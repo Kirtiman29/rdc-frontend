@@ -4,6 +4,7 @@ import HeroSection from '@/components/home/HeroSection';
 import ValueProposition from '@/components/home/ValueProposition';
 import FeaturedCategories from '@/components/home/FeaturedCategories';
 import FeaturedProducts from '@/components/home/FeaturedProducts';
+import InDetailsSection from '@/components/home/InDetailsSection';
 import Testimonial from '@/components/home/Testimonial';
 import CallToAction from '@/components/home/CallToAction';
 
@@ -16,6 +17,7 @@ const Index = () => {
         <ValueProposition />
         <FeaturedCategories />
         <FeaturedProducts />
+        <InDetailsSection />
         <Testimonial />
         <CallToAction />
       </main>
