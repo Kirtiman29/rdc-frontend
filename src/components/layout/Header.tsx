@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Search, Menu, X, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import rdcLogo from '@/assets/rdc-logo.png';
 
 interface HeaderProps {
   cartItemCount?: number;
@@ -11,13 +13,14 @@ interface HeaderProps {
 
 const Header = ({ cartItemCount = 0, onCartClick }: HeaderProps) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const navLinks = [
+    { name: 'Home', href: '/' },
     { name: 'Collections', href: '/gallery' },
-    { name: 'Digital Patterns', href: '/gallery?category=digital' },
-    { name: 'Fabrics', href: '/gallery?category=fabric' },
-    { name: 'Custom', href: '/gallery?category=custom' },
-    { name: 'About', href: '/about' },
+    { name: 'Trending', href: '/gallery?category=trending' },
+    { name: 'Premium', href: '/gallery?category=premium' },
+    { name: 'Special Offer', href: '/gallery?category=special-offer' },
   ];
 
   return (
@@ -35,9 +38,10 @@ const Header = ({ cartItemCount = 0, onCartClick }: HeaderProps) => {
         </Button>
 
         {/* Logo */}
-        <Link to="/" className="flex items-center">
-          <h1 className="font-serif text-xl font-medium tracking-wide md:text-2xl">
-            ATELIER
+        <Link to="/" className="flex items-center gap-2">
+          <img src={rdcLogo} alt="RDC Logo" className="h-10 w-auto md:h-12" />
+          <h1 className="font-serif text-xl font-semibold tracking-wide text-foreground md:text-2xl">
+            RDC
           </h1>
         </Link>
 
@@ -54,11 +58,31 @@ const Header = ({ cartItemCount = 0, onCartClick }: HeaderProps) => {
           ))}
         </nav>
 
-        {/* Right side icons */}
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="hidden md:flex" aria-label="Search">
+        {/* Right side - Search Bar & Icons */}
+        <div className="flex items-center gap-2 md:gap-4">
+          {/* Search Bar - Desktop */}
+          <div className="hidden md:flex items-center">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search designs..."
+                className="w-48 lg:w-64 pl-9 h-9 bg-muted/50 border-border/50 focus:bg-background"
+              />
+            </div>
+          </div>
+          
+          {/* Mobile Search Toggle */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="md:hidden" 
+            aria-label="Search"
+            onClick={() => setIsSearchOpen(!isSearchOpen)}
+          >
             <Search className="h-5 w-5" />
           </Button>
+          
           <Button variant="ghost" size="icon" aria-label="Account">
             <User className="h-5 w-5" />
           </Button>
@@ -71,11 +95,28 @@ const Header = ({ cartItemCount = 0, onCartClick }: HeaderProps) => {
           >
             <ShoppingBag className="h-5 w-5" />
             {cartItemCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-xs text-background">
+              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
                 {cartItemCount}
               </span>
             )}
           </Button>
+        </div>
+      </div>
+
+      {/* Mobile Search Bar */}
+      <div
+        className={cn(
+          'border-b border-border bg-background px-4 py-3 transition-all duration-300 md:hidden',
+          isSearchOpen ? 'block' : 'hidden'
+        )}
+      >
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search designs..."
+            className="w-full pl-9 bg-muted/50"
+          />
         </div>
       </div>
 
