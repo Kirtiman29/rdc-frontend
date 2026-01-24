@@ -1,25 +1,25 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import HeroSection from '@/components/home/HeroSection';
-import ValueProposition from '@/components/home/ValueProposition';
-import FeaturedCategories from '@/components/home/FeaturedCategories';
-import FeaturedProducts from '@/components/home/FeaturedProducts';
-import InDetailsSection from '@/components/home/InDetailsSection';
-import Testimonial from '@/components/home/Testimonial';
-import CallToAction from '@/components/home/CallToAction';
+import HeroEditorial from '@/components/home/HeroEditorial';
+import TrendingDesigns from '@/components/home/TrendingDesigns';
+import PremiumDesigns from '@/components/home/PremiumDesigns';
+import EditorsChoice from '@/components/home/EditorsChoice';
+import ShopByCategory from '@/components/home/ShopByCategory';
+import NewArrivals from '@/components/home/NewArrivals';
+import SpecialOffers from '@/components/home/SpecialOffers';
 
 const Index = () => {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
-        <HeroSection />
-        <ValueProposition />
-        <FeaturedCategories />
-        <FeaturedProducts />
-        <InDetailsSection />
-        <Testimonial />
-        <CallToAction />
+        <HeroEditorial />
+        <TrendingDesigns />
+        <PremiumDesigns />
+        <EditorsChoice />
+        <ShopByCategory />
+        <NewArrivals />
+        <SpecialOffers />
       </main>
       <Footer />
     </div>

@@ -1,56 +1,53 @@
 import { Link } from 'react-router-dom';
+import { Instagram, Facebook, Twitter, Linkedin } from 'lucide-react';
 
 const Footer = () => {
   return (
-    <footer className="border-t border-border bg-card">
-      <div className="container px-4 py-12 md:py-16">
-        <div className="grid gap-8 md:grid-cols-4">
+    <footer className="bg-foreground text-background">
+      <div className="container mx-auto px-4 md:px-8 py-16 md:py-20">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
           {/* Brand */}
-          <div className="md:col-span-1">
-            <Link to="/" className="inline-block">
-              <h2 className="font-serif text-2xl font-medium tracking-wide">ATELIER</h2>
-            </Link>
-            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-              Curating exceptional textile designs for discerning creators and collectors.
+          <div className="col-span-2 md:col-span-1">
+            <h2 className="font-serif text-2xl font-medium tracking-wide mb-4">RDC</h2>
+            <p className="text-sm text-background/70 leading-relaxed max-w-xs">
+              Premium textile design patterns for fashion and lifestyle brands worldwide.
             </p>
+            {/* Social Icons */}
+            <div className="flex gap-4 mt-6">
+              <a href="#" className="text-background/60 hover:text-background transition-colors">
+                <Instagram className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-background/60 hover:text-background transition-colors">
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-background/60 hover:text-background transition-colors">
+                <Twitter className="h-5 w-5" />
+              </a>
+              <a href="#" className="text-background/60 hover:text-background transition-colors">
+                <Linkedin className="h-5 w-5" />
+              </a>
+            </div>
           </div>
 
-          {/* Collections */}
+          {/* Company */}
           <div>
-            <h3 className="mb-4 font-serif text-sm font-medium uppercase tracking-widest">
-              Collections
+            <h3 className="text-xs font-medium uppercase tracking-[0.2em] mb-4 text-background/50">
+              Company
             </h3>
             <ul className="space-y-3">
               <li>
-                <Link
-                  to="/gallery?category=digital"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Digital Patterns
+                <Link to="/about" className="text-sm text-background/70 hover:text-background transition-colors">
+                  About Us
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/gallery?category=fabric"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Premium Fabrics
+                <Link to="/careers" className="text-sm text-background/70 hover:text-background transition-colors">
+                  Careers
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/gallery?category=custom"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Custom Services
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/gallery?category=ready-made"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Ready-Made
+                <Link to="/contact" className="text-sm text-background/70 hover:text-background transition-colors">
+                  Contact
                 </Link>
               </li>
             </ul>
@@ -58,88 +55,58 @@ const Footer = () => {
 
           {/* Support */}
           <div>
-            <h3 className="mb-4 font-serif text-sm font-medium uppercase tracking-widest">
+            <h3 className="text-xs font-medium uppercase tracking-[0.2em] mb-4 text-background/50">
               Support
             </h3>
             <ul className="space-y-3">
               <li>
-                <Link
-                  to="/contact"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Contact Us
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/shipping"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Shipping & Returns
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/faq"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
+                <Link to="/faq" className="text-sm text-background/70 hover:text-background transition-colors">
                   FAQ
                 </Link>
               </li>
               <li>
-                <Link
-                  to="/care"
-                  className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  Care Instructions
+                <Link to="/licensing" className="text-sm text-background/70 hover:text-background transition-colors">
+                  Licensing
+                </Link>
+              </li>
+              <li>
+                <Link to="/help" className="text-sm text-background/70 hover:text-background transition-colors">
+                  Help Center
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* Newsletter */}
+          {/* Legal */}
           <div>
-            <h3 className="mb-4 font-serif text-sm font-medium uppercase tracking-widest">
-              Stay Connected
+            <h3 className="text-xs font-medium uppercase tracking-[0.2em] mb-4 text-background/50">
+              Legal
             </h3>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Join our newsletter for exclusive previews and design inspiration.
-            </p>
-            <form className="flex gap-2">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 rounded-sm border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-              <button
-                type="submit"
-                className="rounded-sm bg-foreground px-4 py-2 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-              >
-                Join
-              </button>
-            </form>
+            <ul className="space-y-3">
+              <li>
+                <Link to="/terms" className="text-sm text-background/70 hover:text-background transition-colors">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="text-sm text-background/70 hover:text-background transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/cookies" className="text-sm text-background/70 hover:text-background transition-colors">
+                  Cookie Policy
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-8 md:flex-row">
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} Atelier Textiles. All rights reserved.
+        {/* Bottom Bar */}
+        <div className="mt-16 pt-8 border-t border-background/10">
+          <p className="text-xs text-background/50 text-center">
+            © {new Date().getFullYear()} RDC Textiles. All rights reserved.
           </p>
-          <div className="flex gap-6">
-            <Link
-              to="/privacy"
-              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Privacy Policy
-            </Link>
-            <Link
-              to="/terms"
-              className="text-xs text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Terms of Service
-            </Link>
-          </div>
         </div>
       </div>
     </footer>
