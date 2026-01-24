@@ -1,143 +1,172 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingBag, Search, Menu, X, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Link, useLocation } from 'react-router-dom';
+import { Search, User, Heart, ShoppingBag, Package, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import MegaMenu from './MegaMenu';
 import rdcLogo from '@/assets/rdc-logo.png';
 
-interface HeaderProps {
-  cartItemCount?: number;
-  onCartClick?: () => void;
-}
+const navItems = [
+  { label: 'Home', href: '/' },
+  { label: 'Designs', href: '/gallery', hasMegaMenu: true },
+  { label: 'Premium', href: '/gallery?filter=premium' },
+  { label: 'Trends', href: '/gallery?tag=trending' },
+  { label: 'Special Offers', href: '/gallery?tag=special-offer' },
+];
 
-const Header = ({ cartItemCount = 0, onCartClick }: HeaderProps) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-
-  const navLinks = [
-    { name: 'Home', href: '/' },
-    { name: 'Collections', href: '/gallery' },
-    { name: 'Trending', href: '/gallery?category=trending' },
-    { name: 'Premium', href: '/gallery?category=premium' },
-    { name: 'Special Offer', href: '/gallery?category=special-offer' },
-  ];
+const Header = () => {
+  const location = useLocation();
+  const [showMegaMenu, setShowMegaMenu] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center justify-between px-4 md:h-20">
-        {/* Mobile menu button */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden"
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-          aria-label="Toggle menu"
-        >
-          {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-        </Button>
+    <header className="sticky top-0 z-50 w-full bg-background/95 backdrop-blur-sm border-b border-border">
+      <div className="container mx-auto px-4 md:px-8">
+        <div className="flex h-16 md:h-20 items-center justify-between">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="lg:hidden p-2 text-foreground"
+            aria-label="Toggle menu"
+          >
+            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
 
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2">
-          <img src={rdcLogo} alt="RDC Logo" className="h-10 w-auto md:h-12" />
-          <h1 className="font-serif text-xl font-semibold tracking-wide text-foreground md:text-2xl">
-            RDC
-          </h1>
-        </Link>
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-2">
+            <img src={rdcLogo} alt="RDC" className="h-8 md:h-10 w-auto" />
+            <span className="font-serif text-xl md:text-2xl font-medium tracking-wide">RDC</span>
+          </Link>
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex md:items-center md:gap-8">
-          {navLinks.map((link) => (
-            <Link
-              key={link.name}
-              to={link.href}
-              className="text-sm font-light tracking-wide text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {link.name}
-            </Link>
-          ))}
-        </nav>
+          {/* Center Navigation */}
+          <nav className="hidden lg:flex items-center gap-8">
+            {navItems.map((item) => (
+              <div
+                key={item.label}
+                className="relative"
+                onMouseEnter={() => item.hasMegaMenu && setShowMegaMenu(true)}
+                onMouseLeave={() => item.hasMegaMenu && setShowMegaMenu(false)}
+              >
+                <Link
+                  to={item.href}
+                  className={cn(
+                    'text-sm font-medium tracking-wide transition-colors py-2',
+                    location.pathname === item.href || 
+                    (item.href !== '/' && location.pathname.startsWith(item.href.split('?')[0]))
+                      ? 'text-foreground'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  {item.label}
+                </Link>
+                {item.hasMegaMenu && showMegaMenu && <MegaMenu />}
+              </div>
+            ))}
+          </nav>
 
-        {/* Right side - Search Bar & Icons */}
-        <div className="flex items-center gap-2 md:gap-4">
-          {/* Search Bar - Desktop */}
-          <div className="hidden md:flex items-center">
+          {/* Right Icons */}
+          <div className="flex items-center gap-2 md:gap-4">
+            {/* Search */}
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search designs..."
-                className="w-48 lg:w-64 pl-9 h-9 bg-muted/50 border-border/50 focus:bg-background"
-              />
+              {showSearch ? (
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center animate-fade-in">
+                  <input
+                    type="text"
+                    placeholder="Search designs..."
+                    className="w-48 md:w-64 h-9 bg-secondary/50 border border-border rounded-sm px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+                    autoFocus
+                    onBlur={() => setShowSearch(false)}
+                  />
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSearch(true)}
+                  className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Search"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+              )}
             </div>
-          </div>
-          
-          {/* Mobile Search Toggle */}
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="md:hidden" 
-            aria-label="Search"
-            onClick={() => setIsSearchOpen(!isSearchOpen)}
-          >
-            <Search className="h-5 w-5" />
-          </Button>
-          
-          <Button variant="ghost" size="icon" aria-label="Account">
-            <User className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative"
-            onClick={onCartClick}
-            aria-label="Shopping cart"
-          >
-            <ShoppingBag className="h-5 w-5" />
-            {cartItemCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
-                {cartItemCount}
-              </span>
-            )}
-          </Button>
-        </div>
-      </div>
 
-      {/* Mobile Search Bar */}
-      <div
-        className={cn(
-          'border-b border-border bg-background px-4 py-3 transition-all duration-300 md:hidden',
-          isSearchOpen ? 'block' : 'hidden'
-        )}
-      >
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Search designs..."
-            className="w-full pl-9 bg-muted/50"
-          />
+            {/* Orders */}
+            <Link
+              to="/orders"
+              className="hidden md:flex p-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Orders"
+            >
+              <Package className="h-5 w-5" />
+            </Link>
+
+            {/* Wishlist */}
+            <Link
+              to="/wishlist"
+              className="hidden md:flex p-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Wishlist"
+            >
+              <Heart className="h-5 w-5" />
+            </Link>
+
+            {/* Cart */}
+            <Link
+              to="/cart"
+              className="relative p-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Cart"
+            >
+              <ShoppingBag className="h-5 w-5" />
+              <span className="absolute -top-1 -right-1 h-4 w-4 bg-foreground text-background text-[10px] font-medium rounded-full flex items-center justify-center">
+                0
+              </span>
+            </Link>
+
+            {/* Profile */}
+            <Link
+              to="/profile"
+              className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Profile"
+            >
+              <User className="h-5 w-5" />
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* Mobile Navigation */}
       <div
         className={cn(
-          'absolute left-0 right-0 top-full border-b border-border bg-background transition-all duration-300 md:hidden',
-          isMenuOpen ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'
+          'lg:hidden border-t border-border bg-background transition-all duration-300 overflow-hidden',
+          isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
         )}
       >
-        <nav className="container flex flex-col gap-4 px-4 py-6">
-          {navLinks.map((link) => (
+        <nav className="container mx-auto px-4 py-4 flex flex-col gap-4">
+          {navItems.map((item) => (
             <Link
-              key={link.name}
-              to={link.href}
-              className="text-base font-light tracking-wide text-muted-foreground transition-colors hover:text-foreground"
-              onClick={() => setIsMenuOpen(false)}
+              key={item.label}
+              to={item.href}
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
+              onClick={() => setIsMobileMenuOpen(false)}
             >
-              {link.name}
+              {item.label}
             </Link>
           ))}
+          <div className="flex gap-4 pt-4 border-t border-border">
+            <Link
+              to="/orders"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Package className="h-4 w-4" />
+              Orders
+            </Link>
+            <Link
+              to="/wishlist"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Heart className="h-4 w-4" />
+              Wishlist
+            </Link>
+          </div>
         </nav>
       </div>
     </header>
