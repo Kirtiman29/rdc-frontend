@@ -43,7 +43,6 @@ const HeroEditorial = () => {
 
   const formatNumber = (num: number) => String(num).padStart(2, '0');
 
-  // Get category display name
   const getCategoryLabel = (category: string) => {
     const labels: Record<string, string> = {
       'digital': 'Digital Pattern',
@@ -55,145 +54,152 @@ const HeroEditorial = () => {
   };
 
   return (
-    <section className="relative min-h-[90vh] lg:min-h-[85vh] bg-background overflow-hidden">
-      {/* Main Container */}
-      <div className="h-full min-h-[90vh] lg:min-h-[85vh]">
-        <div className="grid lg:grid-cols-12 min-h-[90vh] lg:min-h-[85vh]">
+    <section className="relative bg-background overflow-hidden">
+      {/* Editorial Hero Container */}
+      <div className="flex flex-col lg:flex-row min-h-[85vh] lg:min-h-[90vh]">
+        
+        {/* Left: Full-Bleed Editorial Image (75%) */}
+        <div className="relative w-full lg:w-[75%] h-[55vh] lg:h-auto overflow-hidden">
+          {/* Film Grain Overlay */}
+          <div 
+            className="absolute inset-0 z-20 pointer-events-none opacity-[0.03] mix-blend-overlay"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+            }}
+          />
           
-          {/* Left: Editorial Image (70%) */}
-          <div className="relative lg:col-span-8 h-[50vh] lg:h-auto overflow-hidden order-1">
-            {/* Soft overlay for editorial feel */}
-            <div className="absolute inset-0 bg-gradient-to-r from-background/5 via-transparent to-background/10 z-10 pointer-events-none" />
-            
-            {/* Image Container with animation */}
-            <div
-              className={`absolute inset-0 transition-all duration-[800ms] ease-out ${
-                isAnimating 
-                  ? `opacity-0 ${direction === 'right' ? '-translate-x-4' : 'translate-x-4'} scale-[1.02]` 
-                  : 'opacity-100 translate-x-0 scale-100'
-              }`}
-            >
-              <div className="relative w-full h-full group">
-                <img
-                  src={currentProduct.images[0]}
-                  alt={currentProduct.name}
-                  className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03] filter saturate-[0.9] contrast-[1.02]"
-                />
-                {/* Subtle vignette effect */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-black/5 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Navigation Arrows - Desktop */}
-            <div className="absolute bottom-8 left-8 hidden lg:flex items-center gap-3 z-20">
-              <button
-                onClick={goToPrevious}
-                disabled={isAnimating}
-                className="w-14 h-14 bg-background/95 backdrop-blur-sm flex items-center justify-center text-foreground hover:bg-background hover:shadow-lg transition-all duration-300 disabled:opacity-50 group"
-                aria-label="Previous slide"
-              >
-                <ChevronLeft className="h-5 w-5 transition-transform group-hover:-translate-x-0.5" />
-              </button>
-              <button
-                onClick={goToNext}
-                disabled={isAnimating}
-                className="w-14 h-14 bg-background/95 backdrop-blur-sm flex items-center justify-center text-foreground hover:bg-background hover:shadow-lg transition-all duration-300 disabled:opacity-50 group"
-                aria-label="Next slide"
-              >
-                <ChevronRight className="h-5 w-5 transition-transform group-hover:translate-x-0.5" />
-              </button>
-            </div>
-
-            {/* Slide Counter */}
-            <div className="absolute bottom-8 right-8 flex items-center gap-3 z-20">
-              <div className="bg-background/95 backdrop-blur-sm px-5 py-3 shadow-sm">
-                <span className="font-serif text-xl tracking-wide text-foreground">{formatNumber(currentIndex + 1)}</span>
-                <span className="mx-2 text-muted-foreground/60">/</span>
-                <span className="text-muted-foreground text-sm">{formatNumber(totalSlides)}</span>
-              </div>
+          {/* Soft Shadow Depth */}
+          <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-l from-background/20 to-transparent z-10 pointer-events-none hidden lg:block" />
+          
+          {/* Image with Animation */}
+          <div
+            className={`absolute inset-0 transition-all duration-[800ms] ease-out ${
+              isAnimating 
+                ? `opacity-0 ${direction === 'right' ? '-translate-x-6' : 'translate-x-6'}` 
+                : 'opacity-100 translate-x-0'
+            }`}
+          >
+            <div className="relative w-full h-full group cursor-pointer">
+              <img
+                src={currentProduct.images[0]}
+                alt={currentProduct.name}
+                className="w-full h-full object-cover transition-transform duration-[1500ms] ease-out group-hover:scale-[1.02] filter saturate-[0.92] contrast-[1.01]"
+              />
+              {/* Subtle vignette for depth */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-black/5 pointer-events-none" />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/5 via-transparent to-black/10 pointer-events-none" />
             </div>
           </div>
 
-          {/* Right: Content Panel (30%) */}
-          <div className="lg:col-span-4 flex flex-col justify-center bg-background px-6 py-10 lg:px-12 lg:py-16 order-2 border-l border-border/30">
-            <div
-              className={`transition-all duration-700 delay-100 ${
-                isAnimating 
-                  ? 'opacity-0 translate-y-8' 
-                  : 'opacity-100 translate-y-0'
-              }`}
+          {/* Navigation Arrows - Minimal Style */}
+          <div className="absolute bottom-10 left-10 hidden lg:flex items-center gap-2 z-20">
+            <button
+              onClick={goToPrevious}
+              disabled={isAnimating}
+              className="w-12 h-12 border border-background/40 bg-background/10 backdrop-blur-sm flex items-center justify-center text-background hover:bg-background/20 hover:border-background/60 transition-all duration-300 disabled:opacity-40 group"
+              aria-label="Previous slide"
             >
-              {/* Label */}
-              <span className="inline-block text-[11px] font-medium uppercase tracking-[0.35em] text-muted-foreground mb-6 pb-3 border-b border-border/50">
-                Trending Design
+              <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
+            </button>
+            <button
+              onClick={goToNext}
+              disabled={isAnimating}
+              className="w-12 h-12 border border-background/40 bg-background/10 backdrop-blur-sm flex items-center justify-center text-background hover:bg-background/20 hover:border-background/60 transition-all duration-300 disabled:opacity-40 group"
+              aria-label="Next slide"
+            >
+              <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </button>
+          </div>
+
+          {/* Slide Counter - Editorial Style */}
+          <div className="absolute bottom-10 right-10 z-20 hidden lg:block">
+            <div className="flex items-baseline gap-1 text-background/90">
+              <span className="font-serif text-2xl tracking-wide">{formatNumber(currentIndex + 1)}</span>
+              <span className="text-background/50 text-sm mx-1">/</span>
+              <span className="text-background/60 text-sm">{formatNumber(totalSlides)}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Editorial Content Column (25%) */}
+        <div className="w-full lg:w-[25%] flex flex-col justify-center px-6 py-12 lg:px-10 lg:py-20 xl:px-14">
+          <div
+            className={`transition-all duration-700 delay-150 ${
+              isAnimating 
+                ? 'opacity-0 translate-y-6' 
+                : 'opacity-100 translate-y-0'
+            }`}
+          >
+            {/* Trending Label */}
+            <span className="inline-block text-[10px] font-medium uppercase tracking-[0.4em] text-muted-foreground mb-8">
+              Trending Design
+            </span>
+
+            {/* Editorial Title */}
+            <h1 className="font-serif text-2xl md:text-3xl lg:text-[2rem] xl:text-[2.5rem] font-medium leading-[1.1] text-foreground mb-6 tracking-tight">
+              {currentProduct.name}
+            </h1>
+
+            {/* Short Description */}
+            <p className="text-muted-foreground text-sm lg:text-base leading-relaxed mb-8 line-clamp-2">
+              {currentProduct.description}
+            </p>
+
+            {/* Price Display */}
+            <div className="flex items-baseline gap-3 mb-10">
+              <span className="font-serif text-2xl lg:text-3xl text-foreground">
+                ${currentProduct.price}
               </span>
-
-              {/* Title */}
-              <h1 className="font-serif text-3xl md:text-4xl lg:text-[2.75rem] font-medium leading-[1.15] text-foreground mb-5 tracking-tight">
-                {currentProduct.name}
-              </h1>
-
-              {/* Description */}
-              <p className="text-muted-foreground text-base leading-relaxed mb-8 line-clamp-2 max-w-md">
-                {currentProduct.description}
-              </p>
-
-              {/* Price */}
-              <div className="flex items-baseline gap-4 mb-8">
-                <span className="font-serif text-3xl lg:text-4xl text-foreground tracking-tight">
-                  ${currentProduct.price}
+              {currentProduct.originalPrice && (
+                <span className="text-base text-muted-foreground/60 line-through">
+                  ${currentProduct.originalPrice}
                 </span>
-                {currentProduct.originalPrice && (
-                  <span className="text-lg text-muted-foreground/70 line-through">
-                    ${currentProduct.originalPrice}
-                  </span>
-                )}
-              </div>
+              )}
+            </div>
 
-              {/* CTA Button */}
-              <Button 
-                asChild 
-                size="lg" 
-                className="w-full sm:w-auto px-12 py-6 text-sm tracking-wide font-medium shadow-sm hover:shadow-md transition-all duration-300"
-              >
-                <Link to={`/product/${currentProduct.id}`}>
-                  View Design
-                </Link>
-              </Button>
+            {/* CTA Button - Clean Style */}
+            <Button 
+              asChild 
+              size="lg" 
+              className="w-full px-8 py-6 text-xs tracking-[0.15em] uppercase font-medium hover:shadow-lg transition-all duration-300"
+            >
+              <Link to={`/product/${currentProduct.id}`}>
+                View Design
+              </Link>
+            </Button>
 
-              {/* Category Label */}
-              <div className="mt-10 pt-6 border-t border-border/30">
-                <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground/80">
-                  {getCategoryLabel(currentProduct.category)}
-                </span>
-              </div>
+            {/* Category Label */}
+            <div className="mt-12">
+              <span className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground/70">
+                {getCategoryLabel(currentProduct.category)}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile Navigation */}
-      <div className="lg:hidden absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 z-20">
+      {/* Mobile Navigation - Bottom Center */}
+      <div className="lg:hidden absolute bottom-6 left-0 right-0 flex items-center justify-center gap-4 z-20">
         <button
           onClick={goToPrevious}
           disabled={isAnimating}
-          className="w-12 h-12 bg-background/95 backdrop-blur-sm flex items-center justify-center text-foreground shadow-md disabled:opacity-50"
+          className="w-10 h-10 border border-foreground/20 bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground disabled:opacity-40"
           aria-label="Previous slide"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft className="h-4 w-4" />
         </button>
-        <div className="bg-background/95 backdrop-blur-sm px-4 py-2 shadow-sm">
+        <div className="flex items-baseline gap-1 text-foreground">
           <span className="font-serif text-lg">{formatNumber(currentIndex + 1)}</span>
-          <span className="mx-2 text-muted-foreground/60">/</span>
+          <span className="text-muted-foreground/50 mx-1">/</span>
           <span className="text-muted-foreground text-sm">{formatNumber(totalSlides)}</span>
         </div>
         <button
           onClick={goToNext}
           disabled={isAnimating}
-          className="w-12 h-12 bg-background/95 backdrop-blur-sm flex items-center justify-center text-foreground shadow-md disabled:opacity-50"
+          className="w-10 h-10 border border-foreground/20 bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground disabled:opacity-40"
           aria-label="Next slide"
         >
-          <ChevronRight className="h-5 w-5" />
+          <ChevronRight className="h-4 w-4" />
         </button>
       </div>
     </section>
