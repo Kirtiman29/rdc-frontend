@@ -2,6 +2,7 @@ import { Product } from '@/types/product';
 import { Link } from 'react-router-dom';
 import { ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useCart } from '@/hooks/useCart';
 
 interface ProductCardProps {
   product: Product;
@@ -9,7 +10,18 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
+  const { addToCart } = useCart();
   const categoryLabel = product.category.replace('-', ' ');
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onAddToCart) {
+      onAddToCart(product);
+    } else {
+      addToCart(product);
+    }
+  };
 
   return (
     <div className="group animate-fade-in">
@@ -46,17 +58,14 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
 
           {/* Quick add button */}
           {product.inStock && (
-            <div className="absolute bottom-3 left-3 right-3 translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+            <div className="absolute bottom-3 left-3 right-3 translate-y-2 opacity-100 md:opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
               <Button
                 className="w-full gap-2"
                 size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onAddToCart?.(product);
-                }}
+                onClick={handleAddToCart}
               >
                 <ShoppingBag className="h-4 w-4" />
-                Quick Add
+                Add to Cart
               </Button>
             </div>
           )}

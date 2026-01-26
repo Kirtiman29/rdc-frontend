@@ -1,10 +1,13 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ShoppingBag } from 'lucide-react';
 import { getEditorsChoice, getFeaturedProducts } from '@/data/products';
 import { useState } from 'react';
+import { useCart } from '@/hooks/useCart';
+import { Product } from '@/types/product';
 
 const EditorsChoice = () => {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const { addToCart } = useCart();
   
   // Use editors choice or fallback to featured
   const allProducts = getEditorsChoice().length > 0 
@@ -12,6 +15,12 @@ const EditorsChoice = () => {
     : getFeaturedProducts();
   
   const products = allProducts.slice(0, 5);
+
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product);
+  };
 
   // Card configurations for asymmetric layout
   const cardConfigs = [
@@ -99,9 +108,18 @@ const EditorsChoice = () => {
                         <h3 className="font-serif text-xl md:text-2xl text-foreground mb-2">
                           {product.name}
                         </h3>
-                        <p className="text-foreground/70 text-sm">
-                          ${product.price}
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-foreground/70 text-sm">
+                            ${product.price}
+                          </p>
+                          <button 
+                            className="h-9 px-4 bg-foreground text-background rounded-md flex items-center justify-center gap-2 text-xs font-medium opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-foreground/90"
+                            onClick={(e) => handleAddToCart(e, product)}
+                          >
+                            <ShoppingBag className="h-3.5 w-3.5" />
+                            Add
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -114,7 +132,15 @@ const EditorsChoice = () => {
                       />
                       
                       {/* Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-500" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-500 pointer-events-none" />
+                      
+                      {/* Add to Cart Button */}
+                      <button 
+                        className="absolute top-4 right-4 w-10 h-10 bg-background/90 backdrop-blur-sm rounded-full flex items-center justify-center text-foreground hover:bg-background transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 shadow-md"
+                        onClick={(e) => handleAddToCart(e, product)}
+                      >
+                        <ShoppingBag className="h-4 w-4" />
+                      </button>
                       
                       {/* Bottom-left Content */}
                       <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">

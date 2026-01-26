@@ -1,9 +1,18 @@
 import { Link } from 'react-router-dom';
-import { Heart } from 'lucide-react';
+import { Heart, ShoppingBag } from 'lucide-react';
 import { getPremiumProducts } from '@/data/products';
+import { useCart } from '@/hooks/useCart';
+import { Product } from '@/types/product';
 
 const PremiumDesigns = () => {
+  const { addToCart } = useCart();
   const premiumProducts = getPremiumProducts().slice(0, 3);
+
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product);
+  };
 
   return (
     <section className="py-20 md:py-28 bg-[#1a1a1a] text-white">
@@ -39,7 +48,7 @@ const PremiumDesigns = () => {
                   />
                   
                   {/* Gold Accent Border on Hover */}
-                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#c9a962]/50 transition-colors duration-300" />
+                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#c9a962]/50 transition-colors duration-300 pointer-events-none" />
                   
                   {/* Premium Badge */}
                   <div className="absolute top-4 left-4">
@@ -57,6 +66,15 @@ const PremiumDesigns = () => {
                     }}
                   >
                     <Heart className="h-4 w-4" />
+                  </button>
+
+                  {/* Add to Cart Button */}
+                  <button 
+                    className="absolute bottom-4 left-4 right-4 h-10 bg-[#c9a962] text-[#1a1a1a] rounded-md flex items-center justify-center gap-2 text-sm font-medium opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-[#d4b574]"
+                    onClick={(e) => handleAddToCart(e, product)}
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    Add to Cart
                   </button>
                 </div>
               </Link>

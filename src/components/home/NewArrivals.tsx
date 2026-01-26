@@ -1,12 +1,22 @@
 import { Link } from 'react-router-dom';
-import { Heart } from 'lucide-react';
+import { Heart, ShoppingBag } from 'lucide-react';
 import { getNewArrivals, products } from '@/data/products';
+import { useCart } from '@/hooks/useCart';
+import { Product } from '@/types/product';
 
 const NewArrivals = () => {
+  const { addToCart } = useCart();
+  
   // Use new arrivals or fallback to first 4 products
   const newProducts = getNewArrivals().length > 0 
     ? getNewArrivals() 
     : products.slice(0, 4);
+
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product);
+  };
 
   return (
     <section className="py-20 md:py-28 bg-background">
@@ -59,8 +69,17 @@ const NewArrivals = () => {
                     <Heart className="h-4 w-4" />
                   </button>
 
+                  {/* Add to Cart Button */}
+                  <button 
+                    className="absolute bottom-4 left-4 right-4 h-10 bg-foreground text-background rounded-md flex items-center justify-center gap-2 text-sm font-medium opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-foreground/90"
+                    onClick={(e) => handleAddToCart(e, product)}
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    Add to Cart
+                  </button>
+
                   {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-300" />
+                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-300 pointer-events-none" />
                 </div>
               </Link>
 
