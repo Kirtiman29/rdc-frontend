@@ -2,9 +2,18 @@ import { Link } from 'react-router-dom';
 import { ArrowUpRight, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getFeaturedProducts } from '@/data/products';
+import { useCart } from '@/hooks/useCart';
+import { Product } from '@/types/product';
 
 const FeaturedProducts = () => {
+  const { addToCart } = useCart();
   const featuredProducts = getFeaturedProducts().slice(0, 4);
+
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product);
+  };
 
   return (
     <section className="bg-background py-16 md:py-24">
@@ -57,17 +66,14 @@ const FeaturedProducts = () => {
                   )}
 
                   {/* Quick add button */}
-                  <div className="absolute bottom-3 left-3 right-3 translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+                  <div className="absolute bottom-3 left-3 right-3 translate-y-2 opacity-100 md:opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                     <Button
                       className="w-full gap-2"
                       size="sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        // Add to cart logic will go here
-                      }}
+                      onClick={(e) => handleAddToCart(e, product)}
                     >
                       <ShoppingBag className="h-4 w-4" />
-                      Quick Add
+                      Add to Cart
                     </Button>
                   </div>
                 </div>

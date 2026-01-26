@@ -1,10 +1,20 @@
 import { Link } from 'react-router-dom';
-import { Heart, Eye } from 'lucide-react';
+import { Heart, Eye, ShoppingBag } from 'lucide-react';
 import { getTrendingProducts, getFeaturedProducts } from '@/data/products';
+import { useCart } from '@/hooks/useCart';
+import { Product } from '@/types/product';
 
 const TrendingDesigns = () => {
+  const { addToCart } = useCart();
+  
   // Combine trending and featured for more variety
   const products = [...getTrendingProducts(), ...getFeaturedProducts()].slice(0, 6);
+
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product);
+  };
 
   return (
     <section className="py-20 md:py-28 bg-background">
@@ -40,7 +50,7 @@ const TrendingDesigns = () => {
                   />
                   
                   {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-300" />
+                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-300 pointer-events-none" />
                   
                   {/* Quick Actions */}
                   <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -65,11 +75,20 @@ const TrendingDesigns = () => {
                   </div>
 
                   {/* Category Badge */}
-                  <div className="absolute bottom-4 left-4">
+                  <div className="absolute top-4 left-4">
                     <span className="text-xs font-medium uppercase tracking-wider bg-background/90 backdrop-blur-sm px-3 py-1 rounded-sm">
                       {product.tags[0]}
                     </span>
                   </div>
+
+                  {/* Add to Cart Button */}
+                  <button 
+                    className="absolute bottom-4 left-4 right-4 h-10 bg-foreground text-background rounded-md flex items-center justify-center gap-2 text-sm font-medium opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-foreground/90"
+                    onClick={(e) => handleAddToCart(e, product)}
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    Add to Cart
+                  </button>
                 </div>
               </Link>
 
