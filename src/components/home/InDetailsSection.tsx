@@ -4,22 +4,22 @@ const details = [
   {
     icon: Palette,
     title: 'Unique Designs',
-    description: 'Each pattern is meticulously crafted by our expert designers, ensuring originality and artistic excellence in every piece.',
+    description: 'Each pattern is meticulously crafted by our expert designers, ensuring originality across all segments from Menswear to Home Interior.',
   },
   {
     icon: Layers,
-    title: 'High-Resolution Files',
-    description: 'All digital patterns come in multiple formats (PNG, SVG, AI) at 300+ DPI, perfect for printing on any fabric type.',
+    title: 'Industrial Formats',
+    description: 'Digital patterns are provided in high-resolution TIFF and AI formats at 300+ DPI, optimized for industrial textile printing machinery.',
   },
   {
     icon: Sparkles,
     title: 'Trend-Forward',
-    description: 'Our design team stays ahead of global textile trends, bringing you patterns that are both timeless and contemporary.',
+    description: 'Our design team utilizes real-time market analytics to stay ahead of global textile trends, bringing you contemporary patterns.',
   },
   {
     icon: Award,
     title: 'Premium Quality',
-    description: 'We source only the finest materials for our physical fabrics, ensuring durability, color fastness, and exceptional feel.',
+    description: 'We ensure durability and color fastness in our physical fabrics, adhering to international textile quality standards.',
   },
 ];
 
@@ -32,8 +32,8 @@ const InDetailsSection = () => {
             In Details
           </h2>
           <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
-            Discover what makes RDC textile designs stand apart from the rest. 
-            Every detail matters in creating exceptional patterns.
+            Discover what makes RDC textile designs stand apart. 
+            Every detail is synchronized with our industrial production standards.
           </p>
         </div>
 
@@ -63,44 +63,44 @@ const InDetailsSection = () => {
                 Crafted for Excellence
               </h3>
               <p className="text-muted-foreground leading-relaxed mb-4">
-                At RDC, we believe that great textile design is an art form. Our team of skilled designers 
-                combines traditional craftsmanship with modern technology to create patterns that inspire.
+                At RDC, we believe that great textile design is an art form. Our team combines 
+                traditional craftsmanship with the data-driven efficiency of our microservice architecture.
               </p>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Over 1000+ unique designs in our collection
+                  Over 1000+ unique designs managed in our Admin Service
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Customization available for all patterns
+                  Bespoke customization available via our Home Interior segment
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Worldwide shipping on physical products
+                  Secure worldwide transactions powered by Razorpay
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Instant digital downloads available
+                  Instant asset streaming from our Media Service
                 </li>
               </ul>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-muted/50 rounded-lg p-6 text-center">
                 <span className="block font-serif text-3xl md:text-4xl font-semibold text-primary mb-1">1000+</span>
-                <span className="text-sm text-muted-foreground">Unique Designs</span>
+                <span className="text-sm text-muted-foreground">Catalog Designs</span>
               </div>
               <div className="bg-muted/50 rounded-lg p-6 text-center">
                 <span className="block font-serif text-3xl md:text-4xl font-semibold text-primary mb-1">50+</span>
-                <span className="text-sm text-muted-foreground">Countries Served</span>
+                <span className="text-sm text-muted-foreground">Global Markets</span>
               </div>
               <div className="bg-muted/50 rounded-lg p-6 text-center">
                 <span className="block font-serif text-3xl md:text-4xl font-semibold text-primary mb-1">15+</span>
-                <span className="text-sm text-muted-foreground">Years Experience</span>
+                <span className="text-sm text-muted-foreground">Years in Textile</span>
               </div>
               <div className="bg-muted/50 rounded-lg p-6 text-center">
                 <span className="block font-serif text-3xl md:text-4xl font-semibold text-primary mb-1">5000+</span>
-                <span className="text-sm text-muted-foreground">Happy Clients</span>
+                <span className="text-sm text-muted-foreground">Verified Orders</span>
               </div>
             </div>
           </div>

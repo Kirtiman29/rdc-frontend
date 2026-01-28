@@ -8,8 +8,8 @@ const Testimonial = () => {
           <Quote className="mx-auto mb-6 h-10 w-10 text-champagne" />
           <blockquote className="mb-8 font-serif text-2xl font-light leading-relaxed text-foreground md:text-3xl lg:text-4xl">
             "The quality of these textiles transformed our entire project. The attention to detail 
-            and the unique patterns are simply unmatched. Working with Atelier has been an 
-            absolute pleasure."
+            and the unique patterns from the Home Interior segment are simply unmatched. 
+            The industrial TIFF files made production seamless."
           </blockquote>
           <div className="flex flex-col items-center">
             <div className="mb-3 h-14 w-14 overflow-hidden rounded-full bg-muted">
@@ -21,7 +21,7 @@ const Testimonial = () => {
             </div>
             <cite className="not-italic">
               <span className="block font-serif text-base font-medium">Sarah Mitchell</span>
-              <span className="text-sm text-muted-foreground">Interior Designer, London</span>
+              <span className="text-sm text-muted-foreground">Lead Designer, Home Interior Group</span>
             </cite>
           </div>
         </div>

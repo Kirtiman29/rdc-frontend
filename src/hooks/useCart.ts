@@ -1,75 +1,97 @@
-import { useState, useCallback } from 'react';
-import { Product } from '@/types/product';
+// src/components/hooks/useCart.ts
+// ✅ FIXED: Transitioned from in-memory to Port 8091 Persistence
+
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  getCart, 
+  addToCart as apiAddToCart, 
+  removeCartItem as apiRemoveItem, 
+  clearCart as apiClearCart,
+  CartItem as ApiCartItem 
+} from '@/api/cartApi';
+import { getToken } from '@/api/apiClient';
 import { toast } from '@/hooks/use-toast';
-
-export interface CartItem {
-  product: Product;
-  quantity: number;
-}
-
-// Simple in-memory cart state (will be replaced with context/backend later)
-let cartItems: CartItem[] = [];
-let listeners: Set<() => void> = new Set();
-
-const notifyListeners = () => {
-  listeners.forEach(listener => listener());
-};
+import { Design } from '@/types/product';
 
 export const useCart = () => {
-  const [, setUpdate] = useState(0);
+  const [items, setItems] = useState<ApiCartItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const subscribe = useCallback(() => {
-    const listener = () => setUpdate(prev => prev + 1);
-    listeners.add(listener);
-    return () => listeners.delete(listener);
+  // ✅ Fetch cart data from Port 8091
+  const fetchCart = useCallback(async () => {
+    if (!getToken()) return;
+    try {
+      const summary = await getCart();
+      setItems(summary.items);
+      setTotalCount(summary.totalItems);
+    } catch (error) {
+      console.error('Failed to sync cart:', error);
+    }
   }, []);
 
-  // Subscribe on mount
-  useState(() => {
-    const unsubscribe = subscribe();
-    return unsubscribe;
-  });
+  // Initial load
+  useEffect(() => {
+    fetchCart();
+  }, [fetchCart]);
 
-  const addToCart = useCallback((product: Product) => {
-    const existingItem = cartItems.find(item => item.product.id === product.id);
-    
-    if (existingItem) {
+  const addToCart = useCallback(async (product: Design) => {
+    if (!getToken()) {
       toast({
-        title: "Already in cart",
-        description: `${product.name} is already in your cart.`,
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please login to add designs to your cart.",
       });
       return;
     }
 
-    cartItems = [...cartItems, { product, quantity: 1 }];
-    notifyListeners();
-    
-    toast({
-      title: "Added to cart",
-      description: `${product.name} has been added to your cart.`,
-    });
-  }, []);
+    setLoading(true);
+    try {
+      // ✅ Persist to Cart DB (Port 8091)
+      await apiAddToCart(product.id, 1);
+      await fetchCart(); // Refresh local state
+      
+      toast({
+        title: "Added to cart",
+        description: `${product.title} has been added to your cart.`,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Could not add item to cart. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchCart]);
 
-  const removeFromCart = useCallback((productId: string) => {
-    cartItems = cartItems.filter(item => item.product.id !== productId);
-    notifyListeners();
-  }, []);
+  const removeFromCart = useCallback(async (itemId: number) => {
+    try {
+      await apiRemoveItem(itemId);
+      await fetchCart();
+    } catch (error) {
+      console.error('Failed to remove item:', error);
+    }
+  }, [fetchCart]);
 
-  const getCartItems = useCallback(() => cartItems, []);
-
-  const getCartCount = useCallback(() => cartItems.length, []);
-
-  const clearCart = useCallback(() => {
-    cartItems = [];
-    notifyListeners();
+  const clearCart = useCallback(async () => {
+    try {
+      await apiClearCart();
+      setItems([]);
+      setTotalCount(0);
+    } catch (error) {
+      console.error('Failed to clear cart:', error);
+    }
   }, []);
 
   return {
     addToCart,
     removeFromCart,
-    getCartItems,
-    getCartCount,
     clearCart,
-    items: cartItems,
+    refreshCart: fetchCart,
+    items,
+    itemCount: totalCount,
+    loading,
   };
 };

@@ -1,165 +1,117 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { registerUser, loginWithGoogle } from '@/api/authApi'; 
+import { saveTokens } from '@/api/apiClient';
+import { Loader2 } from 'lucide-react';
 
 const Signup = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-  });
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (formData.password !== formData.confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match.",
-        variant: "destructive",
-      });
+      toast({ title: "Passwords don't match", variant: "destructive" });
       return;
     }
-
-    if (formData.password.length < 8) {
-      toast({
-        title: "Password too short",
-        description: "Password must be at least 8 characters.",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    
     setIsSubmitting(true);
+    try {
+      // ✅ Sync: Hits Port 8081 /auth/signup [cite: 25]
+      const response = await registerUser({
+        displayName: formData.name, 
+        email: formData.email,
+        password: formData.password
+      });
 
-    // Simulate signup
-    await new Promise(resolve => setTimeout(resolve, 1000));
+      toast({ title: "Account created successfully" });
 
-    toast({
-      title: "Account created",
-      description: "Please check your email to verify your account.",
-    });
+      if (response.accessToken) {
+        saveTokens(response.accessToken, response.refreshToken || response.accessToken);
+        navigate('/');
+      } else {
+        navigate('/login');
+      }
+    } catch (error: any) {
+      toast({ 
+        title: "Registration Failed", 
+        description: error.response?.data?.error || "An account with this email might already exist.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    setIsSubmitting(false);
+  /**
+   * ✅ GOOGLE OAUTH SUCCESS: Triggers the backend /auth/google logic
+   * Sends res.credential (the ID Token) to backend for verification [cite: 15-17]
+   */
+  const handleGoogleSuccess = async (res: CredentialResponse) => {
+    setIsSubmitting(true);
+    try {
+      const response = await loginWithGoogle(res.credential!); 
+      toast({ title: "Welcome!", description: "Account authenticated via Google." });
+      navigate('/');
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Google Signup Failed" });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      
-      <main className="pt-24 pb-20">
-        <div className="container mx-auto px-4 md:px-8 max-w-md">
-          {/* Page Header */}
-          <div className="text-center mb-12">
-            <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
-              Join Us
-            </span>
-            <h1 className="font-serif text-3xl md:text-4xl font-medium mt-3">
-              Create Account
-            </h1>
+      <main className="flex-1 flex items-center justify-center py-20 px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-10">
+            <span className="text-xs font-bold uppercase tracking-[0.4em] text-muted-foreground">The RDC Vault</span>
+            <h1 className="font-serif text-4xl mt-3">Join the Studio</h1>
           </div>
 
-          {/* Signup Form */}
-          <div className="border border-border p-8 md:p-10">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium mb-2">
-                  Full Name
-                </label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                  className="bg-background border-border focus:border-foreground/30"
-                  placeholder="Your full name"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-2">
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  className="bg-background border-border focus:border-foreground/30"
-                  placeholder="your@email.com"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-2">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  className="bg-background border-border focus:border-foreground/30"
-                  placeholder="Minimum 8 characters"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="confirmPassword" className="block text-sm font-medium mb-2">
-                  Confirm Password
-                </label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  required
-                  className="bg-background border-border focus:border-foreground/30"
-                  placeholder="Re-enter your password"
-                />
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full mt-6"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Creating Account...' : 'Create Account'}
+          <div className="border border-border p-8 md:p-10 bg-background shadow-2xl">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input placeholder="Full Name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required />
+              <Input type="email" placeholder="Email Address" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} required />
+              <Input type="password" placeholder="Password" value={formData.password} onChange={e => setFormData({...formData, password: e.target.value})} required />
+              <Input type="password" placeholder="Confirm Password" value={formData.confirmPassword} onChange={e => setFormData({...formData, confirmPassword: e.target.value})} required />
+              
+              <Button type="submit" className="w-full h-12 text-xs font-bold uppercase tracking-widest mt-4" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Create Industrial Account'}
               </Button>
             </form>
 
-            {/* Links */}
-            <div className="mt-8 pt-6 border-t border-border text-center space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Already have an account?{' '}
-                <Link to="/login" className="text-foreground hover:underline">
-                  Sign in
-                </Link>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                By creating an account, you agree to our{' '}
-                <Link to="/terms" className="text-foreground hover:underline">
-                  Terms & Conditions
-                </Link>{' '}
-                and{' '}
-                <Link to="/privacy" className="text-foreground hover:underline">
-                  Privacy Policy
-                </Link>
-              </p>
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-border"></span></div>
+              <div className="relative flex justify-center text-xs uppercase"><span className="bg-background px-4 text-muted-foreground font-medium">Or join with</span></div>
             </div>
+
+            {/* ✅ WORKING GOOGLE OAUTH COMPONENT [cite: 16] */}
+            <div className="w-full flex justify-center">
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={() => toast({ variant: "destructive", title: "Google Auth Failed" })}
+                theme="outline"
+                shape="rectangular"
+                width="100%"
+              />
+            </div>
+
+            <p className="mt-8 text-center text-sm text-muted-foreground">
+              Member already? <Link to="/login" className="text-foreground font-bold hover:underline">Sign In</Link>
+            </p>
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   );

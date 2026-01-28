@@ -10,7 +10,7 @@ const CallToAction = () => {
         <div
           className="h-full w-full"
           style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H0v-2h20v-2H0V8h20V6H0V4h20V2H0V0h22v20h2V0h2v20h2V0h2v20h2V0h2v20h2V0h2v22H20v-1.5zM0 20h2v20H0V20zm4 0h2v20H4V20zm4 0h2v20H8V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20zm4 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2z' fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E")`,
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M20 20.5V18H0v-2h20v-2H0v-2h20v-2H0V8h20V6H0V4h20V2H0V0h22v20h2V0h2v20h2V0h2v20h2V0h2v20h2V0h2v20h2V0h2v22H20v-1.5zM0 20h2v20H0V20zm4 0h2v20H4V20zm4 0h2v20H8V20zm4 0h2v20h-2V20zm4 0h2v20h-2V20zm4 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2zm0 4h20v2H20v-2z' fill='%23ffffff' fill-opacity='1' fill-rule='evenodd'/%3E%3C/svg%3E")`,
           }}
         />
       </div>
@@ -35,7 +35,9 @@ const CallToAction = () => {
               variant="secondary"
               className="group px-8"
             >
-              <Link to="/gallery?category=custom">
+              {/* ✅ Sync: Routing to the 'Custom' segment filtered in Admin Service (Port 8080) */}
+              {/* This matches the 'segment' filter logic in your DesignFilters interface */}
+              <Link to="/gallery?segment=HOME_INTERIOR">
                 Start Your Project
                 <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
@@ -46,6 +48,7 @@ const CallToAction = () => {
               variant="outline"
               className="border-background/30 bg-transparent px-8 text-background hover:bg-background/10 hover:text-background"
             >
+              {/* ✅ Sync: Standard contact route for bespoke inquiries */}
               <Link to="/contact">Contact Us</Link>
             </Button>
           </div>

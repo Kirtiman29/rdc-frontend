@@ -1,3 +1,5 @@
+// src/components/home/ValueProposition.tsx
+
 import { Palette, Award, Truck, HeartHandshake, LucideIcon } from 'lucide-react';
 
 interface ValueItem {
@@ -10,22 +12,25 @@ const values: ValueItem[] = [
   {
     icon: Palette,
     title: 'Original Designs',
-    description: 'Each pattern is crafted exclusively by our in-house designers, ensuring unique pieces you will not find anywhere else.',
+    // ✅ Sync: Referencing the Segment-based design logic in Admin Service
+    description: 'Each pattern is crafted exclusively for our diverse segments, ensuring unique pieces you will not find anywhere else.',
   },
   {
     icon: Award,
-    title: 'Premium Quality',
-    description: 'We source only the finest materials and use high-resolution printing techniques for exceptional results.',
+    title: 'Industrial Quality',
+    // ✅ Sync: Referencing the High-Res assets (TIFF/AI) managed in Port 8090
+    description: 'We utilize high-resolution industrial file standards and secure asset streaming for exceptional production results.',
   },
   {
     icon: Truck,
     title: 'Global Delivery',
-    description: 'Secure worldwide shipping with careful packaging to ensure your textiles arrive in perfect condition.',
+    // ✅ Sync: Referencing the Order Service (Port 8095) fulfillment logic
+    description: 'Secure worldwide fulfillment with real-time status tracking from our dedicated order management service.',
   },
   {
     icon: HeartHandshake,
-    title: 'Dedicated Support',
-    description: 'Our design consultants are here to help you find the perfect textile solution for your project.',
+    title: 'Technical Support',
+    description: 'Our consultants provide technical guidance on pattern integration and industrial textile application for your projects.',
   },
 ];
 

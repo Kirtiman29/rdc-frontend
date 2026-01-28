@@ -1,11 +1,15 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { products } from '@/data/products';
+import { getDesigns } from '@/api/designApi';
+import { getAssetUrl } from '@/api/apiClient';
+import type { Design } from '@/types/product';
+import { Loader2 } from 'lucide-react';
 
 interface MenuItem {
   label: string;
   href: string;
   tag?: string;
+  category?: string; // To match segments like MENSWEAR
 }
 
 interface MenuColumn {
@@ -17,9 +21,9 @@ const menuColumns: MenuColumn[] = [
   {
     title: 'Apparel',
     items: [
-      { label: 'Menswear', href: '/gallery?tag=menswear', tag: 'menswear' },
-      { label: 'Womenswear', href: '/gallery?tag=womenswear', tag: 'womenswear' },
-      { label: 'Kidswear', href: '/gallery?tag=kidswear', tag: 'kidswear' },
+      { label: 'Menswear', href: '/gallery?tag=menswear', tag: 'menswear', category: 'MENSWEAR' },
+      { label: 'Womenswear', href: '/gallery?tag=womenswear', tag: 'womenswear', category: 'WOMENSWEAR' },
+      { label: 'Kidswear', href: '/gallery?tag=kidswear', tag: 'kidswear', category: 'KIDSWEAR' },
     ],
   },
   {
@@ -34,18 +38,51 @@ const menuColumns: MenuColumn[] = [
 ];
 
 const MegaMenu = () => {
-  const [hoveredTag, setHoveredTag] = useState<string | null>(null);
-  
-  // Get preview product based on hovered item or show latest
-  const getPreviewProduct = () => {
-    if (hoveredTag) {
-      const matchingProduct = products.find(p => 
-        p.tags.some(t => t.toLowerCase().includes(hoveredTag.toLowerCase()))
+  const [designs, setDesigns] = useState<Design[]>([]);
+  const [hoveredItem, setHoveredItem] = useState<MenuItem | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // ✅ Industrial Sync: Fetch latest designs from Admin Service (Port 8080)
+  useEffect(() => {
+    const fetchMenuData = async () => {
+      try {
+        const response = await getDesigns({ limit: 50 });
+        // Handle both List and Page responses
+        const data = Array.isArray(response) ? response : (response.content || []);
+        setDesigns(data);
+      } catch (error) {
+        console.error('MegaMenu sync failed:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMenuData();
+  }, []);
+
+  // ✅ Logic: Find the latest design matching the hovered category or tag
+  const getPreviewProduct = (): Design | null => {
+    if (!designs.length) return null;
+
+    if (hoveredItem) {
+      // 1. Try matching by Segment (MENSWEAR, etc)
+      if (hoveredItem.category) {
+        const match = designs.find(d => d.segment === hoveredItem.category);
+        if (match) return match;
+      }
+      // 2. Try matching by Flag (Trending, Special Offer)
+      if (hoveredItem.tag === 'trending') return designs.find(d => d.trending) || designs[0];
+      if (hoveredItem.tag === 'special-offer') return designs.find(d => d.specialOffer) || designs[0];
+      
+      // 3. Try matching by Title/Tags
+      const search = hoveredItem.label.toLowerCase();
+      const match = designs.find(d => 
+        d.title.toLowerCase().includes(search) || 
+        d.tags?.some(t => t.toLowerCase().includes(search))
       );
-      if (matchingProduct) return matchingProduct;
+      if (match) return match;
     }
-    // Default to first product (latest)
-    return products[0];
+
+    return designs[0]; // Default to latest
   };
 
   const previewProduct = getPreviewProduct();
@@ -77,8 +114,8 @@ const MegaMenu = () => {
                       <Link
                         to={item.href}
                         className="text-sm text-foreground hover:text-muted-foreground transition-colors"
-                        onMouseEnter={() => setHoveredTag(item.tag || null)}
-                        onMouseLeave={() => setHoveredTag(null)}
+                        onMouseEnter={() => setHoveredItem(item)}
+                        onMouseLeave={() => setHoveredItem(null)}
                       >
                         {item.label}
                       </Link>
@@ -91,25 +128,34 @@ const MegaMenu = () => {
 
           {/* Preview Card */}
           <div className="col-span-4">
-            <div className="bg-secondary/50 p-5 rounded-sm">
-              <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground mb-4">
-                Latest Design
-              </p>
-              <Link to={`/product/${previewProduct.id}`} className="group block">
-                <div className="aspect-[4/3] overflow-hidden rounded-sm mb-4">
-                  <img
-                    src={previewProduct.images[0]}
-                    alt={previewProduct.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <h4 className="font-serif text-lg text-foreground group-hover:text-muted-foreground transition-colors">
-                  {previewProduct.name}
-                </h4>
-                <p className="font-serif text-base text-muted-foreground mt-1">
-                  ${previewProduct.price}
-                </p>
-              </Link>
+            <div className="bg-secondary/50 p-5 rounded-sm min-h-[300px] flex flex-col justify-center">
+              {loading ? (
+                <div className="flex justify-center"><Loader2 className="animate-spin text-muted-foreground" /></div>
+              ) : previewProduct ? (
+                <>
+                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground mb-4">
+                    {hoveredItem ? `Latest in ${hoveredItem.label}` : 'Latest Design'}
+                  </p>
+                  <Link to={`/product/${previewProduct.id}`} className="group block">
+                    <div className="aspect-[4/3] overflow-hidden rounded-sm mb-4 bg-secondary/30">
+                      <img
+                        // ✅ Resolved via Asset Service (Port 8090) using assetUuid
+                        src={getAssetUrl(previewProduct.assetUuid)}
+                        alt={previewProduct.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                    <h4 className="font-serif text-lg text-foreground group-hover:text-muted-foreground transition-colors truncate">
+                      {previewProduct.title}
+                    </h4>
+                    <p className="font-serif text-base text-muted-foreground mt-1">
+                      ₹{(previewProduct.finalPriceCents / 100).toLocaleString('en-IN')}
+                    </p>
+                  </Link>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center">No designs found</p>
+              )}
             </div>
           </div>
         </div>

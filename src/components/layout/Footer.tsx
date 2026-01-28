@@ -1,5 +1,7 @@
+// src/components/layout/Footer.tsx
+
 import { Link } from 'react-router-dom';
-import { Instagram, Facebook, Linkedin } from 'lucide-react';
+import { Instagram, Linkedin, Facebook } from 'lucide-react';
 import rdcLogo from '@/assets/rdc-logo.png';
 
 // Pinterest icon component
@@ -58,6 +60,12 @@ const Footer = () => {
               <li>
                 <Link to="/faq" className="text-sm text-foreground hover:text-muted-foreground transition-colors">
                   FAQs
+                </Link>
+              </li>
+              {/* ✅ ADDED: Order Tracking path for Order Service consistency */}
+              <li>
+                <Link to="/orders" className="text-sm text-foreground hover:text-muted-foreground transition-colors">
+                  Track Order
                 </Link>
               </li>
             </ul>
@@ -122,7 +130,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="mt-16 pt-8 border-t border-border">
           <p className="text-xs text-muted-foreground text-center">
-            © {new Date().getFullYear()} RDC Textiles. All rights reserved.
+            © {new Date().getFullYear()} RDC Textiles. Industrial Microservice V2.0.
           </p>
         </div>
       </div>

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, X } from 'lucide-react';
-import { products } from '@/data/products';
-import { Product } from '@/types/product';
+import { Search, X, Loader2 } from 'lucide-react';
+import { getDesigns } from '@/api/designApi';
+import { getAssetUrl } from '@/api/apiClient';
+import type { Design } from '@/types/product';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -11,7 +12,8 @@ interface SearchOverlayProps {
 
 const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Product[]>([]);
+  const [results, setResults] = useState<Design[]>([]);
+  const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -20,18 +22,27 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
     }
   }, [isOpen]);
 
+  // ✅ Industrial Sync: Server-side search logic
   useEffect(() => {
-    if (query.length >= 2) {
-      const filtered = products.filter(
-        (p) =>
-          p.name.toLowerCase().includes(query.toLowerCase()) ||
-          p.tags.some((t) => t.toLowerCase().includes(query.toLowerCase())) ||
-          p.category.toLowerCase().includes(query.toLowerCase())
-      );
-      setResults(filtered.slice(0, 6));
-    } else {
-      setResults([]);
-    }
+    const searchTimer = setTimeout(async () => {
+      if (query.length >= 2) {
+        setLoading(true);
+        try {
+          // Hits Port 8080 Admin Service with the 'search' query parameter
+          const response = await getDesigns({ search: query, limit: 6 });
+          setResults(response.content || []);
+        } catch (error) {
+          console.error('Industrial Search Error:', error);
+          setResults([]);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setResults([]);
+      }
+    }, 300); // Debounce to prevent API hammering
+
+    return () => clearTimeout(searchTimer);
   }, [query]);
 
   useEffect(() => {
@@ -65,7 +76,11 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
         {/* Search Input */}
         <div className="max-w-2xl mx-auto pt-20">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            {loading ? (
+              <Loader2 className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground animate-spin" />
+            ) : (
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            )}
             <input
               ref={inputRef}
               type="text"
@@ -93,23 +108,25 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
                     }}
                     className="flex items-center gap-4 p-3 rounded-sm hover:bg-secondary/50 transition-colors group"
                   >
-                    <div className="w-16 h-16 rounded-sm overflow-hidden flex-shrink-0">
+                    <div className="w-16 h-16 rounded-sm overflow-hidden flex-shrink-0 bg-secondary">
                       <img
-                        src={product.images[0]}
-                        alt={product.name}
+                        // ✅ Sync: Asset streaming via Port 8090
+                        src={getAssetUrl(product.assetUuid)}
+                        alt={product.title}
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-foreground group-hover:text-muted-foreground transition-colors truncate">
-                        {product.name}
+                        {product.title}
                       </h4>
                       <p className="text-sm text-muted-foreground capitalize">
-                        {product.tags[0]}
+                        {product.segment?.replace('_', ' ') || 'Collection'}
                       </p>
                     </div>
+                    {/* ✅ Sync: Industrial Price Formatting */}
                     <span className="font-serif text-lg text-foreground">
-                      ${product.price}
+                      ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
                     </span>
                   </Link>
                 ))}
@@ -118,7 +135,7 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
           )}
 
           {/* No Results */}
-          {query.length >= 2 && results.length === 0 && (
+          {query.length >= 2 && results.length === 0 && !loading && (
             <div className="mt-8 text-center">
               <p className="text-muted-foreground">No designs found for "{query}"</p>
             </div>
@@ -131,10 +148,10 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
                 Popular Searches
               </p>
               <div className="flex flex-wrap gap-2">
-                {['Floral', 'Geometric', 'Premium', 'Trending', 'New Arrivals'].map((term) => (
+                {['Menswear', 'Womenswear', 'Floral', 'Premium', 'Special Offer'].map((term) => (
                   <button
                     key={term}
-                    onClick={() => setQuery(term.toLowerCase())}
+                    onClick={() => setQuery(term)}
                     className="px-4 py-2 bg-secondary/50 rounded-full text-sm text-foreground hover:bg-secondary transition-colors"
                   >
                     {term}

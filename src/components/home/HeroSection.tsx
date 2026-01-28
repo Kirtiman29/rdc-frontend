@@ -40,7 +40,9 @@ const HeroSection = () => {
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="px-8">
-                <Link to="/gallery?category=custom">Custom Services</Link>
+                {/* ✅ Sync: Mapping to the 'HOME_INTERIOR' segment for custom textile projects */}
+                {/* This corresponds to the Segment enum in your Admin Service backend */}
+                <Link to="/gallery?segment=HOME_INTERIOR">Custom Services</Link>
               </Button>
             </div>
           </div>

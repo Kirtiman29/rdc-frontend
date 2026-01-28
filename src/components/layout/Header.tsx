@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Search, User, Heart, ShoppingBag, Package, Menu, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MegaMenu from './MegaMenu';
 import SearchOverlay from './SearchOverlay';
 import rdcLogo from '@/assets/rdc-logo.png';
+import { getCart } from '@/api/cartApi'; // ✅ Connect to Port 8091
+import { getToken } from '@/api/apiClient'; // ✅ Check JWT status
 
 const navItems = [
   { label: 'Home', href: '/' },
@@ -19,6 +21,23 @@ const Header = () => {
   const [showMegaMenu, setShowMegaMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // ✅ Technical Logic: Cart & Auth State
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const fetchHeaderData = async () => {
+      if (getToken()) {
+        try {
+          const cart = await getCart();
+          setCartCount(cart.totalItems);
+        } catch (error) {
+          console.error('Cart sync failed:', error);
+        }
+      }
+    };
+    fetchHeaderData();
+  }, [location.pathname]); // Re-sync when user navigates
 
   return (
     <>
@@ -103,14 +122,17 @@ const Header = () => {
                 aria-label="Cart"
               >
                 <ShoppingBag className="h-5 w-5" />
-                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-foreground text-background text-[10px] font-medium rounded-full flex items-center justify-center">
-                  0
-                </span>
+                {/* ✅ FIXED: Dynamic Badge Count */}
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-foreground text-background text-[10px] font-medium rounded-full flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
               </Link>
 
               {/* Profile */}
               <Link
-                to="/profile"
+                to={getToken() ? "/profile" : "/login"} // ✅ Redirect to login if guest
                 className="p-2 text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Profile"
               >

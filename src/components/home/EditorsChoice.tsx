@@ -1,162 +1,154 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShoppingBag } from 'lucide-react';
-import { getEditorsChoice, getFeaturedProducts } from '@/data/products';
-import { useState } from 'react';
-import { useCart } from '@/hooks/useCart';
-import { Product } from '@/types/product';
+import { Heart, ShoppingBag, Loader2 } from 'lucide-react';
+import { getEditorsPick } from '@/api/designApi';
+import { getAssetUrl } from '@/api/apiClient';
+import { addToCart } from '@/api/cartApi';
+import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
+import { useToast } from '@/components/ui/use-toast';
+import type { Design } from '@/types/product';
 
 const EditorsChoice = () => {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const { addToCart } = useCart();
-  
-  // Use editors choice or fallback to featured
-  const allProducts = getEditorsChoice().length > 0 
-    ? getEditorsChoice() 
-    : getFeaturedProducts();
-  
-  const products = allProducts.slice(0, 5);
+  const [products, setProducts] = useState<Design[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
+  const { toast } = useToast();
 
-  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+  useEffect(() => {
+    const fetchPicks = async () => {
+      try {
+        // ✅ Sync: Fetch real-time editor picks from Admin Service (Port 8080)
+        // Requesting 8 to 10 designs as requested to create a balanced grid
+        const data = await getEditorsPick(8);
+        setProducts(data);
+
+        // ✅ Sync: Check wishlist status for each product from Port 8093
+        const statusMap: Record<number, boolean> = {};
+        for (const product of data) {
+          statusMap[product.id] = await checkWishlistStatus(product.id);
+        }
+        setWishlistState(statusMap);
+      } catch (error) {
+        console.error('Failed to sync editor picks:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPicks();
+  }, []);
+
+  const handleAddToCart = async (e: React.MouseEvent, product: Design) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product);
+    try {
+      // ✅ Sync: Direct integration with Cart Service (Port 8091)
+      await addToCart(product.id, 1);
+      toast({ title: "Added to Cart", description: `${product.title} is now in your bag.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Cart Error", description: "Please login to add items." });
+    }
   };
 
-  // Card configurations for asymmetric layout
-  const cardConfigs = [
-    { 
-      gridClass: 'md:col-span-2 md:row-span-2', 
-      aspectClass: 'aspect-[3/4]',
-      isStroke: false 
-    },
-    { 
-      gridClass: 'md:col-span-2 md:row-span-2', 
-      aspectClass: 'aspect-square',
-      isStroke: false 
-    },
-    { 
-      gridClass: 'md:col-span-3 md:row-span-1', 
-      aspectClass: 'aspect-[16/9]',
-      isStroke: false 
-    },
-    { 
-      gridClass: 'md:col-span-2 md:row-span-1', 
-      aspectClass: 'aspect-[4/3]',
-      isStroke: false 
-    },
-    { 
-      gridClass: 'md:col-span-2 md:row-span-1', 
-      aspectClass: 'aspect-[3/2]',
-      isStroke: true // Last card - stroke style
-    },
-  ];
-
-  const getCardScale = (index: number) => {
-    if (hoveredIndex === null) return 'scale-100';
-    if (hoveredIndex === index) return 'scale-[1.02]';
-    return 'scale-[0.98]';
+  const toggleWishlist = async (e: React.MouseEvent, product: Design) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isWished = wishlistState[product.id];
+    try {
+      if (isWished) {
+        await removeFromWishlist(product.id);
+      } else {
+        await addToWishlist(product.id);
+      }
+      setWishlistState(prev => ({ ...prev, [product.id]: !isWished }));
+      toast({ title: isWished ? "Removed" : "Saved", description: "Your wishlist has been updated." });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Wishlist Error", description: "Authentication required." });
+    }
   };
 
-  const getCardOpacity = (index: number) => {
-    if (hoveredIndex === null) return 'opacity-100';
-    if (hoveredIndex === index) return 'opacity-100';
-    return 'opacity-70';
-  };
+  if (loading) {
+    return (
+      <div className="py-20 flex justify-center items-center h-96">
+        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (products.length === 0) return null;
 
   return (
     <section className="py-20 md:py-28 bg-background">
       <div className="container mx-auto px-4 md:px-8">
-        {/* Section Header */}
-        <div className="text-center mb-16">
-          <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
-            Curated Selection
-          </span>
-          <h2 className="font-serif text-3xl md:text-4xl lg:text-5xl font-medium mt-3">
-            Editor's Choice
-          </h2>
+        <div className="flex items-end justify-between mb-12">
+          <div>
+            <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
+              Curated Selection
+            </span>
+            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2">
+              Editor's Choice
+            </h2>
+          </div>
+          <Link 
+            to="/gallery" 
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden md:block"
+          >
+            Explore All →
+          </Link>
         </div>
 
-        {/* Asymmetric Mosaic Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4 md:gap-5">
-          {products.map((product, index) => {
-            const config = cardConfigs[index] || cardConfigs[cardConfigs.length - 1];
-            
-            return (
-              <div 
-                key={product.id} 
-                className={`${config.gridClass} transition-all duration-700 ease-in-out ${getCardScale(index)} ${getCardOpacity(index)}`}
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
-              >
-                <Link 
-                  to={`/product/${product.id}`} 
-                  className="block h-full cursor-pointer"
-                >
-                  {config.isStroke ? (
-                    // Stroke/Border Style Card (Last Card)
-                    <div className={`relative ${config.aspectClass} border-2 border-foreground/20 hover:border-foreground/40 transition-all duration-500 ease-in-out flex flex-col justify-between p-6 md:p-8 group`}>
-                      {/* Top Content */}
-                      <div className="flex justify-between items-start">
-                        <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                          Editor's Pick
-                        </span>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1 transition-all duration-300" />
-                      </div>
-                      
-                      {/* Bottom Content */}
-                      <div>
-                        <h3 className="font-serif text-xl md:text-2xl text-foreground mb-2">
-                          {product.name}
-                        </h3>
-                        <div className="flex items-center justify-between">
-                          <p className="text-foreground/70 text-sm">
-                            ${product.price}
-                          </p>
-                          <button 
-                            className="h-9 px-4 bg-foreground text-background rounded-md flex items-center justify-center gap-2 text-xs font-medium opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-foreground/90"
-                            onClick={(e) => handleAddToCart(e, product)}
-                          >
-                            <ShoppingBag className="h-3.5 w-3.5" />
-                            Add
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    // Standard Image Card
-                    <div className={`relative ${config.aspectClass} overflow-hidden bg-secondary/30 group`}>
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        className="w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-105"
-                      />
-                      
-                      {/* Gradient Overlay */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/20 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-500 pointer-events-none" />
-                      
-                      {/* Add to Cart Button */}
-                      <button 
-                        className="absolute top-4 right-4 w-10 h-10 bg-background/90 backdrop-blur-sm rounded-full flex items-center justify-center text-foreground hover:bg-background transition-colors opacity-100 md:opacity-0 group-hover:opacity-100 shadow-md"
-                        onClick={(e) => handleAddToCart(e, product)}
-                      >
-                        <ShoppingBag className="h-4 w-4" />
-                      </button>
-                      
-                      {/* Bottom-left Content */}
-                      <div className="absolute bottom-0 left-0 right-0 p-5 md:p-6">
-                        <h3 className="font-serif text-lg md:text-xl lg:text-2xl text-background mb-1">
-                          {product.name}
-                        </h3>
-                        <p className="text-background/80 text-sm">
-                          ${product.price}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+        {/* ✅ FIXED: Clean 4-column grid (Industrial standard for 8-10 items) */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+          {products.map((product) => (
+            <div key={product.id} className="group">
+              <Link to={`/product/${product.id}`} className="block">
+                <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4">
+                  <img
+                    // ✅ Sync: Resolved via Asset Service (Port 8090)
+                    src={getAssetUrl(product.assetUuid)}
+                    alt={product.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  
+                  <div className="absolute top-4 left-4">
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-foreground text-background px-3 py-1">
+                      Featured
+                    </span>
+                  </div>
+
+                  <button 
+                    className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-md ${
+                      wishlistState[product.id] ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground'
+                    }`}
+                    onClick={(e) => toggleWishlist(e, product)}
+                  >
+                    <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
+                  </button>
+
+                  <button 
+                    className="absolute bottom-4 left-4 right-4 h-10 bg-foreground text-background rounded-md flex items-center justify-center gap-2 text-sm font-medium opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-foreground/90"
+                    onClick={(e) => handleAddToCart(e, product)}
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    Add to Cart
+                  </button>
+
+                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-300 pointer-events-none" />
+                </div>
+              </Link>
+
+              <div className="space-y-1 px-1">
+                <Link to={`/product/${product.id}`}>
+                  <h3 className="font-serif text-lg text-foreground group-hover:text-muted-foreground transition-colors line-clamp-1">
+                    {product.title}
+                  </h3>
                 </Link>
+                {/* ✅ Sync: Industrial Price Rendering (Paise to Rupees) */}
+                <p className="text-sm text-muted-foreground">
+                  ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
+                </p>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
     </section>
