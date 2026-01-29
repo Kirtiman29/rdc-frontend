@@ -1,3 +1,5 @@
+// src/pages/Signup.tsx
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";

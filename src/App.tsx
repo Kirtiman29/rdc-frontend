@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { getToken } from "@/api/apiClient";
 import { AuthProvider } from "@/hooks/useAuth";
@@ -16,6 +16,9 @@ import Profile from "./pages/Profile";
 import Login from "./pages/Login"; 
 import Wishlist from "./pages/Wishlist";
 import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout"; 
+import PaymentSuccess from "./pages/PaymentSuccess"; 
+import PaymentFailure from "./pages/PaymentFailure";
 import Premium from "./pages/Premium";
 import Trends from "./pages/Trends";
 import SpecialOffers from "./pages/SpecialOffers";
@@ -35,15 +38,15 @@ const GOOGLE_CLIENT_ID = "121636299170-gmk6tc3ubdq543bjolttsa27gucgcf7o.apps.goo
 
 /**
  * ✅ FIXED Industrial Guard: ProtectedRoute
- * We check getToken() directly instead of a state variable.
- * This prevents the "flash logout" redirect during navigation.
+ * Directly checks storage and preserves the user's intended destination.
  */
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = getToken();
+  const location = useLocation();
   
-  // If no token exists in localStorage, redirect to login
   if (!token) {
-    return <Navigate to="/login" replace />;
+    // Redirect to login but save the current location to redirect back after login
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   return <>{children}</>;
@@ -70,7 +73,7 @@ const App = () => (
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />
 
-              {/* ✅ Protected Routes - Direct Token Validation */}
+              {/* ✅ Protected Routes */}
               <Route 
                 path="/orders" 
                 element={<ProtectedRoute><Orders /></ProtectedRoute>} 
@@ -87,7 +90,19 @@ const App = () => (
                 path="/cart" 
                 element={<ProtectedRoute><Cart /></ProtectedRoute>} 
               />
+              <Route 
+                path="/checkout" 
+                element={<ProtectedRoute><Checkout /></ProtectedRoute>} 
+              />
 
+              <Route 
+                path="/payment-success" 
+                element={<ProtectedRoute><PaymentSuccess /></ProtectedRoute>} 
+              />
+              <Route 
+                path="/payment-failure" 
+                element={<ProtectedRoute><PaymentFailure /></ProtectedRoute>} 
+              />  
               {/* Info Routes */}
               <Route path="/about" element={<About />} />
               <Route path="/careers" element={<Careers />} />

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { saveTokens, clearTokens, applyIndustrialInterceptors } from './apiClient';
+import { applyIndustrialInterceptors, clearTokens } from './apiClient';
 
 const AUTH_BASE_URL = 'http://localhost:8081/auth';
 
@@ -21,54 +21,41 @@ export const profileApi = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Apply industrial interceptors for automated token refresh [cite: 131-135]
+// Apply industrial interceptors for automated token refresh
 applyIndustrialInterceptors(profileApi);
 
 /**
  * ✅ Industrial Sync: Register User (Port 8081)
  */
 export const registerUser = async (data: any) => {
-  const res = await authApi.post('/signup', data); // [cite: 25-27]
+  const res = await authApi.post('/signup', data);
   return res.data;
 };
 
 /**
  * ✅ Industrial Sync: Login User
- * Standardizes token extraction and saves to LocalStorage automatically.
+ * Logic: Just returns data. Storage is handled by useAuth.login() 
+ * to ensure state and storage are always in sync.
  */
 export const loginUser = async (email: string, password: string) => {
-  const res = await authApi.post('/login', { email, password }); // [cite: 27]
-  
-  const { accessToken, refreshToken } = res.data; // [cite: 48-50]
-  
-  if (accessToken) {
-    saveTokens(accessToken, refreshToken);
-    console.log('✅ Session synchronized: JWT stored in LocalStorage');
-  }
-  
-  return res.data;
+  const res = await authApi.post('/login', { email, password });
+  return res.data; // Logic moved to useAuth hook for atomic state updates
 };
 
 /**
  * ✅ Google Login Support
- * Verifies ID Token from Frontend and creates/logs in user [cite: 15-24]
  */
 export const loginWithGoogle = async (idToken: string) => {
-  const res = await authApi.post('/google', { idToken }); // 
-  const { accessToken, refreshToken } = res.data; // [cite: 22]
-  
-  if (accessToken) {
-    saveTokens(accessToken, refreshToken);
-  }
+  const res = await authApi.post('/google', { idToken });
   return res.data;
 };
 
 /**
- * ✅ FIXED: Fetch User Profile
+ * ✅ Fetch User Profile
  * Uses the authenticated profileApi to hit the /me endpoint
  */
 export const getProfile = async () => {
-  const res = await profileApi.get('/me'); // Calls getCurrentUser [cite: 10, 12, 132]
+  const res = await profileApi.get('/me');
   return res.data;
 };
 
@@ -76,10 +63,13 @@ export const getProfile = async () => {
  * ✅ Update Profile
  */
 export const updateProfile = async (data: any) => {
-  const res = await profileApi.put('/me', data); 
+  const res = await profileApi.put('/me', data);
   return res.data;
 };
 
+/**
+ * ✅ Global Logout
+ */
 export const logoutUser = () => {
   clearTokens();
   window.location.href = '/login';
