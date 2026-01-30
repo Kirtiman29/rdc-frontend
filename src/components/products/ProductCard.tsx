@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import type { Design } from '@/types/product';
 
 interface ProductCardProps {
-  product: Design; // ✅ Sync: Using industrial Design type
+  product: Design;
 }
 
 const ProductCard = ({ product }: ProductCardProps) => {
@@ -18,7 +18,11 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const [isWished, setIsWished] = useState(false);
   const [isWishloading, setIsWishloading] = useState(false);
 
-  // ✅ Sync: Backend uses 'segment' and 'category.name'
+  // ✅ Security: Restrict Right-Click
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   const categoryLabel = product.category?.name || product.segment?.replace('_', ' ') || 'Textile';
 
   useEffect(() => {
@@ -39,16 +43,9 @@ const ProductCard = ({ product }: ProductCardProps) => {
     setIsAdding(true);
     try {
       await cartApiService(product.id, 1);
-      toast({
-        title: "Added to Cart",
-        description: `${product.title} has been added to your selection.`,
-      });
+      toast({ title: "Added to Cart", description: `${product.title} added.` });
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Authentication Required",
-        description: "Please login to add items to your cart.",
-      });
+      toast({ variant: "destructive", title: "Cart Error" });
     } finally {
       setIsAdding(false);
     }
@@ -62,121 +59,110 @@ const ProductCard = ({ product }: ProductCardProps) => {
       if (isWished) {
         await removeFromWishlist(product.id);
         setIsWished(false);
-        toast({ title: "Removed", description: "Design removed from wishlist." });
       } else {
         await addToWishlist(product.id);
         setIsWished(true);
-        toast({ title: "Saved", description: "Design added to wishlist." });
       }
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Wishlist Error",
-        description: "Authentication required.",
-      });
+      toast({ variant: "destructive", title: "Wishlist Error" });
     } finally {
       setIsWishloading(false);
     }
   };
 
   return (
-    <div className="group animate-fade-in relative">
+    <div className="group animate-fade-in relative" onContextMenu={handleContextMenu}>
       <Link to={`/product/${product.id}`}>
-        <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-sm bg-secondary">
+        <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-sm bg-secondary select-none">
+          
+          {/* ✅ RDC WATERMARK */}
+          <div 
+            className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.7' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+              backgroundRepeat: 'repeat'
+            }}
+          />
+
           <img
             src={getAssetUrl(product.assetUuid)}
             alt={product.title}
+            draggable={false}
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
 
-          {/* ✅ FIXED: Vertical Badge Stack (Top-Left) */}
+          {/* Badges (Top-Left) */}
           <div className="absolute left-3 top-3 z-20 flex flex-col gap-2">
             {product.premium && (
-              <span className="rounded-sm bg-foreground/90 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-background shadow-sm">
+              <span className="rounded-sm bg-[#2A2623] px-2 py-1 text-[10px] font-bold uppercase text-white shadow-sm">
                 Premium
               </span>
             )}
             {product.discountPercent > 0 && (
-              <span className="rounded-sm bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-destructive-foreground shadow-sm">
+              <span className="rounded-sm bg-destructive px-2 py-1 text-[10px] font-bold uppercase text-white shadow-sm">
                 {product.discountPercent}% OFF
               </span>
             )}
           </div>
 
-          {/* ✅ FIXED: Wishlist Button (Top-Right) - Higher Z-Index */}
-          <div className="absolute right-3 top-3 z-30">
+          {/* ✅ FIXED ACTION STACK (Top-Right) */}
+          {/* We move the eye icon here instead of the middle */}
+          <div className="absolute right-3 top-3 z-30 flex flex-col gap-2 translate-x-2 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
             <button
               onClick={handleToggleWishlist}
               disabled={isWishloading}
-              className={`flex h-9 w-9 items-center justify-center rounded-full shadow-lg transition-all backdrop-blur-sm ${
-                isWished
-                  ? 'bg-destructive text-destructive-foreground scale-110'
-                  : 'bg-background/80 text-foreground hover:bg-background hover:scale-110'
+              className={`flex h-9 w-9 items-center justify-center rounded-full shadow-lg transition-all backdrop-blur-md ${
+                isWished ? 'bg-destructive text-white' : 'bg-white/90 text-[#2A2623] hover:bg-white'
               }`}
             >
-              {isWishloading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Heart className={`h-4 w-4 ${isWished ? 'fill-current' : ''}`} />
-              )}
+              {isWishloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className={`h-4 w-4 ${isWished ? 'fill-current' : ''}`} />}
             </button>
+            
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#2A2623] shadow-lg backdrop-blur-md hover:bg-white transition-all">
+              <Eye className="h-4 w-4" />
+            </div>
           </div>
 
           {/* Out of stock logic */}
           {!product.active && (
             <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/80">
-              <span className="font-serif text-sm uppercase tracking-wider text-muted-foreground">
-                Unavailable
-              </span>
+              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Unavailable</span>
             </div>
           )}
 
-          {/* Hover Overlay with Eye Icon */}
-          <div className="absolute inset-0 z-10 bg-black/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex items-center justify-center">
-             <div className="rounded-full bg-background/90 p-3 shadow-xl">
-                <Eye className="h-5 w-5 text-foreground" />
-             </div>
-          </div>
-
-          {/* Quick add button */}
+          {/* Add to Cart Button (Bottom) */}
           {product.active && (
-            <div className="absolute bottom-3 left-3 right-3 z-30 translate-y-2 opacity-100 transition-all duration-300 md:opacity-0 group-hover:translate-y-0 group-hover:opacity-100">
+            <div className="absolute bottom-3 left-3 right-3 z-30 translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
               <Button
-                className="w-full gap-2 shadow-xl"
+                className="w-full gap-2 shadow-xl bg-[#2A2623] hover:bg-black uppercase text-[10px] font-bold tracking-widest h-10"
                 size="sm"
                 disabled={isAdding}
                 onClick={handleAddToCart}
               >
-                {isAdding ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ShoppingBag className="h-4 w-4" />
-                )}
-                {isAdding ? 'Adding...' : 'Add to Cart'}
+                {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
+                Add to Cart
               </Button>
             </div>
           )}
+          
+          {/* Subtle Darkening Overlay */}
+          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
         </div>
       </Link>
 
-      <div>
-        <span className="mb-1 block text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+      <div className="px-1">
+        <span className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           {categoryLabel}
         </span>
         <Link to={`/product/${product.id}`}>
-          <h3 className="mb-2 font-serif text-lg font-medium transition-colors hover:text-muted-foreground line-clamp-1">
+          <h3 className="mb-1 font-serif text-lg font-medium transition-colors hover:text-muted-foreground line-clamp-1 text-[#2A2623]">
             {product.title}
           </h3>
         </Link>
         <div className="flex items-center gap-2">
-          <span className="font-medium text-foreground">
+          <span className="font-bold text-[#2A2623]">
             ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
           </span>
-          {product.discountPercent > 0 && (
-            <span className="text-sm text-muted-foreground line-through">
-              ₹{(product.basePriceCents / 100).toLocaleString('en-IN')}
-            </span>
-          )}
         </div>
       </div>
     </div>

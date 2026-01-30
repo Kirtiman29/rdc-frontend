@@ -13,15 +13,18 @@ const SpecialOffers = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
+  // ✅ Security: Restrict Right-Click across the offers section
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   useEffect(() => {
     const fetchOffers = async () => {
       try {
-        // ✅ Sync: Fetch real-time special offers from Admin Service (Port 8080)
         const response = await getDesigns({ limit: 4, specialOffer: true });
         const offerData = response.content || [];
         setProducts(offerData);
 
-        // ✅ Sync: Check wishlist status from Wishlist Service (Port 8093)
         const statusMap: Record<number, boolean> = {};
         for (const product of offerData) {
           statusMap[product.id] = await checkWishlistStatus(product.id);
@@ -71,7 +74,7 @@ const SpecialOffers = () => {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-20 md:py-28 bg-secondary/20">
+    <section className="py-20 md:py-28 bg-secondary/20" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
         {/* Section Header */}
         <div className="flex items-end justify-between mb-12">
@@ -79,13 +82,13 @@ const SpecialOffers = () => {
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-destructive">
               Limited Time
             </span>
-            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2">
+            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2 text-[#2A2623]">
               Special Offers
             </h2>
           </div>
           <Link 
             to="/gallery?specialOffer=true" 
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden md:block"
+            className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-[#2A2623] transition-colors hidden md:block"
           >
             View All Offers →
           </Link>
@@ -96,25 +99,35 @@ const SpecialOffers = () => {
           {products.map((product) => (
             <div key={product.id} className="group">
               <Link to={`/product/${product.id}`} className="block">
-                <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 border border-destructive/20">
+                <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 border border-destructive/10 select-none">
+                  
+                  {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
+                  <div 
+                    className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='22' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'repeat'
+                    }}
+                  />
+
                   <img
-                    // ✅ Sync: Resolved via Asset Service (Port 8090)
                     src={getAssetUrl(product.assetUuid)}
                     alt={product.title}
+                    draggable={false} // ✅ Prevent image dragging
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   
                   {/* Sale Badge */}
-                  <div className="absolute top-4 left-4">
-                    <span className="text-xs font-medium uppercase tracking-wider bg-destructive text-destructive-foreground px-3 py-1">
+                  <div className="absolute top-4 left-4 z-20">
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-destructive text-destructive-foreground px-3 py-1 shadow-sm">
                       Sale
                     </span>
                   </div>
 
-                  {/* Discount Percentage - Sync'd with Admin Service logic */}
+                  {/* Discount Percentage */}
                   {product.discountPercent > 0 && (
-                    <div className="absolute bottom-4 left-4">
-                      <span className="text-xs font-medium uppercase tracking-wider bg-background/90 backdrop-blur-sm px-3 py-1 rounded-sm">
+                    <div className="absolute bottom-4 left-4 z-20">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm text-[#2A2623] px-3 py-1 rounded-sm border border-destructive/20 shadow-sm">
                         {product.discountPercent}% Off
                       </span>
                     </div>
@@ -122,33 +135,32 @@ const SpecialOffers = () => {
 
                   {/* Wishlist Button */}
                   <button 
-                    className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-md ${
-                      wishlistState[product.id] ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground'
+                    className={`absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-md z-20 ${
+                      wishlistState[product.id] ? 'bg-destructive text-white' : 'bg-white/80 text-[#2A2623]'
                     }`}
                     onClick={(e) => toggleWishlist(e, product)}
                   >
                     <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
                   </button>
 
-                  {/* Hover Overlay */}
-                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-300" />
+                  {/* Darkening security overlay */}
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
                 </div>
               </Link>
 
               {/* Product Info */}
-              <div className="space-y-1">
+              <div className="space-y-1 px-1">
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-serif text-lg text-foreground group-hover:text-muted-foreground transition-colors line-clamp-1">
+                  <h3 className="font-serif text-lg text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1">
                     {product.title}
                   </h3>
                 </Link>
                 <div className="flex items-center gap-2">
-                  {/* ✅ Sync: Industrial Price Rendering (Paise to Rupees) */}
-                  <span className="text-sm font-medium text-destructive">
+                  <span className="font-bold text-destructive">
                     ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
                   </span>
                   {product.discountPercent > 0 && (
-                    <span className="text-sm text-muted-foreground line-through">
+                    <span className="text-xs text-muted-foreground line-through">
                       ₹{(product.basePriceCents / 100).toLocaleString('en-IN')}
                     </span>
                   )}
@@ -162,7 +174,7 @@ const SpecialOffers = () => {
         <div className="mt-8 text-center md:hidden">
           <Link 
             to="/gallery?specialOffer=true" 
-            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-[#2A2623] transition-colors"
           >
             View All Offers →
           </Link>

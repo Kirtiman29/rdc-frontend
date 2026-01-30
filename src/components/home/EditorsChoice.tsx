@@ -14,11 +14,15 @@ const EditorsChoice = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
+  // ✅ Security: Restrict Right-Click across the curated section
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   useEffect(() => {
     const fetchPicks = async () => {
       try {
         // ✅ Sync: Fetch real-time editor picks from Admin Service (Port 8080)
-        // Requesting 8 to 10 designs as requested to create a balanced grid
         const data = await getEditorsPick(8);
         setProducts(data);
 
@@ -41,7 +45,6 @@ const EditorsChoice = () => {
     e.preventDefault();
     e.stopPropagation();
     try {
-      // ✅ Sync: Direct integration with Cart Service (Port 8091)
       await addToCart(product.id, 1);
       toast({ title: "Added to Cart", description: `${product.title} is now in your bag.` });
     } catch (error) {
@@ -77,7 +80,7 @@ const EditorsChoice = () => {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-20 md:py-28 bg-background">
+    <section className="py-20 md:py-28 bg-background" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex items-end justify-between mb-12">
           <div>
@@ -96,27 +99,38 @@ const EditorsChoice = () => {
           </Link>
         </div>
 
-        {/* ✅ FIXED: Clean 4-column grid (Industrial standard for 8-10 items) */}
+        {/* ✅ Layout: 4-column grid (Industrial standard) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {products.map((product) => (
             <div key={product.id} className="group">
               <Link to={`/product/${product.id}`} className="block">
-                <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4">
+                <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none">
+                  
+                  {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
+                  {/* Using stroke (outline) + higher opacity for clear copyright signal */}
+                  <div 
+                    className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='22' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'repeat'
+                    }}
+                  />
+
                   <img
-                    // ✅ Sync: Resolved via Asset Service (Port 8090)
                     src={getAssetUrl(product.assetUuid)}
                     alt={product.title}
+                    draggable={false} // ✅ Security: Prevent drag-to-save
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   
-                  <div className="absolute top-4 left-4">
+                  <div className="absolute top-4 left-4 z-20">
                     <span className="text-[10px] font-bold uppercase tracking-wider bg-foreground text-background px-3 py-1">
                       Featured
                     </span>
                   </div>
 
                   <button 
-                    className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-md ${
+                    className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-md z-20 ${
                       wishlistState[product.id] ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground'
                     }`}
                     onClick={(e) => toggleWishlist(e, product)}
@@ -125,14 +139,15 @@ const EditorsChoice = () => {
                   </button>
 
                   <button 
-                    className="absolute bottom-4 left-4 right-4 h-10 bg-foreground text-background rounded-md flex items-center justify-center gap-2 text-sm font-medium opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-foreground/90"
+                    className="absolute bottom-4 left-4 right-4 h-10 bg-foreground text-background rounded-md flex items-center justify-center gap-2 text-sm font-medium opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-foreground/90 z-20"
                     onClick={(e) => handleAddToCart(e, product)}
                   >
                     <ShoppingBag className="h-4 w-4" />
                     Add to Cart
                   </button>
 
-                  <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-300 pointer-events-none" />
+                  {/* Darkening overlay for contrast & security */}
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
                 </div>
               </Link>
 
@@ -142,8 +157,7 @@ const EditorsChoice = () => {
                     {product.title}
                   </h3>
                 </Link>
-                {/* ✅ Sync: Industrial Price Rendering (Paise to Rupees) */}
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground font-medium">
                   ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
                 </p>
               </div>

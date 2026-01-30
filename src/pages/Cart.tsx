@@ -14,7 +14,11 @@ const Cart = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // ✅ Industrial Sync: Fetch cart state from Port 8091
+  // ✅ Security: Restrict Right-Click
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   const fetchCartState = async () => {
     try {
       const data = await getCart();
@@ -32,9 +36,8 @@ const Cart = () => {
 
   const handleRemove = async (itemId: number) => {
     try {
-      // ✅ Persist removal to Cart Service
       await removeCartItem(itemId);
-      await fetchCartState(); // Refresh local state
+      await fetchCartState();
       toast({ title: "Item removed", description: "Cart updated successfully." });
     } catch (error) {
       toast({ variant: "destructive", title: "Update Failed", description: "Could not remove item." });
@@ -42,7 +45,6 @@ const Cart = () => {
   };
 
   const handleCheckout = () => {
-    // Navigate to industrial checkout flow (Port 8092 Integration)
     navigate('/checkout');
   };
 
@@ -58,7 +60,7 @@ const Cart = () => {
   const subtotal = (cartData?.subtotalCents || 0) / 100;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1 bg-secondary/20">
         <div className="container mx-auto px-4 md:px-8 py-12 md:py-20">
@@ -84,18 +86,28 @@ const Cart = () => {
             </div>
           ) : (
             <div className="grid lg:grid-cols-3 gap-8">
-              {/* Cart Items */}
               <div className="lg:col-span-2 space-y-4">
                 {items.map((item) => (
                   <div
                     key={item.id}
                     className="bg-background border border-border p-6 flex gap-6 animate-fade-in"
                   >
-                    {/* Thumbnail resolved via Asset Service (Port 8090) */}
-                    <Link to={`/product/${item.designId}`} className="w-24 h-24 flex-shrink-0 overflow-hidden bg-secondary/30">
+                    {/* ✅ Protected Thumbnail */}
+                    <Link to={`/product/${item.designId}`} className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-secondary/30 select-none">
+                      
+                      {/* MICRO-WATERMARK OVERLAY */}
+                      <div 
+                        className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='6' font-weight='900' fill='none' stroke='white' stroke-width='0.2' text-anchor='middle' transform='rotate(-35 20 20)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'repeat'
+                        }}
+                      />
+
                       <img
                         src={getAssetUrl(item.assetUuid)}
                         alt={item.designTitle}
+                        draggable={false} // ✅ Prevent drag
                         className="w-full h-full object-cover"
                       />
                     </Link>
@@ -127,7 +139,6 @@ const Cart = () => {
                 ))}
               </div>
 
-              {/* Order Summary */}
               <div className="lg:col-span-1">
                 <div className="bg-background border border-border p-6 sticky top-24 shadow-sm">
                   <h2 className="font-serif text-xl mb-6">Order Summary</h2>

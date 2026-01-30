@@ -14,6 +14,11 @@ export default function Checkout() {
     const { items: cart } = useCart(); 
     const [isProcessing, setIsProcessing] = useState(false);
 
+    // ✅ Security: Restrict Right-Click on checkout review
+    const handleContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+    };
+
     useEffect(() => {
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
@@ -43,7 +48,7 @@ export default function Checkout() {
     };
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA]">
+        <div className="min-h-screen bg-[#FAFAFA]" onContextMenu={handleContextMenu}>
             <div className="bg-white border-b border-border py-4">
                 <div className="container mx-auto px-6 flex justify-between items-center">
                     <Link to="/cart" className="flex items-center gap-2 text-sm font-medium hover:text-[#2A2623] transition-colors">
@@ -71,15 +76,32 @@ export default function Checkout() {
                             <div className="divide-y divide-border">
                                 {cart.map((item) => (
                                     <div key={item.id} className="p-6 flex gap-6 items-center">
-                                        <div className="w-16 h-16 bg-secondary/30 rounded-lg overflow-hidden border border-border flex-shrink-0">
-                                            <img src={getAssetUrl(item.assetUuid)} alt="" className="w-full h-full object-cover" />
+                                        {/* ✅ Protected Thumbnail */}
+                                        <div className="relative w-16 h-16 bg-secondary/30 rounded-lg overflow-hidden border border-border flex-shrink-0 select-none">
+                                            
+                                            {/* MICRO-WATERMARK OVERLAY */}
+                                            <div 
+                                                className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
+                                                style={{
+                                                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='5' font-weight='900' fill='none' stroke='white' stroke-width='0.15' text-anchor='middle' transform='rotate(-35 15 15)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                                                    backgroundRepeat: 'repeat'
+                                                }}
+                                            />
+
+                                            <img 
+                                                src={getAssetUrl(item.assetUuid)} 
+                                                alt="" 
+                                                draggable={false} // ✅ Prevent drag
+                                                className="w-full h-full object-cover" 
+                                            />
                                         </div>
+
                                         <div className="flex-1 min-w-0 text-left">
                                             <h3 className="font-serif text-lg truncate text-[#2A2623]">{item.designTitle}</h3>
-                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Digital License × {item.quantity}</p>
+                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Digital License × {item.quantity}</p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="font-medium text-[#2A2623]">₹{(item.priceCents / 100).toLocaleString('en-IN')}</p>
+                                            <p className="font-bold text-[#2A2623]">₹{(item.priceCents / 100).toLocaleString('en-IN')}</p>
                                         </div>
                                     </div>
                                 ))}
@@ -93,7 +115,7 @@ export default function Checkout() {
                             <div className="space-y-4 mb-8">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground font-medium uppercase tracking-tighter">Inventory Subtotal</span>
-                                    <span className="text-[#2A2623]">₹{(calculateTotal() / 100).toLocaleString('en-IN')}</span>
+                                    <span className="text-[#2A2623] font-bold">₹{(calculateTotal() / 100).toLocaleString('en-IN')}</span>
                                 </div>
                                 <div className="h-[1px] bg-border my-2" />
                                 <div className="flex justify-between items-end">
@@ -107,12 +129,12 @@ export default function Checkout() {
                             <Button 
                                 onClick={handleCheckout} 
                                 disabled={isProcessing || cart.length === 0} 
-                                className="w-full h-16 bg-[#2A2623] hover:bg-[#1a1816] text-lg font-bold shadow-lg transition-all active:scale-[0.98] rounded-xl"
+                                className="w-full h-16 bg-[#2A2623] hover:bg-black text-lg font-bold shadow-lg transition-all active:scale-[0.98] rounded-xl uppercase tracking-widest"
                             >
                                 {isProcessing ? (
                                     <span className="flex items-center gap-3"><Loader2 className="animate-spin" /> Authorizing...</span>
                                 ) : (
-                                    <span className="flex items-center gap-3"><Lock size={20} /> Secure Checkout</span>
+                                    <span className="flex items-center gap-3"><Lock size={20} strokeWidth={2.5} /> Secure Checkout</span>
                                 )}
                             </Button>
 

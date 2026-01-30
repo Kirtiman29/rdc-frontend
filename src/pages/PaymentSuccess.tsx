@@ -19,7 +19,7 @@ export default function PaymentSuccess() {
         // Hits Order Service Port 8095 [cite: 162]
         const { data } = await orderApi.get(`/${orderId}`);
         
-        // Ensure the order is marked as PAID in database [cite: 148, 149]
+        // Ensure the order is marked as PAID in database
         if (data.status === 'PAID') {
           setIsVerifying(false);
           

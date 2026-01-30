@@ -27,6 +27,11 @@ const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Security: Restrict Right-Click across order history
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   useEffect(() => {
     const fetchOrders = async () => {
       if (!getToken()) {
@@ -69,7 +74,7 @@ const Orders = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAFAFA]">
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA]" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1">
         <div className="container mx-auto px-6 md:px-12 py-16">
@@ -95,13 +100,28 @@ const Orders = () => {
                     >
                       {/* LEFT SIDE: ASSET INFO */}
                       <div className="flex items-center gap-6 w-full md:w-auto">
-                        <div className="w-24 h-24 bg-secondary/20 flex-shrink-0 overflow-hidden rounded-lg border border-border">
+                        <div className="relative w-24 h-24 bg-secondary/20 flex-shrink-0 overflow-hidden rounded-lg border border-border select-none">
+                          
+                          {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
+                          <div 
+                            className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
+                            style={{
+                              backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='6' font-weight='900' fill='none' stroke='white' stroke-width='0.2' text-anchor='middle' transform='rotate(-35 20 20)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                              backgroundRepeat: 'repeat'
+                            }}
+                          />
+
                           <img
                             src={getAssetUrl(item.assetUuid)}
                             alt=""
-                            className="w-full h-full object-cover"
+                            draggable={false} // ✅ Prevent Drag
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
+                          
+                          {/* Security contrast layer */}
+                          <div className="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors pointer-events-none" />
                         </div>
+
                         <div className="text-left space-y-1">
                           <h3 className="font-serif text-2xl text-[#2A2623] leading-tight">{item.designTitle}</h3>
                           <div className="flex flex-col gap-0.5">

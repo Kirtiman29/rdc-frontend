@@ -16,15 +16,17 @@ const Trends = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
+  // ✅ Security: Restrict Right-Click on global trends container
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   useEffect(() => {
     const fetchTrendingData = async () => {
       try {
-        // ✅ Sync: Fetch real-time trending designs from Admin Service (Port 8080)
-        // Fetches a larger set (24) for the main trends page
         const data = await getTrendingDesigns(24);
         setProducts(data);
 
-        // ✅ Sync: Check wishlist status for each product via Port 8093
         const statusMap: Record<number, boolean> = {};
         for (const product of data) {
           statusMap[product.id] = await checkWishlistStatus(product.id);
@@ -36,7 +38,6 @@ const Trends = () => {
         setLoading(false);
       }
     };
-
     fetchTrendingData();
   }, []);
 
@@ -47,13 +48,13 @@ const Trends = () => {
       await addToCart(product.id, 1);
       toast({ 
         title: "Added to Cart", 
-        description: `${product.title} has been added.` 
+        description: `${product.title} added.` 
       });
     } catch (error) {
       toast({ 
         variant: "destructive", 
         title: "Cart Error", 
-        description: "Please login to manage your cart." 
+        description: "Please login to manage your selection." 
       });
     }
   };
@@ -69,16 +70,9 @@ const Trends = () => {
         await addToWishlist(product.id);
       }
       setWishlistState(prev => ({ ...prev, [product.id]: !isWished }));
-      toast({ 
-        title: isWished ? "Removed" : "Saved", 
-        description: "Your selection has been updated." 
-      });
+      toast({ title: isWished ? "Removed" : "Saved" });
     } catch (error) {
-      toast({ 
-        variant: "destructive", 
-        title: "Error", 
-        description: "Authentication required." 
-      });
+      toast({ variant: "destructive", title: "Error" });
     }
   };
 
@@ -87,7 +81,7 @@ const Trends = () => {
       <div className="min-h-screen flex flex-col bg-background">
         <Header />
         <main className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#2A2623]" />
         </main>
         <Footer />
       </div>
@@ -95,16 +89,16 @@ const Trends = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1">
         {/* Hero Section */}
         <section className="py-16 md:py-24 bg-secondary/20">
           <div className="container mx-auto px-4 md:px-8 text-center">
-            <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
+            <span className="text-xs font-bold uppercase tracking-[0.3em] text-[#2A2623]">
               What's Hot
             </span>
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-medium mt-4 mb-6">
+            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-medium mt-4 mb-6 text-[#2A2623]">
               Trending Designs
             </h1>
             <p className="text-muted-foreground text-lg max-w-xl mx-auto">
@@ -121,57 +115,69 @@ const Trends = () => {
               {products.map((product) => (
                 <div
                   key={product.id}
-                  className="group relative bg-background rounded-sm overflow-hidden border border-border/50"
+                  className="group relative bg-background rounded-sm overflow-hidden border border-border/60 hover:border-[#2A2623]/30 transition-all duration-300"
                 >
                   {/* Action Buttons Overlay (Upper Right) */}
-                  <div className="absolute top-3 right-3 z-10 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  <div className="absolute top-3 right-3 z-20 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
                     <button
                       onClick={(e) => toggleWishlist(e, product)}
-                      className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all shadow-sm ${
-                        wishlistState[product.id] ? 'bg-primary text-primary-foreground' : 'bg-background/80 text-muted-foreground hover:text-foreground'
+                      className={`w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-md ${
+                        wishlistState[product.id] ? 'bg-destructive text-white' : 'bg-white/90 text-[#2A2623]'
                       }`}
-                      aria-label="Toggle wishlist"
                     >
                       <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
                     </button>
                     <Link 
                       to={`/product/${product.id}`}
-                      className="w-9 h-9 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center text-muted-foreground hover:text-foreground transition-all shadow-sm"
+                      className="w-9 h-9 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-[#2A2623] hover:bg-white transition-all shadow-md"
                     >
                       <Eye className="h-4 w-4" />
                     </Link>
                   </div>
 
-                  {/* Image resolved via Asset Service (Port 8090) */}
-                  <Link to={`/product/${product.id}`} className="block">
-                    <div className="aspect-[3/4] overflow-hidden bg-secondary/30">
+                  <Link to={`/product/${product.id}`} className="block relative">
+                    <div className="aspect-[3/4] overflow-hidden bg-secondary/30 select-none">
+                      
+                      {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK */}
+                      <div 
+                        className="absolute inset-0 z-10 pointer-events-none opacity-[0.22]"
+                        style={{
+                          backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.7' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                          backgroundRepeat: 'repeat'
+                        }}
+                      />
+
                       <img
                         src={getAssetUrl(product.assetUuid)}
                         alt={product.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        draggable={false} // ✅ Prevent Drag
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
+                      
+                      {/* Security Contrast Overlay */}
+                      <div className="absolute inset-0 bg-black/5 group-hover:bg-black/15 transition-colors pointer-events-none" />
                     </div>
                   </Link>
 
                   {/* Info & Add to Cart */}
-                  <div className="p-4 space-y-3">
+                  <div className="p-5 space-y-4">
                     <div>
-                      <p className="text-[10px] text-muted-foreground uppercase tracking-widest mb-1">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">
                         {product.segment?.replace('_', ' ') || 'Textile'}
                       </p>
-                      <h3 className="font-serif text-md text-foreground line-clamp-1">
+                      <h3 className="font-serif text-lg text-[#2A2623] line-clamp-1 group-hover:text-slate-600 transition-colors">
                         {product.title}
                       </h3>
-                      <p className="font-serif text-lg text-foreground mt-1">
+                      <p className="font-bold text-xl text-[#2A2623] mt-1">
                         ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
                       </p>
                     </div>
 
                     <button 
-                      className="w-full h-10 bg-foreground text-background text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-foreground/90 transition-colors"
+                      className="w-full h-11 bg-[#2A2623] text-white text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-black transition-all shadow-sm active:scale-95"
                       onClick={(e) => handleAddToCart(e, product)}
                     >
-                      <ShoppingBag className="h-3.5 w-3.5" />
+                      <ShoppingBag className="h-4 w-4" />
                       Add to Cart
                     </button>
                   </div>
@@ -181,8 +187,8 @@ const Trends = () => {
 
             {/* Empty State */}
             {products.length === 0 && (
-              <div className="text-center py-20">
-                <p className="text-muted-foreground">No trending designs found.</p>
+              <div className="text-center py-24 border border-dashed border-slate-200 rounded-xl">
+                <p className="text-slate-400 font-medium">No trending designs synchronized.</p>
               </div>
             )}
           </div>

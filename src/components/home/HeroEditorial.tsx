@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,10 +13,29 @@ const HeroEditorial = () => {
   const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [loading, setLoading] = useState(true);
 
+  // ✅ Spotlight Reveal State
+  const [isBlurred, setIsBlurred] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // ✅ Security: Restrict Right-Click
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
+  // ✅ Spotlight Logic: Follow Mouse
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    setMousePos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
+  };
+
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        // ✅ Sync: Fetch real-time trending feed from Admin Service (Port 8080)
         const data = await getTrendingDesigns(4);
         setTrendingProducts(data);
       } catch (error) {
@@ -27,6 +46,20 @@ const HeroEditorial = () => {
     };
     fetchTrending();
   }, []);
+
+  // ✅ Timer Logic: Trigger Blur after 3 seconds (REDUCED)
+  useEffect(() => {
+    if (loading || !currentProduct) return;
+    
+    // Reset blur whenever we change slides
+    setIsBlurred(false);
+    
+    const blurTimer = setTimeout(() => {
+      setIsBlurred(true);
+    }, 3000); // 3 Seconds visible, then transition to blur
+
+    return () => clearTimeout(blurTimer);
+  }, [currentIndex, loading]);
 
   const totalSlides = trendingProducts.length;
   const currentProduct = trendingProducts[currentIndex];
@@ -53,7 +86,7 @@ const HeroEditorial = () => {
     if (totalSlides <= 1) return;
     const timer = setInterval(() => {
       goToNext();
-    }, 6000);
+    }, 10000); // Allow time for 3s reveal + interaction
     return () => clearInterval(timer);
   }, [goToNext, totalSlides]);
 
@@ -70,11 +103,25 @@ const HeroEditorial = () => {
   const formatNumber = (num: number) => String(num).padStart(2, '0');
 
   return (
-    <section className="relative bg-background overflow-hidden">
+    <section className="relative bg-background overflow-hidden" onContextMenu={handleContextMenu}>
       <div className="flex flex-col lg:flex-row min-h-[85vh] lg:min-h-[90vh]">
         
-        {/* Left: Full-Bleed Editorial Image (75%) */}
-        <div className="relative w-full lg:w-[75%] h-[55vh] lg:h-auto overflow-hidden">
+        {/* Left: Image Column (75%) */}
+        <div 
+          ref={containerRef}
+          onMouseMove={handleMouseMove}
+          className="relative w-full lg:w-[75%] h-[55vh] lg:h-auto overflow-hidden select-none cursor-none"
+        >
+          
+          {/* ✅ WATERMARK (z-50: Topmost layer) */}
+          <div 
+            className="absolute inset-0 z-50 pointer-events-none opacity-[0.25]"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='150' height='150' viewBox='0 0 150 150' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='24' font-weight='900' fill='none' stroke='white' stroke-width='1' text-anchor='middle' transform='rotate(-35 75 75)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+              backgroundRepeat: 'repeat'
+            }}
+          />
+
           <div 
             className="absolute inset-0 z-20 pointer-events-none opacity-[0.03] mix-blend-overlay"
             style={{
@@ -91,18 +138,30 @@ const HeroEditorial = () => {
                 : 'opacity-100 translate-x-0'
             }`}
           >
-            <div className="relative w-full h-full group cursor-pointer">
+            <div className="relative w-full h-full group">
+              {/* Base Design Image */}
               <img
-                // ✅ Sync: Mapping assetUuid to Port 8090 Media Service
                 src={getAssetUrl(currentProduct.assetUuid)}
                 alt={currentProduct.title}
-                className="w-full h-full object-cover transition-transform duration-[1500ms] ease-out group-hover:scale-[1.02] filter saturate-[0.92] contrast-[1.01]"
+                draggable={false}
+                className="absolute inset-0 w-full h-full object-cover saturate-[0.92] contrast-[1.01]"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-black/5 pointer-events-none" />
+
+              {/* ✅ BLUR OVERLAY WITH 3s DELAY */}
+              <div 
+                className={`absolute inset-0 z-30 transition-opacity duration-1000 backdrop-blur-md bg-black/10 ${isBlurred ? 'opacity-100' : 'opacity-0'}`}
+                style={{
+                  WebkitMaskImage: `radial-gradient(circle 120px at ${mousePos.x}px ${mousePos.y}px, transparent 100%, black 100%)`,
+                  maskImage: `radial-gradient(circle 120px at ${mousePos.x}px ${mousePos.y}px, transparent 100%, black 100%)`,
+                }}
+              />
+
+              <div className="absolute inset-0 bg-black/10 pointer-events-none z-10" />
             </div>
           </div>
 
-          <div className="absolute bottom-10 left-10 hidden lg:flex items-center gap-2 z-20">
+          {/* Navigation Controls */}
+          <div className="absolute bottom-10 left-10 hidden lg:flex items-center gap-2 z-[60]">
             <button
               onClick={goToPrevious}
               disabled={isAnimating}
@@ -119,7 +178,7 @@ const HeroEditorial = () => {
             </button>
           </div>
 
-          <div className="absolute bottom-10 right-10 z-20 hidden lg:block">
+          <div className="absolute bottom-10 right-10 z-[60] hidden lg:block">
             <div className="flex items-baseline gap-1 text-background/90">
               <span className="font-serif text-2xl tracking-wide">{formatNumber(currentIndex + 1)}</span>
               <span className="text-background/50 text-sm mx-1">/</span>
@@ -128,7 +187,7 @@ const HeroEditorial = () => {
           </div>
         </div>
 
-        {/* Right: Editorial Content Column (25%) */}
+        {/* Right: Content Column */}
         <div className="w-full lg:w-[25%] flex flex-col justify-center px-6 py-12 lg:px-10 lg:py-20 xl:px-14">
           <div
             className={`transition-all duration-700 delay-150 ${
@@ -148,7 +207,6 @@ const HeroEditorial = () => {
             </p>
 
             <div className="flex items-baseline gap-3 mb-10">
-              {/* ✅ Sync: Industrial Price Rendering (Paise to Rupees) */}
               <span className="font-serif text-2xl lg:text-3xl text-foreground">
                 ₹{(currentProduct.finalPriceCents / 100).toLocaleString('en-IN')}
               </span>
@@ -159,7 +217,7 @@ const HeroEditorial = () => {
               )}
             </div>
 
-            <Button asChild size="lg" className="w-full px-8 py-6 text-xs tracking-[0.15em] uppercase font-medium">
+            <Button asChild size="lg" className="w-full px-8 py-6 text-xs tracking-[0.15em] uppercase font-medium bg-[#2A2623] hover:bg-black">
               <Link to={`/product/${currentProduct.id}`}>
                 View Design
               </Link>
@@ -172,28 +230,6 @@ const HeroEditorial = () => {
             </div>
           </div>
         </div>
-      </div>
-
-      <div className="lg:hidden absolute bottom-6 left-0 right-0 flex items-center justify-center gap-4 z-20">
-        <button
-          onClick={goToPrevious}
-          disabled={isAnimating}
-          className="w-10 h-10 border border-foreground/20 bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground disabled:opacity-40"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <div className="flex items-baseline gap-1 text-foreground">
-          <span className="font-serif text-lg">{formatNumber(currentIndex + 1)}</span>
-          <span className="text-muted-foreground/50 mx-1">/</span>
-          <span className="text-muted-foreground text-sm">{formatNumber(totalSlides)}</span>
-        </div>
-        <button
-          onClick={goToNext}
-          disabled={isAnimating}
-          className="w-10 h-10 border border-foreground/20 bg-background/80 backdrop-blur-sm flex items-center justify-center text-foreground disabled:opacity-40"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
       </div>
     </section>
   );

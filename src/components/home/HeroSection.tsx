@@ -3,8 +3,16 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const HeroSection = () => {
+  // ✅ Security: Restrict Right-Click across the entire hero area
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   return (
-    <section className="relative min-h-[90vh] overflow-hidden bg-secondary">
+    <section 
+      className="relative min-h-[90vh] overflow-hidden bg-secondary select-none"
+      onContextMenu={handleContextMenu}
+    >
       {/* Background pattern */}
       <div className="absolute inset-0 opacity-5">
         <div
@@ -18,11 +26,11 @@ const HeroSection = () => {
       <div className="container relative flex min-h-[90vh] items-center px-4">
         <div className="grid gap-8 md:grid-cols-2 md:gap-12 lg:gap-20">
           {/* Text content */}
-          <div className="flex flex-col justify-center">
+          <div className="flex flex-col justify-center relative z-20">
             <span className="mb-4 inline-block font-serif text-sm uppercase tracking-[0.3em] text-muted-foreground">
               Premium Collection
             </span>
-            <h1 className="mb-6 font-serif text-4xl font-medium leading-tight tracking-tight md:text-5xl lg:text-6xl xl:text-7xl">
+            <h1 className="mb-6 font-serif text-4xl font-medium leading-tight tracking-tight md:text-5xl lg:text-6xl xl:text-7xl text-[#2A2623]">
               Artistry Woven
               <br />
               <span className="text-champagne">Into Every Thread</span>
@@ -33,52 +41,87 @@ const HeroSection = () => {
               and timeless elegance.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Button asChild size="lg" className="group px-8">
+              <Button asChild size="lg" className="group px-8 bg-[#2A2623] hover:bg-black uppercase text-xs font-bold tracking-widest">
                 <Link to="/gallery">
                   Explore Collection
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="px-8">
-                {/* ✅ Sync: Mapping to the 'HOME_INTERIOR' segment for custom textile projects */}
-                {/* This corresponds to the Segment enum in your Admin Service backend */}
+              <Button asChild variant="outline" size="lg" className="px-8 border-[#2A2623] text-[#2A2623] uppercase text-xs font-bold tracking-widest">
                 <Link to="/gallery?segment=HOME_INTERIOR">Custom Services</Link>
               </Button>
             </div>
           </div>
 
-          {/* Hero image grid */}
+          {/* Hero image grid with Watermark */}
           <div className="relative hidden md:block">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-4">
-                <div className="aspect-[3/4] animate-fade-in overflow-hidden rounded-sm">
+                {/* Image 1 */}
+                <div className="relative aspect-[3/4] animate-fade-in overflow-hidden rounded-sm group">
+                  {/* ✅ Watermark Overlay */}
+                  <div 
+                    className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='14' font-weight='900' fill='none' stroke='white' stroke-width='0.5' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'repeat'
+                    }}
+                  />
                   <img
                     src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
                     alt="Textile pattern detail"
-                    className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+                    draggable={false} // ✅ Block Drag
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 </div>
-                <div className="aspect-square animate-fade-in overflow-hidden rounded-sm [animation-delay:200ms]">
+                {/* Image 2 */}
+                <div className="relative aspect-square animate-fade-in overflow-hidden rounded-sm [animation-delay:200ms] group">
+                  <div 
+                    className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='12' font-weight='900' fill='none' stroke='white' stroke-width='0.5' text-anchor='middle' transform='rotate(-35 40 40)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'repeat'
+                    }}
+                  />
                   <img
                     src="https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400&q=80"
                     alt="Premium fabric"
-                    className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+                    draggable={false}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 </div>
               </div>
               <div className="space-y-4 pt-12">
-                <div className="aspect-square animate-fade-in overflow-hidden rounded-sm [animation-delay:100ms]">
+                {/* Image 3 */}
+                <div className="relative aspect-square animate-fade-in overflow-hidden rounded-sm [animation-delay:100ms] group">
+                  <div 
+                    className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='12' font-weight='900' fill='none' stroke='white' stroke-width='0.5' text-anchor='middle' transform='rotate(-35 40 40)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'repeat'
+                    }}
+                  />
                   <img
                     src="https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=400&q=80"
                     alt="Velvet texture"
-                    className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+                    draggable={false}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 </div>
-                <div className="aspect-[3/4] animate-fade-in overflow-hidden rounded-sm [animation-delay:300ms]">
+                {/* Image 4 */}
+                <div className="relative aspect-[3/4] animate-fade-in overflow-hidden rounded-sm [animation-delay:300ms] group">
+                   <div 
+                    className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
+                    style={{
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='14' font-weight='900' fill='none' stroke='white' stroke-width='0.5' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                      backgroundRepeat: 'repeat'
+                    }}
+                  />
                   <img
                     src="https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=600&q=80"
                     alt="Artisan pillows"
-                    className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
+                    draggable={false}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 </div>
               </div>

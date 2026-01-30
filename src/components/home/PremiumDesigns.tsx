@@ -15,13 +15,17 @@ const PremiumDesigns = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // ✅ Security: Restrict Right-Click
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   useEffect(() => {
     const fetchPremium = async () => {
       try {
         const response = await getDesigns({ premium: true });
         const premiumData = Array.isArray(response) ? response : (response.content || []);
         
-        // Strictly take the 4 most recent premium designs
         setProducts(premiumData.slice(0, 4));
 
         const statusMap: Record<number, boolean> = {};
@@ -83,7 +87,7 @@ const PremiumDesigns = () => {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-24 md:py-32 bg-[#0a0a0a] text-white">
+    <section className="py-24 md:py-32 bg-[#0a0a0a] text-white" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex flex-row items-end justify-between mb-16">
           <div className="space-y-2">
@@ -116,25 +120,33 @@ const PremiumDesigns = () => {
           className="flex flex-nowrap gap-6 md:gap-10 overflow-x-auto scroll-smooth pb-4 no-scrollbar"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          <style>{`div::-webkit-scrollbar { display: none; }`}</style>
-
           {products.map((product) => (
             <div key={product.id} className="flex-none w-[300px] sm:w-[340px] md:w-[380px] group">
-              <div className="relative aspect-[3/4] bg-neutral-900 overflow-hidden mb-6">
+              <div className="relative aspect-[3/4] bg-neutral-900 overflow-hidden mb-6 select-none">
+                
+                {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
+                <div 
+                  className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='20' font-weight='900' fill='none' stroke='white' stroke-width='0.7' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'repeat'
+                  }}
+                />
+
                 <img
                   src={getAssetUrl(product.assetUuid)}
                   alt={product.title}
+                  draggable={false} // ✅ Prevent Drag
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 
-                <div className="absolute top-4 left-4">
+                <div className="absolute top-4 left-4 z-20">
                   <span className="text-[10px] font-bold uppercase tracking-wider bg-[#c9a962] text-[#1a1a1a] px-3 py-1">
                     Premium
                   </span>
                 </div>
 
-                {/* ✅ Action Buttons Overlay (Upper Right) */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
                   <button 
                     className={`w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-all ${
                       wishlistState[product.id] ? 'bg-[#c9a962] text-[#1a1a1a]' : 'bg-white/10 text-white hover:bg-white/20'
@@ -144,7 +156,6 @@ const PremiumDesigns = () => {
                     <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
                   </button>
                   
-                  {/* ✅ FIXED: Restored Eye Icon for Quick View */}
                   <Link 
                     to={`/product/${product.id}`}
                     className="w-10 h-10 bg-white/10 backdrop-blur-sm text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-all"
@@ -154,12 +165,15 @@ const PremiumDesigns = () => {
                 </div>
 
                 <button 
-                  className="absolute bottom-4 left-4 right-4 h-10 bg-white text-black text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:bg-[#c9a962] hover:text-white flex items-center justify-center gap-2"
+                  className="absolute bottom-4 left-4 right-4 h-10 bg-white text-black text-[10px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-all hover:bg-[#c9a962] hover:text-white flex items-center justify-center gap-2 z-20"
                   onClick={(e) => handleAddToCart(e, product)}
                 >
                   <ShoppingBag className="h-3.5 w-3.5" />
                   Add to Cart
                 </button>
+
+                {/* Darkening layer for premium contrast & security */}
+                <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors pointer-events-none" />
               </div>
 
               <div className="space-y-2 px-1">
