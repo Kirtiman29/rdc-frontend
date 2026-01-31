@@ -31,21 +31,20 @@ import Privacy from "./pages/Privacy";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 
+// ✅ NEW IMPORTS for Password Recovery & Verification
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+
 const queryClient = new QueryClient();
 
 // ✅ Your Backend Client ID 
 const GOOGLE_CLIENT_ID = "121636299170-gmk6tc3ubdq543bjolttsa27gucgcf7o.apps.googleusercontent.com";
 
-/**
- * ✅ FIXED Industrial Guard: ProtectedRoute
- * Directly checks storage and preserves the user's intended destination.
- */
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = getToken();
   const location = useLocation();
   
   if (!token) {
-    // Redirect to login but save the current location to redirect back after login
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -72,8 +71,13 @@ const App = () => (
               {/* Auth Routes */}
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />
+              
+              {/* ✅ NEW: Recovery & Verification Routes */}
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/verification-success" element={<Login />} />
 
-              {/* ✅ Protected Routes */}
+              {/* Protected Routes */}
               <Route 
                 path="/orders" 
                 element={<ProtectedRoute><Orders /></ProtectedRoute>} 
@@ -103,6 +107,7 @@ const App = () => (
                 path="/payment-failure" 
                 element={<ProtectedRoute><PaymentFailure /></ProtectedRoute>} 
               />  
+
               {/* Info Routes */}
               <Route path="/about" element={<About />} />
               <Route path="/careers" element={<Careers />} />
@@ -111,7 +116,6 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
 
-              {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

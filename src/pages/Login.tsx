@@ -1,9 +1,7 @@
-// src/pages/Login.tsx
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
-import { loginUser, loginWithGoogle } from '../api/authApi'; // ✅ FIXED: Corrected names
+import { loginUser, loginWithGoogle } from '../api/authApi'; 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,12 +22,8 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // ✅ Sync: Calls authApi.loginUser (Port 8081)
       const response = await loginUser(creds.email, creds.password);
-      
-      // Update global context state
       setAuthState(response.accessToken, response.refreshToken);
-      
       toast({ title: "Welcome back!", description: "Signed in successfully." });
       navigate(from, { replace: true });
     } catch (error: any) {
@@ -41,18 +35,11 @@ const Login = () => {
     } finally { setLoading(false); }
   };
 
-  /**
-   * ✅ GOOGLE OAUTH SUCCESS: Triggers the backend /auth/google logic
-   * Sends the ID Token to backend for verification [cite: 15-17]
-   */
   const handleGoogleSuccess = async (res: CredentialResponse) => {
     setLoading(true);
     try {
-      // res.credential is the ID Token provided by Google
       const response = await loginWithGoogle(res.credential!); 
-      
       setAuthState(response.accessToken, response.refreshToken);
-      
       toast({ title: "Google Login Successful" });
       navigate(from, { replace: true });
     } catch (err: any) {
@@ -65,21 +52,31 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-secondary/20 py-20 px-4">
       <div className="w-full max-w-md bg-background border p-8 md:p-12 shadow-sm animate-fade-in">
-        <h1 className="font-serif text-3xl text-center mb-8">Sign In</h1>
+        <h1 className="font-serif text-3xl text-center mb-8 tracking-tight">Sign In</h1>
         
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-6">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Email</label>
+            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Registered Email</label>
             <Input 
               type="email" 
-              placeholder="you@email.com" 
+              placeholder="office@industrial-archive.com" 
               required 
               value={creds.email} 
               onChange={e => setCreds({...creds, email: e.target.value})} 
             />
           </div>
+
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</label>
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Password</label>
+              {/* ✅ ADDED: Forgot Password Link */}
+              <Link 
+                to="/forgot-password" 
+                className="text-[10px] font-bold uppercase tracking-widest text-[#2A2623] hover:opacity-60 transition-opacity"
+              >
+                Forgot?
+              </Link>
+            </div>
             <Input 
               type="password" 
               placeholder="••••••••" 
@@ -88,7 +85,8 @@ const Login = () => {
               onChange={e => setCreds({...creds, password: e.target.value})} 
             />
           </div>
-          <Button className="w-full h-11 uppercase text-xs font-bold tracking-widest" disabled={loading}>
+
+          <Button className="w-full h-12 bg-[#2A2623] hover:bg-black uppercase text-xs font-bold tracking-[0.15em]" disabled={loading}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Sign In
           </Button>
         </form>
@@ -104,12 +102,12 @@ const Login = () => {
             onError={() => toast({ variant: "destructive", title: "Google Auth Error" })}
             theme="outline"
             shape="rectangular"
-            width="100%"
+            width="360px"
           />
         </div>
 
-        <p className="mt-8 text-center text-sm text-muted-foreground">
-          New to RDC? <Link to="/signup" className="text-foreground font-bold hover:underline">Create Account</Link>
+        <p className="mt-10 text-center text-xs font-medium text-muted-foreground tracking-wide">
+          New to RDC Industrial? <Link to="/signup" className="text-[#2A2623] font-bold uppercase tracking-widest hover:underline ml-1">Create Account</Link>
         </p>
       </div>
     </div>

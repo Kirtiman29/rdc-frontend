@@ -75,4 +75,21 @@ export const logoutUser = () => {
   window.location.href = '/login';
 };
 
+/**
+ * ✅ Request Password Reset (Forgot Password)
+ * Triggers the backend /auth/password/request-reset endpoint 
+ */
+export const requestPasswordReset = async (email: string) => {
+  const res = await authApi.post('/password/request-reset', { email });
+  return res.data;
+};
+
+/**
+ * ✅ Submit New Password (Reset Password)
+ * Triggers the backend /auth/password/reset endpoint 
+ */
+export const resetPassword = async (token: string, newPassword: string) => {
+  const res = await authApi.post('/password/reset', { token, newPassword });
+  return res.data;
+};
 export default authApi;

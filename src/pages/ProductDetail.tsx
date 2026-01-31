@@ -5,7 +5,7 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/products/ProductCard';
-import SpotlightMagnifier from '@/components/products/SpotlightMagnifier'; // ✅ Inherited component
+import SpotlightMagnifier from '@/components/products/SpotlightMagnifier'; 
 import { getDesignById, getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { addToCart } from '@/api/cartApi';
@@ -26,7 +26,7 @@ const ProductDetail = () => {
   const [activeMediaUrl, setActiveMediaUrl] = useState<string>('');
   const [activeMediaType, setActiveMediaType] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
 
-  // ✅ Security: Restrict Right-Click on the entire main interaction area
+  // ✅ Security: Restrict Right-Click on the entire interaction zone
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -38,9 +38,12 @@ const ProductDetail = () => {
       try {
         const designData = await getDesignById(Number(id)); 
         setProduct(designData);
+        
+        // Initial Media State
         setActiveMediaUrl(getAssetUrl(designData.assetUuid)); 
         setActiveMediaType('IMAGE');
 
+        // Related Content Sync
         const related = await getDesigns({ segment: designData.segment, limit: 5 }); 
         setRelatedProducts(related.content.filter((p: Design) => p.id !== designData.id));
 
@@ -60,7 +63,7 @@ const ProductDetail = () => {
     setIsAdding(true);
     try {
       await addToCart(product.id, 1);
-      toast({ title: "Added to Bag", description: `${product.title} is ready for download.` });
+      toast({ title: "Added to Bag", description: `${product.title} is ready.` });
     } catch (error) {
       toast({ variant: "destructive", title: "Error", description: "Authentication required." });
     } finally {
@@ -108,8 +111,9 @@ const ProductDetail = () => {
           <div className="container px-6">
             <div className="flex flex-col lg:flex-row gap-16 max-w-6xl mx-auto items-start">
               
+              {/* ASSET INTERACTION COLUMN */}
               <div className="flex-1 flex flex-col gap-6 max-w-[580px]">
-                {/* ✅ Spotlight & Magnifier Interaction */}
+                {/* Main Preview with Spotlight Magnifier */}
                 <div className="relative aspect-square overflow-hidden rounded-sm shadow-[0_4px_24px_-4px_rgba(0,0,0,0.08)]">
                    {activeMediaType === 'VIDEO' ? (
                      <video 
@@ -121,38 +125,33 @@ const ProductDetail = () => {
                    ) : (
                      <SpotlightMagnifier 
                         imageUrl={activeMediaUrl} 
-                        zoomLevel={1.8} 
-                        magnifierRadius={110} 
+                        zoomLevel={2.0} 
+                        magnifierRadius={100} 
                      />
                    )}
                 </div>
 
+                {/* ✅ FIXED: Unique Dynamic Gallery Only (No Duplicates) */}
                 <div className="flex flex-row gap-3 overflow-x-auto pb-4 scrollbar-hide">
-                  <button 
-                    onClick={() => { setActiveMediaUrl(getAssetUrl(product.assetUuid)); setActiveMediaType('IMAGE'); }}
-                    className={`w-20 h-20 rounded-sm border transition-all duration-300 overflow-hidden flex-shrink-0 ${activeMediaUrl === getAssetUrl(product.assetUuid) ? 'border-[#2A2623] scale-95' : 'border-slate-100 grayscale hover:grayscale-0'}`}
-                  >
-                    <img src={getAssetUrl(product.assetUuid)} className="w-full h-full object-cover" alt="Primary" draggable={false} />
-                  </button>
-
                   {product.media?.map((m, idx) => (
                     <button 
                       key={idx}
                       onClick={() => { setActiveMediaUrl(m.url); setActiveMediaType(m.type as any); }}
-                      className={`relative w-20 h-20 rounded-sm border transition-all duration-300 overflow-hidden flex-shrink-0 ${activeMediaUrl === m.url ? 'border-[#2A2623] scale-95' : 'border-slate-100 grayscale hover:grayscale-0'}`}
+                      className={`relative w-20 h-20 rounded-sm border transition-all duration-300 overflow-hidden flex-shrink-0 ${activeMediaUrl === m.url ? 'border-[#2A2623] scale-95 shadow-md' : 'border-slate-100 grayscale hover:grayscale-0'}`}
                     >
                       {m.type === 'VIDEO' ? (
                         <div className="w-full h-full flex items-center justify-center bg-slate-900">
                           <PlayCircle className="text-white w-7 h-7 stroke-1" />
                         </div>
                       ) : (
-                        <img src={m.url} className="w-full h-full object-cover" alt="Gallery" draggable={false} />
+                        <img src={m.url} className="w-full h-full object-cover" alt={`Gallery item ${idx}`} draggable={false} />
                       )}
                     </button>
                   ))}
                 </div>
               </div>
 
+              {/* PRODUCT INFO COLUMN */}
               <div className="flex-1 flex flex-col pt-2 lg:max-w-[420px]">
                 <div className="mb-6 flex gap-3">
                   {product.premium && (
