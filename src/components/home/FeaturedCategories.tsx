@@ -1,3 +1,5 @@
+// src/components/home/FeaturedCategories.tsx
+
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, ShoppingBag, Loader2 } from 'lucide-react';

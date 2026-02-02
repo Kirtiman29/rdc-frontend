@@ -1,3 +1,5 @@
+// src/api/authApi.ts
+
 import axios from 'axios';
 import { applyIndustrialInterceptors, clearTokens } from './apiClient';
 
@@ -15,13 +17,14 @@ export const authApi = axios.create({
 /**
  * ✅ Private Instance: Used for Profile Management
  * Automatically includes the JWT and handles 401 refreshes via interceptors.
+ * Applied to Port 8081 to ensure profile data is fetched from Auth Service.
  */
 export const profileApi = axios.create({
   baseURL: AUTH_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Apply industrial interceptors for automated token refresh
+// ✅ Applying your crucial industrial interceptors (Contains the Refresh Logic)
 applyIndustrialInterceptors(profileApi);
 
 /**
@@ -34,12 +37,10 @@ export const registerUser = async (data: any) => {
 
 /**
  * ✅ Industrial Sync: Login User
- * Logic: Just returns data. Storage is handled by useAuth.login() 
- * to ensure state and storage are always in sync.
  */
 export const loginUser = async (email: string, password: string) => {
   const res = await authApi.post('/login', { email, password });
-  return res.data; // Logic moved to useAuth hook for atomic state updates
+  return res.data; 
 };
 
 /**
@@ -52,10 +53,11 @@ export const loginWithGoogle = async (idToken: string) => {
 
 /**
  * ✅ Fetch User Profile
- * Uses the authenticated profileApi to hit the /me endpoint
+ * Uses profileApi (with interceptors) to hit the /profile endpoint.
+ * Note: Changed from '/me' to '/profile' to match standard Auth Service patterns.
  */
 export const getProfile = async () => {
-  const res = await profileApi.get('/me');
+  const res = await profileApi.get('/profile');
   return res.data;
 };
 
@@ -63,7 +65,7 @@ export const getProfile = async () => {
  * ✅ Update Profile
  */
 export const updateProfile = async (data: any) => {
-  const res = await profileApi.put('/me', data);
+  const res = await profileApi.put('/profile', data);
   return res.data;
 };
 
@@ -76,8 +78,7 @@ export const logoutUser = () => {
 };
 
 /**
- * ✅ Request Password Reset (Forgot Password)
- * Triggers the backend /auth/password/request-reset endpoint 
+ * ✅ Request Password Reset
  */
 export const requestPasswordReset = async (email: string) => {
   const res = await authApi.post('/password/request-reset', { email });
@@ -85,11 +86,11 @@ export const requestPasswordReset = async (email: string) => {
 };
 
 /**
- * ✅ Submit New Password (Reset Password)
- * Triggers the backend /auth/password/reset endpoint 
+ * ✅ Submit New Password
  */
 export const resetPassword = async (token: string, newPassword: string) => {
   const res = await authApi.post('/password/reset', { token, newPassword });
   return res.data;
 };
+
 export default authApi;

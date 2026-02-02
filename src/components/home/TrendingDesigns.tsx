@@ -14,7 +14,6 @@ const TrendingDesigns = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
-  // ✅ Security: Restrict Right-Click across the trending section
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -22,12 +21,18 @@ const TrendingDesigns = () => {
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        const data = await getTrendingDesigns(8); 
-        const limitedData = data.slice(0, 8);
-        setProducts(limitedData);
+        const data = await getTrendingDesigns(50); // Fetch a larger set to allow proper sorting
+        
+        // ✅ 1. Filter Trending -> 2. Sort Recent First -> 3. Slice top 8
+        const filteredTrending = data
+          .filter((product: Design) => product.trending === true)
+          .sort((a, b) => b.id - a.id) // ✅ Sort descending by ID (Newest First)
+          .slice(0, 8); 
+
+        setProducts(filteredTrending);
 
         const statusMap: Record<number, boolean> = {};
-        for (const product of limitedData) {
+        for (const product of filteredTrending) {
           statusMap[product.id] = await checkWishlistStatus(product.id);
         }
         setWishlistState(statusMap);
@@ -100,16 +105,16 @@ const TrendingDesigns = () => {
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
               Most Popular
             </span>
-            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2">
+            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2 text-[#2A2623]">
               Trending Designs
             </h2>
           </div>
           <div className="hidden md:block">
             <Link 
-              to="/gallery?trending=true" 
+              to="/trends" 
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              View All Collection →
+              View All Trending Collection →
             </Link>
           </div>
         </div>
@@ -120,7 +125,7 @@ const TrendingDesigns = () => {
               <Link to={`/product/${product.id}`} className="block">
                 <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none">
                   
-                  {/* ✅ HIGH-VISIBILITY "RDC" WATERMARK OVERLAY */}
+                  {/* Watermark Overlay */}
                   <div 
                     className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                     style={{
@@ -132,10 +137,11 @@ const TrendingDesigns = () => {
                   <img
                     src={getAssetUrl(product.assetUuid)}
                     alt={product.title}
-                    draggable={false} // ✅ Prevent image dragging
+                    draggable={false}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   
+                  {/* Actions */}
                   <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
                     <button 
                       className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shadow-md ${
@@ -145,37 +151,31 @@ const TrendingDesigns = () => {
                     >
                       <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
                     </button>
-                    <button className="w-10 h-10 bg-background rounded-full flex items-center justify-center text-foreground hover:bg-secondary transition-colors shadow-md">
+                    <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center text-foreground hover:bg-secondary transition-colors shadow-md">
                       <Eye className="h-4 w-4" />
-                    </button>
+                    </div>
                   </div>
 
-                  <div className="absolute top-4 left-4 z-20">
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-background/90 backdrop-blur-sm px-3 py-1 rounded-sm border border-border">
-                      {product.segment?.replace('_', ' ') || 'Textile'}
-                    </span>
-                  </div>
-
+                  {/* Add To Cart */}
                   <button 
-                    className="absolute bottom-4 left-4 right-4 h-10 bg-foreground text-background rounded-md flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-foreground/90 z-20"
+                    className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20 shadow-lg"
                     onClick={(e) => handleAddToCart(e, product)}
                   >
                     <ShoppingBag className="h-4 w-4" />
                     Add to Cart
                   </button>
 
-                  {/* Darkening overlay for contrast & security */}
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
                 </div>
               </Link>
 
               <div className="space-y-1">
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-serif text-lg text-foreground group-hover:text-muted-foreground transition-colors line-clamp-1">
+                  <h3 className="font-serif text-lg text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1 italic">
                     {product.title}
                   </h3>
                 </Link>
-                <p className="text-sm font-medium">
+                <p className="text-sm font-medium text-slate-600">
                   ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
                 </p>
               </div>

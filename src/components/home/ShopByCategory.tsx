@@ -17,7 +17,11 @@ const ShopByCategory = () => {
     const fetchCategories = async () => {
       try {
         const data = await getCategories();
-        setDbCategories(data);
+        
+        // ✅ SORT: Descending ID for Recent First
+        const sortedCategories = [...data].sort((a, b) => b.id - a.id);
+        
+        setDbCategories(sortedCategories);
       } catch (error) {
         console.error('Failed to sync gallery categories:', error);
       } finally {
@@ -38,6 +42,7 @@ const ShopByCategory = () => {
 
   if (dbCategories.length === 0) return null;
 
+  // ✅ Keeping your limit of 9
   const displayedCategories = dbCategories.slice(0, 9);
 
   return (
@@ -72,7 +77,6 @@ const ShopByCategory = () => {
               className="group relative aspect-square overflow-hidden bg-background select-none"
             >
               {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK */}
-              {/* Added as a layer above the image (z-10) but below the title text */}
               <div 
                 className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
                 style={{
@@ -84,17 +88,15 @@ const ShopByCategory = () => {
               <img
                 src={category.imageUrl || 'https://placehold.co/600x600?text=Design+Collection'}
                 alt={category.name}
-                draggable={false} // ✅ Security: Prevent drag-to-save
+                draggable={false} 
                 className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 onError={(e) => {
                   (e.target as HTMLImageElement).src = 'https://placehold.co/600x600?text=Category';
                 }}
               />
               
-              {/* Overlay darkening for text readability and watermark contrast */}
               <div className="absolute inset-0 bg-black/30 group-hover:bg-black/40 transition-colors duration-300 z-10" />
               
-              {/* Category Display Name */}
               <div className="absolute inset-0 flex items-center justify-center z-20">
                 <h3 className="font-serif text-xl md:text-2xl text-white text-center px-4 tracking-tight drop-shadow-md">
                   {category.name}

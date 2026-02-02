@@ -62,12 +62,6 @@ const Footer = () => {
                   FAQs
                 </Link>
               </li>
-              {/* ✅ ADDED: Order Tracking path for Order Service consistency */}
-              <li>
-                <Link to="/orders" className="text-sm text-foreground hover:text-muted-foreground transition-colors">
-                  Track Order
-                </Link>
-              </li>
             </ul>
           </div>
 

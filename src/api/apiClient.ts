@@ -7,9 +7,10 @@ const TOKEN_KEY = 'accessToken';
 const REFRESH_KEY = 'refreshToken';
 
 /**
- * ✅ NEW: Check if JWT is expired to trigger refresh BEFORE a request fails
+ * ✅ Check if JWT is expired (Used to guard routes and refresh logic)
  */
-export const isTokenExpired = (token: string): boolean => {
+export const isTokenExpired = (token: string | null): boolean => {
+  if (!token) return true;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]));
     // Buffer of 10 seconds to account for network lag
@@ -32,6 +33,9 @@ export const clearTokens = () => {
     localStorage.removeItem(REFRESH_KEY);
 };
 
+// ✅ ADDED ALIAS: Required for Header.tsx and Profile.tsx
+export const removeToken = clearTokens; 
+
 // ==========================================
 // ✅ SERVICE URL CONFIGURATION
 // ==========================================
@@ -50,13 +54,6 @@ export const publicApi = axios.create({
     baseURL: `${ADMIN_URL}/api`, 
     headers: { 'Content-Type': 'application/json' },
 });
-
-publicApi.interceptors.request.use(config => {
-    if (config.headers) {
-        config.headers.Authorization = undefined; 
-    }
-    return config;
-}, error => Promise.reject(error));
 
 // ==========================================
 // ✅ INTERCEPTOR FOR AUTHENTICATED SERVICES
@@ -80,9 +77,7 @@ export const applyIndustrialInterceptors = (instance: any) => {
 
             /**
              * ✅ AUTO-REFRESH LOGIC
-             * 1. Trigger on 401 Unauthorized
-             * 2. Ensure we aren't already retrying
-             * 3. Ensure the failed request wasn't the refresh call itself (prevents infinite loops)
+             * Triggers on 401 if not already retrying
              */
             if (
                 error.response?.status === 401 && 
@@ -100,7 +95,6 @@ export const applyIndustrialInterceptors = (instance: any) => {
                     
                     const { accessToken, refreshToken: newRefresh } = response.data;
                     
-                    // Sync tokens in localStorage
                     saveTokens(accessToken, newRefresh);
 
                     // Update header and retry original request
@@ -108,9 +102,11 @@ export const applyIndustrialInterceptors = (instance: any) => {
                     return axios(originalRequest); 
 
                 } catch (refreshError) {
-                    // Refresh failed (e.g., refresh token expired) -> Force Logout
-                    clearTokens();
-                    window.location.href = '/login'; 
+                    // Force Logout on critical refresh failure
+                    removeToken();
+                    if (window.location.pathname !== '/login') {
+                        window.location.href = '/login'; 
+                    }
                     return Promise.reject(refreshError);
                 }
             }
@@ -126,7 +122,7 @@ export const userApi = axios.create({ baseURL: `${ADMIN_URL}/api` });
 export const cartApi = axios.create({ baseURL: `${CART_URL}/api/cart` });
 export const orderApi = axios.create({ baseURL: `${ORDER_URL}/api/orders` });
 export const wishlistApi = axios.create({ baseURL: `${WISHLIST_URL}/api/wishlist` });
-export const paymentApi = axios.create({ baseURL: 'http://localhost:8092/api/payments' });
+export const paymentApi = axios.create({ baseURL: `${PAYMENT_URL}/api/payments` });
 
 // Initialize Interceptors
 [userApi, cartApi, orderApi, wishlistApi, paymentApi].forEach(applyIndustrialInterceptors);

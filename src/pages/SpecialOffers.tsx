@@ -15,7 +15,6 @@ const SpecialOffers = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
-  // ✅ Security: Restrict Right-Click across the offers page
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -23,12 +22,21 @@ const SpecialOffers = () => {
   useEffect(() => {
     const fetchOffers = async () => {
       try {
-        const response = await getDesigns({ specialOffer: true, limit: 12 });
-        const items = Array.isArray(response) ? response : (response.content || []);
-        setOffers(items);
+        // Fetch items with specialOffer filter applied
+        const response = await getDesigns({ specialOffer: true, limit: 24 });
+        const rawItems = Array.isArray(response) ? response : (response.content || []);
+        
+        // ✅ STRICT FILTER: Only show designs where specialOffer is true
+        // ✅ SORT: Ensure newest entries (highest IDs) are shown first
+        const sortedOffers = [...rawItems]
+          .filter((item: Design) => item.specialOffer === true)
+          .sort((a, b) => b.id - a.id)
+          .slice(0, 12);
+
+        setOffers(sortedOffers);
 
         const statusMap: Record<number, boolean> = {};
-        for (const item of items) {
+        for (const item of sortedOffers) {
           statusMap[item.id] = await checkWishlistStatus(item.id);
         }
         setWishlistState(statusMap);
@@ -70,7 +78,7 @@ const SpecialOffers = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" onContextMenu={handleContextMenu}>
+    <div className="flex min-h-screen flex-col" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1">
         <section className="py-16 md:py-20 bg-secondary/30">
@@ -96,7 +104,6 @@ const SpecialOffers = () => {
                   key={product.id}
                   className="group relative bg-background rounded-sm overflow-hidden border border-border hover:border-[#2A2623]/30 transition-all duration-300 animate-fade-in shadow-sm"
                 >
-                  {/* Sync: Discount Badge */}
                   <div className="absolute top-3 left-3 z-20">
                     <span className="px-2 py-1 bg-rose-600 text-white text-[10px] font-bold uppercase tracking-wider shadow-md">
                       {product.discountPercent}% Off
@@ -114,8 +121,6 @@ const SpecialOffers = () => {
 
                   <Link to={`/product/${product.id}`} className="block relative">
                     <div className="aspect-square overflow-hidden bg-secondary/20 select-none">
-                      
-                      {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
                       <div 
                         className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                         style={{
@@ -123,15 +128,12 @@ const SpecialOffers = () => {
                           backgroundRepeat: 'repeat'
                         }}
                       />
-
                       <img
                         src={getAssetUrl(product.assetUuid)}
                         alt={product.title}
-                        draggable={false} // ✅ Prevent drag
+                        draggable={false}
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                       />
-                      
-                      {/* Security contrast layer */}
                       <div className="absolute inset-0 bg-black/5 group-hover:bg-black/15 transition-colors pointer-events-none" />
                     </div>
 
@@ -147,6 +149,7 @@ const SpecialOffers = () => {
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
                       {product.segment?.replace('_', ' ')}
                     </p>
+                    {/* ✅ FIX: Removed 'italic' class to keep title straight */}
                     <h3 className="font-serif text-xl text-[#2A2623] mb-3 truncate group-hover:text-slate-600 transition-colors">
                       {product.title}
                     </h3>

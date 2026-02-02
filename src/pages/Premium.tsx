@@ -15,7 +15,6 @@ const Premium = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
-  // ✅ Security: Restrict Right-Click across the premium gallery
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -23,12 +22,19 @@ const Premium = () => {
   useEffect(() => {
     const fetchPremiumData = async () => {
       try {
-        const response = await getDesigns({ premium: true, limit: 12 });
+        // Fetch a larger limit to ensure we have enough items to sort properly
+        const response = await getDesigns({ premium: true, limit: 24 });
         const items = Array.isArray(response) ? response : (response.content || []);
-        setPremiumProducts(items);
+        
+        // ✅ 1. Filter Premium -> 2. Sort Recent (ID Desc)
+        const sortedPremium = items
+          .filter((item: Design) => item.premium === true)
+          .sort((a, b) => b.id - a.id); // Newest First
+
+        setPremiumProducts(sortedPremium);
 
         const statusMap: Record<number, boolean> = {};
-        for (const item of items) {
+        for (const item of sortedPremium) {
           statusMap[item.id] = await checkWishlistStatus(item.id);
         }
         setWishlistState(statusMap);
@@ -96,7 +102,7 @@ const Premium = () => {
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 lg:gap-10">
                 {premiumProducts.map((product) => (
-                  <div key={product.id} className="group relative bg-[#252525] rounded-sm overflow-hidden border border-white/5 hover:border-[#c9a96e]/30 transition-colors duration-500">
+                  <div key={product.id} className="group relative bg-[#252525] rounded-sm overflow-hidden border border-white/5 hover:border-[#c9a96e]/30 transition-colors duration-500 animate-in fade-in slide-in-from-bottom-4">
                     <div className="absolute top-4 left-4 z-20">
                       <span className="px-3 py-1 bg-[#c9a96e] text-[#1a1a1a] text-[10px] font-bold uppercase tracking-wider shadow-xl">
                         Premium
@@ -115,7 +121,7 @@ const Premium = () => {
                     <Link to={`/product/${product.id}`} className="block relative">
                       <div className="aspect-[3/4] overflow-hidden select-none">
                         
-                        {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
+                        {/* HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
                         <div 
                           className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                           style={{
@@ -127,7 +133,7 @@ const Premium = () => {
                         <img
                           src={getAssetUrl(product.assetUuid)}
                           alt={product.title}
-                          draggable={false} // ✅ Prevent drag
+                          draggable={false}
                           className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
                         />
                       </div>

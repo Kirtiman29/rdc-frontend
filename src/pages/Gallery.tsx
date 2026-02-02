@@ -34,13 +34,17 @@ const Gallery = () => {
     try {
       const response = await getDesigns({
         ...filters,
-        limit: 12,
+        limit: 24, // Increased limit to ensure better grid filling
       });
 
-      const content = Array.isArray(response) ? response : (response.content || []);
-      const total = Array.isArray(response) ? response.length : (response.totalElements || content.length);
+      const rawContent = Array.isArray(response) ? response : (response.content || []);
       
-      setDesigns(content);
+      // ✅ SORT: Ensure newest entries (highest IDs) are shown first
+      const sortedContent = [...rawContent].sort((a, b) => b.id - a.id);
+
+      const total = Array.isArray(response) ? response.length : (response.totalElements || sortedContent.length);
+      
+      setDesigns(sortedContent);
       setTotalElements(total);
     } catch (error) {
       console.error('Gallery sync error:', error);

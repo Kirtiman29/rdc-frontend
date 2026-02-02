@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Loader2 } from 'lucide-react';
+import { Heart, ShoppingBag, Loader2 } from 'lucide-react';
 import { getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
+import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
 import { useToast } from '@/components/ui/use-toast';
 import type { Design } from '@/types/product';
@@ -13,7 +14,6 @@ const SpecialOffers = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
-  // ✅ Security: Restrict Right-Click across the offers section
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -21,12 +21,20 @@ const SpecialOffers = () => {
   useEffect(() => {
     const fetchOffers = async () => {
       try {
-        const response = await getDesigns({ limit: 4, specialOffer: true });
-        const offerData = response.content || [];
-        setProducts(offerData);
+        // Fetch a larger pool to ensure we can sort and pick the top 4
+        const response = await getDesigns({ limit: 50 }); 
+        const rawData = Array.isArray(response) ? response : (response?.content || []);
+        
+        
+        const filteredOffers = rawData
+          .filter((product: Design) => product.specialOffer === true)
+          .sort((a: Design, b: Design) => b.id - a.id) 
+          .slice(0, 4); 
+
+        setProducts(filteredOffers);
 
         const statusMap: Record<number, boolean> = {};
-        for (const product of offerData) {
+        for (const product of filteredOffers) {
           statusMap[product.id] = await checkWishlistStatus(product.id);
         }
         setWishlistState(statusMap);
@@ -39,6 +47,17 @@ const SpecialOffers = () => {
     fetchOffers();
   }, []);
 
+  const handleAddToCart = async (e: React.MouseEvent, product: Design) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await addToCart(product.id, 1);
+      toast({ title: "Added to Cart", description: `${product.title} is now in your selection.` });
+    } catch (error) {
+      toast({ variant: "destructive", title: "Cart Error", description: "Please login to add items." });
+    }
+  };
+
   const toggleWishlist = async (e: React.MouseEvent, product: Design) => {
     e.preventDefault();
     e.stopPropagation();
@@ -50,33 +69,26 @@ const SpecialOffers = () => {
         await addToWishlist(product.id);
       }
       setWishlistState(prev => ({ ...prev, [product.id]: !isWished }));
-      toast({
-        title: isWished ? "Removed from Wishlist" : "Saved to Wishlist",
-        description: "Your selection has been updated."
-      });
+      toast({ title: isWished ? "Removed" : "Saved", description: "Your selection has been updated." });
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Wishlist Error",
-        description: "Please login to save your favorite designs."
-      });
+      toast({ variant: "destructive", title: "Wishlist Error", description: "Authentication required." });
     }
   };
 
   if (loading) {
     return (
-      <div className="py-20 flex justify-center items-center h-96">
+      <div className="py-20 flex justify-center items-center h-96 bg-secondary/10">
         <Loader2 className="h-10 w-10 animate-spin text-destructive" />
       </div>
     );
   }
 
+  // Only render section if there are active special offers
   if (products.length === 0) return null;
 
   return (
     <section className="py-20 md:py-28 bg-secondary/20" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
-        {/* Section Header */}
         <div className="flex items-end justify-between mb-12">
           <div>
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-destructive">
@@ -87,25 +99,24 @@ const SpecialOffers = () => {
             </h2>
           </div>
           <Link 
-            to="/gallery?specialOffer=true" 
-            className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-[#2A2623] transition-colors hidden md:block"
+            to="/special-Offers" 
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden md:block"
           >
             View All Offers →
           </Link>
         </div>
 
-        {/* Product Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
           {products.map((product) => (
-            <div key={product.id} className="group">
+            <div key={product.id} className="group animate-fade-in">
               <Link to={`/product/${product.id}`} className="block">
-                <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 border border-destructive/10 select-none">
+                <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none rounded-sm">
                   
-                  {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
+                  {/* High-Visibility Watermark Overlay */}
                   <div 
-                    className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
+                    className="absolute inset-0 z-10 pointer-events-none opacity-[0.22]"
                     style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='22' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
                       backgroundRepeat: 'repeat'
                     }}
                   />
@@ -113,45 +124,40 @@ const SpecialOffers = () => {
                   <img
                     src={getAssetUrl(product.assetUuid)}
                     alt={product.title}
-                    draggable={false} // ✅ Prevent image dragging
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    draggable={false}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   
-                  {/* Sale Badge */}
                   <div className="absolute top-4 left-4 z-20">
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-destructive text-destructive-foreground px-3 py-1 shadow-sm">
-                      Sale
+                    <span className="text-[10px] font-bold uppercase tracking-widest bg-destructive text-white px-3 py-1.5 shadow-sm">
+                      {product.discountPercent}% OFF
                     </span>
                   </div>
 
-                  {/* Discount Percentage */}
-                  {product.discountPercent > 0 && (
-                    <div className="absolute bottom-4 left-4 z-20">
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-white/90 backdrop-blur-sm text-[#2A2623] px-3 py-1 rounded-sm border border-destructive/20 shadow-sm">
-                        {product.discountPercent}% Off
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Wishlist Button */}
                   <button 
                     className={`absolute top-4 right-4 w-9 h-9 rounded-full flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 shadow-md z-20 ${
-                      wishlistState[product.id] ? 'bg-destructive text-white' : 'bg-white/80 text-[#2A2623]'
+                      wishlistState[product.id] ? 'bg-destructive text-white' : 'bg-white text-[#2A2623]'
                     }`}
                     onClick={(e) => toggleWishlist(e, product)}
                   >
                     <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
                   </button>
 
-                  {/* Darkening security overlay */}
+                  <button 
+                    className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20 shadow-lg"
+                    onClick={(e) => handleAddToCart(e, product)}
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    Add to Selection
+                  </button>
+
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
                 </div>
               </Link>
 
-              {/* Product Info */}
               <div className="space-y-1 px-1">
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-serif text-lg text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1">
+                  <h3 className="font-serif text-lg text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1 italic">
                     {product.title}
                   </h3>
                 </Link>
@@ -160,7 +166,7 @@ const SpecialOffers = () => {
                     ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
                   </span>
                   {product.discountPercent > 0 && (
-                    <span className="text-xs text-muted-foreground line-through">
+                    <span className="text-xs text-muted-foreground line-through font-light">
                       ₹{(product.basePriceCents / 100).toLocaleString('en-IN')}
                     </span>
                   )}
@@ -168,16 +174,6 @@ const SpecialOffers = () => {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Mobile View All */}
-        <div className="mt-8 text-center md:hidden">
-          <Link 
-            to="/gallery?specialOffer=true" 
-            className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-[#2A2623] transition-colors"
-          >
-            View All Offers →
-          </Link>
         </div>
       </div>
     </section>

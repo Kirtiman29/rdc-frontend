@@ -14,7 +14,7 @@ const NewArrivals = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
-  // ✅ Security: Restrict Right-Click across the section
+  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -22,11 +22,18 @@ const NewArrivals = () => {
   useEffect(() => {
     const fetchNewArrivals = async () => {
       try {
-        const data = await getNewArrivals(4);
-        setProducts(data);
+        // Fetch a larger pool to ensure we can sort and pick the top 8
+        const data = await getNewArrivals(24);
+        
+        // ✅ 1. Sort Recent (ID Desc) -> 2. Slice strictly top 8
+        const sortedRecent = data
+          .sort((a: Design, b: Design) => b.id - a.id) // Recent first
+          .slice(0, 8); // New Limit: 8
+
+        setProducts(sortedRecent);
 
         const statusMap: Record<number, boolean> = {};
-        for (const product of data) {
+        for (const product of sortedRecent) {
           statusMap[product.id] = await checkWishlistStatus(product.id);
         }
         setWishlistState(statusMap);
@@ -85,7 +92,7 @@ const NewArrivals = () => {
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
               Just Arrived
             </span>
-            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2">
+            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2 text-[#2A2623]">
               New Arrivals
             </h2>
           </div>
@@ -97,13 +104,14 @@ const NewArrivals = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        {/* Updated grid to handle 8 items cleanly */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
           {products.map((product) => (
-            <div key={product.id} className="group">
+            <div key={product.id} className="group animate-fade-in">
               <Link to={`/product/${product.id}`} className="block">
-                <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none">
+                <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none rounded-sm">
                   
-                  {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
+                  {/* High-Visibility Watermark Overlay */}
                   <div 
                     className="absolute inset-0 z-10 pointer-events-none opacity-[0.22]"
                     style={{
@@ -115,12 +123,12 @@ const NewArrivals = () => {
                   <img
                     src={getAssetUrl(product.assetUuid)}
                     alt={product.title}
-                    draggable={false} // ✅ Security: Prevent drag and drop
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    draggable={false}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   
                   <div className="absolute top-4 left-4 z-20">
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-foreground text-background px-2 py-0.5">
+                    <span className="text-[9px] font-bold uppercase tracking-widest bg-[#2A2623] text-white px-2 py-1">
                       New
                     </span>
                   </div>
@@ -135,25 +143,24 @@ const NewArrivals = () => {
                   </button>
 
                   <button 
-                    className="absolute bottom-4 left-4 right-4 h-10 bg-foreground text-background rounded-md flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-foreground/90 z-20"
+                    className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20"
                     onClick={(e) => handleAddToCart(e, product)}
                   >
                     <ShoppingBag className="h-4 w-4" />
-                    Add to Cart
+                    Add to Selection
                   </button>
 
-                  {/* Security darkening layer */}
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
                 </div>
               </Link>
 
               <div className="space-y-1">
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-serif text-lg text-foreground group-hover:text-muted-foreground transition-colors line-clamp-1">
+                  <h3 className="font-serif text-lg text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1 italic">
                     {product.title}
                   </h3>
                 </Link>
-                <p className="text-sm text-muted-foreground font-medium">
+                <p className="text-sm font-medium text-slate-600">
                   ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
                 </p>
               </div>
@@ -161,7 +168,7 @@ const NewArrivals = () => {
           ))}
         </div>
 
-        <div className="mt-8 text-center md:hidden">
+        <div className="mt-12 text-center md:hidden">
           <Link to="/gallery?newArrival=true" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             View All New Arrivals →
           </Link>

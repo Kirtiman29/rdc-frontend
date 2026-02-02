@@ -14,7 +14,7 @@ const EditorsChoice = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
-  // ✅ Security: Restrict Right-Click across the curated section
+  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -22,13 +22,20 @@ const EditorsChoice = () => {
   useEffect(() => {
     const fetchPicks = async () => {
       try {
-        // ✅ Sync: Fetch real-time editor picks from Admin Service (Port 8080)
-        const data = await getEditorsPick(8);
-        setProducts(data);
+        // Fetch a larger set to allow for proper recent sorting
+        const data = await getEditorsPick(30);
+        
+        // ✅ 1. Filter picks -> 2. Sort Recent (ID Desc) -> 3. Slice top 8
+        const filteredPicks = data
+          .filter((product: Design) => product.editorsPick === true)
+          .sort((a, b) => b.id - a.id) // ✅ Newest Curated First
+          .slice(0, 8); 
 
-        // ✅ Sync: Check wishlist status for each product from Port 8093
+        setProducts(filteredPicks);
+
+        // ✅ Sync wishlist status
         const statusMap: Record<number, boolean> = {};
-        for (const product of data) {
+        for (const product of filteredPicks) {
           statusMap[product.id] = await checkWishlistStatus(product.id);
         }
         setWishlistState(statusMap);
@@ -87,7 +94,7 @@ const EditorsChoice = () => {
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
               Curated Selection
             </span>
-            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2">
+            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2 text-[#2A2623]">
               Editor's Choice
             </h2>
           </div>
@@ -99,15 +106,13 @@ const EditorsChoice = () => {
           </Link>
         </div>
 
-        {/* ✅ Layout: 4-column grid (Industrial standard) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {products.map((product) => (
-            <div key={product.id} className="group">
+            <div key={product.id} className="group animate-fade-in">
               <Link to={`/product/${product.id}`} className="block">
                 <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none">
                   
-                  {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
-                  {/* Using stroke (outline) + higher opacity for clear copyright signal */}
+                  {/* Industrial Watermark */}
                   <div 
                     className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                     style={{
@@ -119,7 +124,7 @@ const EditorsChoice = () => {
                   <img
                     src={getAssetUrl(product.assetUuid)}
                     alt={product.title}
-                    draggable={false} // ✅ Security: Prevent drag-to-save
+                    draggable={false}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   
@@ -139,25 +144,24 @@ const EditorsChoice = () => {
                   </button>
 
                   <button 
-                    className="absolute bottom-4 left-4 right-4 h-10 bg-foreground text-background rounded-md flex items-center justify-center gap-2 text-sm font-medium opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-foreground/90 z-20"
+                    className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20 shadow-lg"
                     onClick={(e) => handleAddToCart(e, product)}
                   >
                     <ShoppingBag className="h-4 w-4" />
                     Add to Cart
                   </button>
 
-                  {/* Darkening overlay for contrast & security */}
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
                 </div>
               </Link>
 
               <div className="space-y-1 px-1">
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-serif text-lg text-foreground group-hover:text-muted-foreground transition-colors line-clamp-1">
+                  <h3 className="font-serif text-lg text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1 italic">
                     {product.title}
                   </h3>
                 </Link>
-                <p className="text-sm text-muted-foreground font-medium">
+                <p className="text-sm text-slate-500 font-medium">
                   ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
                 </p>
               </div>

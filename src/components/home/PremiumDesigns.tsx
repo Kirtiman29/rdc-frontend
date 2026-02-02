@@ -15,7 +15,6 @@ const PremiumDesigns = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -23,13 +22,20 @@ const PremiumDesigns = () => {
   useEffect(() => {
     const fetchPremium = async () => {
       try {
+        // Fetch premium designs
         const response = await getDesigns({ premium: true });
-        const premiumData = Array.isArray(response) ? response : (response.content || []);
+        const rawData = Array.isArray(response) ? response : (response.content || []);
         
-        setProducts(premiumData.slice(0, 4));
+        // ✅ 1. Filter Premium -> 2. Sort Recent (ID Desc) -> 3. Slice top 8
+        const premiumOnly = rawData
+          .filter((product: Design) => product.premium === true)
+          .sort((a, b) => b.id - a.id) // ✅ Sort Newest First
+          .slice(0, 10); // Display up to 10 recent premium designs
+
+        setProducts(premiumOnly);
 
         const statusMap: Record<number, boolean> = {};
-        for (const product of premiumData.slice(0, 4)) {
+        for (const product of premiumOnly) {
           statusMap[product.id] = await checkWishlistStatus(product.id);
         }
         setWishlistState(statusMap);
@@ -44,9 +50,8 @@ const PremiumDesigns = () => {
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
-      const { current } = scrollContainerRef;
       const scrollAmount = 420; 
-      current.scrollBy({
+      scrollContainerRef.current.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth',
       });
@@ -124,7 +129,7 @@ const PremiumDesigns = () => {
             <div key={product.id} className="flex-none w-[300px] sm:w-[340px] md:w-[380px] group">
               <div className="relative aspect-[3/4] bg-neutral-900 overflow-hidden mb-6 select-none">
                 
-                {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
+                {/* Watermark Overlay */}
                 <div 
                   className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                   style={{
@@ -136,7 +141,7 @@ const PremiumDesigns = () => {
                 <img
                   src={getAssetUrl(product.assetUuid)}
                   alt={product.title}
-                  draggable={false} // ✅ Prevent Drag
+                  draggable={false}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                 />
                 
@@ -172,20 +177,19 @@ const PremiumDesigns = () => {
                   Add to Cart
                 </button>
 
-                {/* Darkening layer for premium contrast & security */}
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors pointer-events-none" />
               </div>
 
               <div className="space-y-2 px-1">
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-serif text-xl text-white group-hover:text-[#c9a962] transition-colors line-clamp-1">
+                  <h3 className="font-serif text-xl text-white group-hover:text-[#c9a962] transition-colors line-clamp-1 italic">
                     {product.title}
                   </h3>
                 </Link>
-                <p className="text-sm text-neutral-500 line-clamp-2 leading-relaxed">
+                <p className="text-sm text-neutral-500 line-clamp-2 leading-relaxed font-light">
                   {product.description}
                 </p>
-                <p className="text-lg text-[#c9a962] font-medium">
+                <p className="text-lg text-[#c9a962] font-medium tracking-tight">
                   ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
                 </p>
               </div>
