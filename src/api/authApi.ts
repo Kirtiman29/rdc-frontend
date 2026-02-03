@@ -29,8 +29,10 @@ applyIndustrialInterceptors(profileApi);
 
 /**
  * ✅ Industrial Sync: Register User (Port 8081)
+ * Now supports the mandatory 'displayName' requirement[cite: 180, 181].
+ * Expected Data: { email, password, displayName }
  */
-export const registerUser = async (data: any) => {
+export const registerUser = async (data: { email: string; password: string; displayName: string }) => {
   const res = await authApi.post('/signup', data);
   return res.data;
 };
@@ -53,19 +55,12 @@ export const loginWithGoogle = async (idToken: string) => {
 
 /**
  * ✅ Fetch User Profile
- * Uses profileApi (with interceptors) to hit the /profile endpoint.
- * Note: Changed from '/me' to '/profile' to match standard Auth Service patterns.
+ * Uses profileApi (with interceptors) to hit the /me endpoint.
+ * Matches the backend controller: AuthController.getCurrentUser().
  */
 export const getProfile = async () => {
-  const res = await profileApi.get('/profile');
-  return res.data;
-};
-
-/**
- * ✅ Update Profile
- */
-export const updateProfile = async (data: any) => {
-  const res = await profileApi.put('/profile', data);
+  // Changed from '/profile' to '/me' to match backend implementation 
+  const res = await profileApi.get('/me');
   return res.data;
 };
 

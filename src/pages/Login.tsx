@@ -22,8 +22,12 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
+      // ✅ Industrial Sync: Authenticate with email/password [cite: 36, 48]
       const response = await loginUser(creds.email, creds.password);
+      
+      // ✅ Token Strategy: Store access and refresh tokens [cite: 49, 63]
       setAuthState(response.accessToken, response.refreshToken);
+      
       toast({ title: "Welcome back!", description: "Signed in successfully." });
       navigate(from, { replace: true });
     } catch (error: any) {
@@ -38,8 +42,12 @@ const Login = () => {
   const handleGoogleSuccess = async (res: CredentialResponse) => {
     setLoading(true);
     try {
+      // ✅ Industrial Sync: Authenticate via Google ID Token [cite: 25, 30]
       const response = await loginWithGoogle(res.credential!); 
+      
+      // ✅ Auto-Verification: Social users bypass standard email verification [cite: 121]
       setAuthState(response.accessToken, response.refreshToken);
+      
       toast({ title: "Google Login Successful" });
       navigate(from, { replace: true });
     } catch (err: any) {
@@ -59,7 +67,7 @@ const Login = () => {
             <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Registered Email</label>
             <Input 
               type="email" 
-              placeholder="office@industrial-archive.com" 
+              placeholder="abc@xyz.com" 
               required 
               value={creds.email} 
               onChange={e => setCreds({...creds, email: e.target.value})} 
@@ -69,7 +77,6 @@ const Login = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Password</label>
-              {/* ✅ ADDED: Forgot Password Link */}
               <Link 
                 to="/forgot-password" 
                 className="text-[10px] font-bold uppercase tracking-widest text-[#2A2623] hover:opacity-60 transition-opacity"
