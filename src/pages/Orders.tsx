@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import { Package, Loader2 } from 'lucide-react';
+import { Package, Loader2, FileText } from 'lucide-react'; // ✅ Added FileText
 import { getAssetUrl, getToken } from '@/api/apiClient';
-import { getMyOrders } from '@/api/orderApi';
+import { getMyOrders, downloadInvoicePdf } from '@/api/orderApi'; // ✅ Added download function
 
 interface OrderItem {
   id: number;
@@ -143,6 +143,17 @@ const Orders = () => {
                           <p className="text-xl font-bold text-[#2A2623]">
                             ₹{(item.priceCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </p>
+                          
+                          {/* ✅ NEW: INVOICE DOWNLOAD OPTION (Only for PAID orders) */}
+                          {order.status.toUpperCase() === 'PAID' && (
+                            <button 
+                              onClick={() => downloadInvoicePdf(order.id)}
+                              className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-[#2A2623] transition-colors mt-1 ml-auto"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              Invoice
+                            </button>
+                          )}
                         </div>
 
                         <div className="flex items-center">
