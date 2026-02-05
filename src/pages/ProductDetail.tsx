@@ -9,7 +9,7 @@ import { getDesignById, getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { addToCart } from '@/api/cartApi';
 import { checkWishlistStatus, addToWishlist, removeFromWishlist } from '@/api/wishlistApi';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
 
 const ProductDetail = () => {
@@ -38,11 +38,43 @@ const ProductDetail = () => {
         setActiveMediaUrl(getAssetUrl(designData.assetUuid)); 
         setActiveMediaType('IMAGE');
 
-        // Fetch Related Patterns in the same segment
+        // ================================================
+        // ✅ ENHANCED RELATED DESIGNS LOGIC
+        // ================================================
         try {
-          const related = await getDesigns({ segment: designData.segment, limit: 5 }); 
-          const relatedContent = Array.isArray(related) ? related : (related?.content || []);
-          setRelatedProducts(relatedContent.filter((p: Design) => p.id !== designData.id).slice(0, 4));
+          // 1. Fetch Primary + Secondary Match (Same Segment + Same Flag)
+          const primaryRelated = await getDesigns({ 
+            segment: designData.segment,
+            trending: designData.trending || undefined,
+            premium: designData.premium || undefined,
+            editorsPick: designData.editorsPick || undefined,
+            specialOffer: designData.specialOffer || undefined,
+            limit: 10 // Fetch extra to account for exclusions
+          });
+
+          const primaryContent = (Array.isArray(primaryRelated) ? primaryRelated : primaryRelated?.content || [])
+            .filter((p: Design) => p.id !== designData.id);
+
+          let finalRelated = [...primaryContent];
+
+          // 2. Fallback: Fill remaining slots with latest designs from same segment
+          if (finalRelated.length < 4) {
+            const fallbackRelated = await getDesigns({ 
+              segment: designData.segment, 
+              limit: 10 
+            });
+            const fallbackContent = (Array.isArray(fallbackRelated) ? fallbackRelated : fallbackRelated?.content || [])
+              .filter((p: Design) => p.id !== designData.id && !finalRelated.some(existing => existing.id === p.id));
+            
+            finalRelated = [...finalRelated, ...fallbackContent];
+          }
+
+          // 3. Final Selection: Sort by ID (Latest first) and Limit to 4
+          setRelatedProducts(
+            finalRelated
+              .sort((a, b) => b.id - a.id)
+              .slice(0, 4)
+          );
         } catch (relatedError) {
           console.error('Failed to fetch related designs:', relatedError);
         }
@@ -194,7 +226,7 @@ const ProductDetail = () => {
                   <div className="grid grid-cols-2 gap-y-8">
                      <div className="flex flex-col gap-1.5">
                         <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Master Format</span>
-                        <span className="text-xs font-medium text-[#1A1A1A]">Industrial TIFF / AI / PSD</span>
+                        <span className="text-xs font-medium text-[#1A1A1A]">Industrial TIFF</span>
                      </div>
                      <div className="flex flex-col gap-1.5">
                         <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">DPI Resolution</span>

@@ -129,7 +129,7 @@ const Terms = () => {
               <p className="text-muted-foreground leading-relaxed">
                 For questions regarding these Terms & Conditions, please contact us at{' '}
                 <a href="mailto:legal@rdctextiles.com" className="text-foreground hover:underline">
-                  legal@rdctextiles.com
+                  legal@ruchitadesigncompany.com
                 </a>
               </p>
             </section>

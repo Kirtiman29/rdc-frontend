@@ -91,7 +91,7 @@ const Footer = () => {
             </h3>
             <div className="flex gap-4">
               <a 
-                href="https://instagram.com" 
+                href="https://www.instagram.com/ruchitadesigncompany/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-foreground hover:text-muted-foreground transition-colors"

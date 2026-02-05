@@ -52,22 +52,26 @@ const Header = () => {
       <header className="sticky top-0 z-50 w-full bg-background border-b border-border/50">
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex h-16 md:h-20 items-center justify-between">
-            {/* Mobile Menu Button */}
+            
+            {/* 1️⃣ Mobile Menu Button - Left aligned on small screens */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 text-foreground"
+              className="lg:hidden p-2 -ml-2 text-foreground"
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
 
-            {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <img src={rdcLogo} alt="RDC" className="h-8 md:h-10 w-auto" />
-              <span className="font-serif text-xl md:text-2xl font-medium tracking-wide">RDC</span>
+            {/* 2️⃣ Logo Section - Responsive scaling */}
+            <Link to="/" className="flex items-center gap-2 shrink-0">
+              <img src={rdcLogo} alt="RDC" className="h-7 sm:h-8 md:h-10 w-auto" />
+              {/* ✅ UPDATED: Hide text on tiny screens, show from sm upwards */}
+              <span className="hidden sm:block font-serif text-xl md:text-2xl font-medium tracking-wide">
+                RDC
+              </span>
             </Link>
 
-            {/* Center Navigation */}
+            {/* 3️⃣ Center Navigation - Desktop only */}
             <nav className="hidden lg:flex items-center gap-8">
               {navItems.map((item) => (
                 <div
@@ -94,8 +98,8 @@ const Header = () => {
               ))}
             </nav>
 
-            {/* Right Icons */}
-            <div className="flex items-center gap-1 md:gap-3">
+            {/* 4️⃣ Right Icons - Improved spacing for mobile */}
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
               <button
                 onClick={() => setShowSearch(true)}
                 className="p-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -104,7 +108,6 @@ const Header = () => {
                 <Search className="h-5 w-5" />
               </button>
 
-              {/* ✅ ADDED: My Orders Icon */}
               {isLoggedIn && (
                 <Link 
                   to="/orders" 
@@ -115,6 +118,7 @@ const Header = () => {
                 </Link>
               )}
 
+              {/* Hide wishlist on mobile to reduce clutter, as you correctly planned */}
               <Link to="/wishlist" className="hidden md:flex p-2 text-muted-foreground hover:text-foreground transition-colors" title="Wishlist">
                 <Heart className="h-5 w-5" />
               </Link>
@@ -128,19 +132,19 @@ const Header = () => {
                 )}
               </Link>
 
-              {/* Auth Toggle */}
+              {/* Auth Toggle - Refined Mobile UI */}
               {!isLoggedIn ? (
-                <div className="flex items-center gap-4 ml-2">
-                  <Link to="/login" className="text-xs font-bold uppercase tracking-widest hover:text-foreground transition-colors">
+                <div className="flex items-center gap-2 sm:gap-4 ml-1 sm:ml-2">
+                  <Link to="/login" className="hidden sm:block text-xs font-bold uppercase tracking-widest hover:text-foreground transition-colors">
                     Login
                   </Link>
-                  <Link to="/signup" className="px-4 py-2 bg-[#2A2623] text-white text-[10px] font-bold uppercase tracking-widest rounded-sm hover:bg-black transition-all">
+                  <Link to="/signup" className="px-3 sm:px-4 py-2 bg-[#2A2623] text-white text-[9px] sm:text-[10px] font-bold uppercase tracking-widest rounded-sm hover:bg-black transition-all">
                     Register
                   </Link>
                 </div>
               ) : (
                 <div 
-                  className="relative ml-2" 
+                  className="relative ml-1 sm:ml-2" 
                   onMouseEnter={() => setShowProfileMenu(true)} 
                   onMouseLeave={() => setShowProfileMenu(false)}
                 >
@@ -148,7 +152,6 @@ const Header = () => {
                     <User className="h-5 w-5" />
                   </button>
                   
-                  {/* Profile Dropdown */}
                   {showProfileMenu && (
                     <div className="absolute right-0 top-full w-48 bg-white border border-border shadow-xl py-2 animate-in fade-in zoom-in-95 duration-200">
                       <Link to="/profile" className="block px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-secondary/50 hover:text-foreground">
@@ -173,23 +176,31 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
-        <div className={cn('lg:hidden border-t border-border bg-background transition-all duration-300 overflow-hidden', isMobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0')}>
-          <nav className="container mx-auto px-4 py-4 flex flex-col gap-4">
+        {/* 5️⃣ Mobile Navigation Drawer - Improved height and height animation */}
+        <div className={cn(
+          'lg:hidden border-t border-border bg-background transition-all duration-300 ease-in-out overflow-hidden', 
+          isMobileMenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+        )}>
+          <nav className="container mx-auto px-4 py-6 flex flex-col gap-4">
             {navItems.map((item) => (
-              <Link key={item.label} to={item.href} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2" onClick={() => setIsMobileMenuOpen(false)}>
+              <Link 
+                key={item.label} 
+                to={item.href} 
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2 border-b border-border/30" 
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
                 {item.label}
               </Link>
             ))}
             {isLoggedIn && (
-              <Link to="/orders" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2" onClick={() => setIsMobileMenuOpen(false)}>
+              <Link to="/orders" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2 border-b border-border/30" onClick={() => setIsMobileMenuOpen(false)}>
                 My Orders
               </Link>
             )}
             {!isLoggedIn && (
-              <div className="flex flex-col gap-3 pt-4 border-t border-border">
-                <Link to="/login" className="text-sm font-bold uppercase tracking-widest" onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
-                <Link to="/signup" className="text-sm font-bold uppercase tracking-widest text-[#c9a96e]" onClick={() => setIsMobileMenuOpen(false)}>Register</Link>
+              <div className="flex flex-col gap-4 pt-4">
+                <Link to="/login" className="text-xs font-bold uppercase tracking-widest" onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
+                <Link to="/signup" className="text-xs font-bold uppercase tracking-widest text-[#c9a96e]" onClick={() => setIsMobileMenuOpen(false)}>Register Account</Link>
               </div>
             )}
           </nav>

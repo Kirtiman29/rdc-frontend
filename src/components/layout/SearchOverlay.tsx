@@ -22,29 +22,41 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
     }
   }, [isOpen]);
 
-  // ✅ Industrial Sync: Server-side search logic
+  // ✅ Search Logic: Matches Title, Tags, and Segments via Backend
   useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
     const searchTimer = setTimeout(async () => {
-      if (query.length >= 2) {
-        setLoading(true);
-        try {
-          // Hits Port 8080 Admin Service with the 'search' query parameter
-          const response = await getDesigns({ search: query, limit: 6 });
-          setResults(response.content || []);
-        } catch (error) {
-          console.error('Industrial Search Error:', error);
-          setResults([]);
-        } finally {
-          setLoading(false);
-        }
-      } else {
+      setLoading(true);
+      try {
+        const lowerQuery = query.trim().toLowerCase();
+
+        const response = await getDesigns({ 
+          search: lowerQuery, 
+          limit: 10 
+        });
+        
+        const content = Array.isArray(response) ? response : (response?.content || []);
+        
+        // Sort newest first (highest ID)
+        setResults([...content].sort((a, b) => b.id - a.id));
+        
+      } catch (error) {
+        console.error('Search Error:', error);
         setResults([]);
+      } finally {
+        setLoading(false);
       }
-    }, 300); // Debounce to prevent API hammering
+    }, 400);
 
     return () => clearTimeout(searchTimer);
   }, [query]);
 
+  // Body Scroll Lock & ESC Key Listener
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -64,7 +76,6 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
   return (
     <div className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-sm animate-fade-in">
       <div className="container mx-auto px-4 md:px-8 pt-8">
-        {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-6 right-6 p-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -73,7 +84,6 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
           <X className="h-6 w-6" />
         </button>
 
-        {/* Search Input */}
         <div className="max-w-2xl mx-auto pt-20">
           <div className="relative">
             {loading ? (
@@ -91,11 +101,10 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
             />
           </div>
 
-          {/* Results */}
           {results.length > 0 && (
-            <div className="mt-8 space-y-2">
+            <div className="mt-8 space-y-2 max-h-[60vh] overflow-y-auto pr-2">
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-4">
-                Results
+                Found {results.length} Industrial Results
               </p>
               <div className="space-y-2">
                 {results.map((product) => (
@@ -108,23 +117,21 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
                     }}
                     className="flex items-center gap-4 p-3 rounded-sm hover:bg-secondary/50 transition-colors group"
                   >
-                    <div className="w-16 h-16 rounded-sm overflow-hidden flex-shrink-0 bg-secondary">
+                    <div className="w-16 h-16 rounded-sm overflow-hidden flex-shrink-0 bg-secondary border border-border/50">
                       <img
-                        // ✅ Sync: Asset streaming via Port 8090
                         src={getAssetUrl(product.assetUuid)}
                         alt={product.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-foreground group-hover:text-muted-foreground transition-colors truncate">
+                      <h4 className="font-medium text-foreground group-hover:text-primary transition-colors truncate">
                         {product.title}
                       </h4>
                       <p className="text-sm text-muted-foreground capitalize">
-                        {product.segment?.replace('_', ' ') || 'Collection'}
+                        {product.segment?.toLowerCase().replace('_', ' ') || 'Collection'}
                       </p>
                     </div>
-                    {/* ✅ Sync: Industrial Price Formatting */}
                     <span className="font-serif text-lg text-foreground">
                       ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
                     </span>
@@ -134,15 +141,13 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
             </div>
           )}
 
-          {/* No Results */}
-          {query.length >= 2 && results.length === 0 && !loading && (
-            <div className="mt-8 text-center">
-              <p className="text-muted-foreground">No designs found for "{query}"</p>
+          {query.trim().length >= 2 && results.length === 0 && !loading && (
+            <div className="mt-12 text-center">
+              <p className="text-muted-foreground">No designs found for "<span className="text-foreground font-medium">{query}</span>"</p>
             </div>
           )}
 
-          {/* Quick Links */}
-          {query.length < 2 && (
+          {query.trim().length < 2 && (
             <div className="mt-12">
               <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-4">
                 Popular Searches
@@ -152,7 +157,7 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
                   <button
                     key={term}
                     onClick={() => setQuery(term)}
-                    className="px-4 py-2 bg-secondary/50 rounded-full text-sm text-foreground hover:bg-secondary transition-colors"
+                    className="px-4 py-2 bg-secondary/50 rounded-full text-sm text-foreground hover:bg-secondary transition-all"
                   >
                     {term}
                   </button>

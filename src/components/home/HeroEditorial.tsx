@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getDesigns, getNewArrivals } from '@/api/designApi';
+import { getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import type { Design } from '@/types/product';
 import { cn } from '@/lib/utils';
@@ -26,7 +26,6 @@ const HeroEditorial = () => {
   useEffect(() => {
     const fetchAllCategories = async () => {
       try {
-        // 1️⃣ Fetch a large pool to allow proper sorting & filtering (Industrial Standard)
         const response = await getDesigns({ limit: 50 });
         const allFetched = Array.isArray(response) ? response : (response?.content || []);
 
@@ -46,7 +45,7 @@ const HeroEditorial = () => {
           {
             label: 'NEW ARRIVALS',
             subtitle: 'FRESH, INNOVATIVE AND MODERN',
-            filter: () => true, // Real logic handled by ID sorting
+            filter: () => true,
             link: '/gallery?newArrival=true',
           },
           {
@@ -66,15 +65,13 @@ const HeroEditorial = () => {
         const slideData: CategorySlide[] = [];
         const usedIds = new Set<number>();
 
-        // 2️⃣ Apply logic from Premium/Trending components
         categoryConfigs.forEach((config) => {
           let designs = allFetched
             .filter(config.filter)
-            .sort((a: Design, b: Design) => b.id - a.id) // ✅ Recent First (Highest ID)
-            .filter(d => !usedIds.has(d.id)) // ✅ Prevent duplicate across slides
+            .sort((a: Design, b: Design) => b.id - a.id)
+            .filter(d => !usedIds.has(d.id))
             .slice(0, 2);
 
-          // ✅ FALLBACK: If category is empty in DB, pick next 2 newest general designs
           if (designs.length < 2) {
             const fallback = allFetched
               .sort((a: Design, b: Design) => b.id - a.id)
@@ -83,7 +80,6 @@ const HeroEditorial = () => {
             designs = [...designs, ...fallback];
           }
 
-          // Mark IDs as used
           designs.forEach(d => usedIds.add(d.id));
 
           slideData.push({
@@ -141,21 +137,29 @@ const HeroEditorial = () => {
   return (
     <>
       <section
-        className="relative overflow-hidden select-none py-16 md:py-24 lg:py-28 bg-[#FBFAF9]"
+        className="relative overflow-hidden select-none py-10 md:py-24 lg:py-28 bg-[#FBFAF9]"
         onContextMenu={handleContextMenu}
       >
-        <div className="container mx-auto px-4 md:px-8 max-w-[1400px]">
-          <div className="relative flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-16 min-h-[520px]">
+        <div className="container mx-auto px-2 md:px-8 max-w-[1400px]">
+          {/* ✅ FIXED: Use flex-row for all screens to keep designs side-by-side */}
+          <div className="
+            relative 
+            flex flex-row 
+            items-center 
+            justify-between 
+            gap-2 sm:gap-6 md:gap-10 lg:gap-16
+            min-h-[320px] sm:min-h-[480px] lg:min-h-[520px]
+          ">
             
-            {/* 1️⃣ Left Card */}
+            {/* 1️⃣ Left Card - Fixed width percentage */}
             <div className={cn(
-              'w-full lg:w-[28%] flex justify-center transition-all duration-700 ease-out',
-              isAnimating ? 'opacity-0 -translate-x-8 scale-[0.98]' : 'opacity-100 translate-x-0 scale-100'
+              'w-[28%] flex justify-center transition-all duration-700 ease-out',
+              isAnimating ? 'opacity-0 -translate-x-4 scale-[0.95]' : 'opacity-100 translate-x-0 scale-100'
             )}>
               {leftDesign && (
                 <Link
                   to={`/product/${leftDesign.id}`}
-                  className="group relative block w-full max-w-[280px] aspect-[3/4] rounded-[10px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-500 ease-out hover:-translate-y-2 hover:scale-[1.02] -rotate-[3deg]"
+                  className="group relative block w-full max-w-[120px] sm:max-w-[220px] lg:max-w-[280px] aspect-[3/4] rounded-[6px] sm:rounded-[10px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-500 ease-out hover:-translate-y-1 sm:hover:-translate-y-2 hover:scale-[1.02] -rotate-[2deg] sm:-rotate-[3deg]"
                 >
                   <img
                     src={getAssetUrl(leftDesign.assetUuid)}
@@ -166,35 +170,35 @@ const HeroEditorial = () => {
               )}
             </div>
 
-            {/* 2️⃣ Center Content */}
+            {/* 2️⃣ Center Content - Fixed width percentage */}
             <div className={cn(
-              'w-full lg:w-[44%] flex flex-col items-center justify-center text-center z-10 transition-all duration-700 ease-out',
-              isAnimating ? 'opacity-0 translate-y-6' : 'opacity-100 translate-y-0'
+              'w-[44%] flex flex-col items-center justify-center text-center z-10 transition-all duration-700 ease-out',
+              isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
             )}>
-              <p className="text-[10px] md:text-xs uppercase tracking-[0.35em] font-light text-[#6b7280] mb-5">
+              <p className="text-[7px] sm:text-[10px] md:text-xs uppercase tracking-[0.2em] sm:tracking-[0.35em] font-medium sm:font-light text-[#6b7280] mb-2 sm:mb-5">
                 {currentSlide.subtitle}
               </p>
-              <h1 className="font-serif text-4xl md:text-6xl lg:text-7xl font-normal text-[#1a1a1a] leading-[1.08] tracking-tight mb-10 italic">
+              <h1 className="font-serif text-lg sm:text-4xl md:text-6xl lg:text-7xl font-normal text-[#1a1a1a] leading-tight sm:leading-[1.08] tracking-tight mb-4 sm:mb-10 italic">
                 {currentSlide.label}
               </h1>
               <Button
                 onClick={() => navigate(currentSlide.link)}
                 variant="outline"
-                className="rounded-full px-10 py-5 h-auto border border-[#1a1a1a]/70 text-[#1a1a1a] font-medium hover:bg-[#1a1a1a] hover:text-white transition-all duration-300 text-[11px] tracking-[0.2em] uppercase"
+                className="rounded-full px-3 sm:px-10 py-2 sm:py-5 h-auto border border-[#1a1a1a]/70 text-[#1a1a1a] font-medium hover:bg-[#1a1a1a] hover:text-white transition-all duration-300 text-[8px] sm:text-[11px] tracking-[0.1em] sm:tracking-[0.2em] uppercase"
               >
-                Explore Collection
+                Explore
               </Button>
             </div>
 
-            {/* 3️⃣ Right Card */}
+            {/* 3️⃣ Right Card - Fixed width percentage */}
             <div className={cn(
-              'w-full lg:w-[28%] flex justify-center transition-all duration-700 ease-out',
-              isAnimating ? 'opacity-0 translate-x-8 scale-[0.98]' : 'opacity-100 translate-x-0 scale-100'
+              'w-[28%] flex justify-center transition-all duration-700 ease-out',
+              isAnimating ? 'opacity-0 translate-x-4 scale-[0.95]' : 'opacity-100 translate-x-0 scale-100'
             )}>
               {rightDesign && (
                 <Link
                   to={`/product/${rightDesign.id}`}
-                  className="group relative block w-full max-w-[280px] aspect-[3/4] rounded-[10px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-500 ease-out hover:-translate-y-2 hover:scale-[1.02] rotate-[3deg]"
+                  className="group relative block w-full max-w-[120px] sm:max-w-[220px] lg:max-w-[280px] aspect-[3/4] rounded-[6px] sm:rounded-[10px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.06)] sm:shadow-[0_8px_32px_rgba(0,0,0,0.08)] transition-all duration-500 ease-out hover:-translate-y-1 sm:hover:-translate-y-2 hover:scale-[1.02] rotate-[2deg] sm:rotate-[3deg]"
                 >
                   <img
                     src={getAssetUrl(rightDesign.assetUuid)}
@@ -207,14 +211,14 @@ const HeroEditorial = () => {
           </div>
 
           {/* Navigation Dots */}
-          <div className="flex justify-center gap-2.5 mt-16 mb-4">
+          <div className="flex justify-center gap-2 mt-8 sm:mt-16 mb-2">
             {slides.map((_, i) => (
               <button
                 key={i}
                 onClick={() => !isAnimating && goToSlide(i)}
                 className={cn(
-                  'h-1.5 rounded-full transition-all duration-300 cursor-pointer',
-                  currentIndex === i ? 'w-8 bg-[#1a1a1a]' : 'w-1.5 bg-neutral-400 hover:bg-neutral-600'
+                  'h-1 rounded-full transition-all duration-300 cursor-pointer',
+                  currentIndex === i ? 'w-6 sm:w-8 bg-[#1a1a1a]' : 'w-1 sm:w-1.5 bg-neutral-400 hover:bg-neutral-600'
                 )}
                 aria-label={`Go to slide ${i + 1}`}
               />

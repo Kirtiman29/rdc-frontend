@@ -30,16 +30,12 @@ const FAQ = () => {
       answer: 'Due to the digital nature of our products, we do not offer refunds once a design has been downloaded. However, if you experience any technical issues, please contact our support team and we will assist you.',
     },
     {
-      question: 'Can I request modifications to a design?',
-      answer: 'Minor modifications such as color adjustments may be available for an additional fee. Please contact us with your specific requirements for a custom quote.',
-    },
-    {
       question: 'How often do you release new designs?',
       answer: 'We release new collections seasonally, with additional individual designs added throughout the year. Subscribe to our newsletter to stay updated on new releases.',
     },
     {
       question: 'Do you offer bulk discounts?',
-      answer: 'Yes, we offer volume discounts for bulk purchases. Please contact our sales team for pricing on orders of 10 or more designs.',
+      answer: 'Yes, we offer volume discounts for bulk purchases. Please contact our sales team for pricing on orders of 100 or more designs.',
     },
   ];
 

@@ -23,6 +23,7 @@ const Trends = () => {
   useEffect(() => {
     const fetchTrendingData = async () => {
       try {
+        // Fetching trending data from the API
         const data = await getTrendingDesigns(50); 
         
         // ✅ MANDATORY FIX: Filter strictly for trending designs only
@@ -99,7 +100,7 @@ const Trends = () => {
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-medium mt-4 mb-6 text-[#2A2623]">
               Trending Designs
             </h1>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto italic">
+            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
               Discover the patterns making waves in the industry. 
               Curated from our most sought-after designs this season.
             </p>
@@ -155,7 +156,7 @@ const Trends = () => {
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">
                         {product.segment?.replace('_', ' ') || 'Textile'}
                       </p>
-                      {/* ✅ FIX: Removed 'italic' from title to match editorial style */}
+                      {/* Title updated to remove 'italic' class for cleaner look */}
                       <h3 className="font-serif text-lg text-[#2A2623] line-clamp-1 group-hover:text-slate-600 transition-colors">
                         {product.title}
                       </h3>

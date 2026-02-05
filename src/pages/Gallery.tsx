@@ -32,9 +32,16 @@ const Gallery = () => {
   const fetchFilteredDesigns = useCallback(async () => {
     setLoading(true);
     try {
+      // ✅ FIX 2: Clean filters before API call to remove undefined/false values
+      const cleanedFilters = Object.fromEntries(
+        Object.entries(filters).filter(
+          ([, v]) => v !== undefined && v !== false && v !== ''
+        )
+      );
+
       const response = await getDesigns({
-        ...filters,
-        limit: 24, // Increased limit to ensure better grid filling
+        ...cleanedFilters,
+        limit: 24, // Increased limit for better grid filling
       });
 
       const rawContent = Array.isArray(response) ? response : (response.content || []);
@@ -91,10 +98,10 @@ const Gallery = () => {
         {/* Catalog Section */}
         <section className="py-12 md:py-16">
           <div className="container px-4 mx-auto md:px-8">
-            <div className="flex flex-col gap-12 lg:flex-row">
+            <div className="flex flex-col gap-8 lg:flex-row">
               
-              {/* Desktop Filters */}
-              <aside className="hidden w-64 shrink-0 lg:block">
+              {/* ✅ SIDEBAR: Sidebar stays unchanged as requested */}
+              <aside className="hidden w-64 shrink-0 lg:block max-h-[calc(100vh-160px)] sticky top-32 overflow-y-auto pr-2 custom-scrollbar">
                 <h2 className="mb-6 font-serif text-lg font-bold text-[#2A2623] uppercase tracking-widest border-b border-border pb-2">Refine By</h2>
                 <FilterContent filters={filters} onFiltersChange={setFilters} />
               </aside>
@@ -112,10 +119,16 @@ const Gallery = () => {
                     <Loader2 className="h-10 w-10 animate-spin text-[#2A2623]" />
                   </div>
                 ) : designs.length > 0 ? (
-                  <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  /* ✅ GRID BEHAVIOR: 
+                     - 1 column on mobile (grid-cols-1)
+                     - 2 columns on tablet (md:grid-cols-2)
+                     - 3 columns on desktop (xl:grid-cols-3)
+                     - 4 columns on large desktop (2xl:grid-cols-4)
+                  */
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-x-6 gap-y-10">
                     {designs.map((design) => (
-                      <div key={design.id} className="relative group overflow-hidden select-none">
-                        {/* ✅ HIGH-VISIBILITY WATERMARK FOR GALLERY CARDS */}
+                      <div key={design.id} className="relative group overflow-hidden select-none w-full">
+                        {/* ✅ WATERMARK: Preservation of visibility and proportional scaling */}
                         <div 
                           className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
                           style={{
@@ -123,6 +136,7 @@ const Gallery = () => {
                             backgroundRepeat: 'repeat'
                           }}
                         />
+                        {/* ✅ DESIGN CARD: Proportional scaling is handled inside ProductCard component */}
                         <ProductCard product={design} />
                       </div>
                     ))}

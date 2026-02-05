@@ -1,4 +1,6 @@
-import { publicApi } from './apiClient'; 
+// src/api/designApi.ts
+
+import { userApi } from './apiClient'; // ✅ FIXED: Importing userApi instead of publicApi
 import type { Design, Category, DesignsResponse, DesignFilters } from '../types/product';
 
 /**
@@ -12,7 +14,7 @@ const extractArray = (data: any): Design[] => {
 
 /**
  * ✅ Sync: Main Gallery Feed
- * Path: /api/public/designs/feed
+ * Uses userApi with proactive refresh interceptors.
  */
 export const getDesigns = async (filters?: DesignFilters): Promise<DesignsResponse> => {
   const params = new URLSearchParams();
@@ -28,7 +30,8 @@ export const getDesigns = async (filters?: DesignFilters): Promise<DesignsRespon
     if (filters.search) params.append('search', filters.search);
   }
 
-  const response = await publicApi.get<DesignsResponse>(`/public/designs/feed?${params.toString()}`);
+  // ✅ FIXED: Using userApi
+  const response = await userApi.get<DesignsResponse>(`/public/designs/feed?${params.toString()}`);
   return response.data;
 };
 
@@ -36,7 +39,7 @@ export const getDesigns = async (filters?: DesignFilters): Promise<DesignsRespon
  * ✅ Trending Feed
  */
 export const getTrendingDesigns = async (limit: number = 10): Promise<Design[]> => {
-  const response = await publicApi.get(`/public/designs/feed?trending=true&size=${limit}`);
+  const response = await userApi.get(`/public/designs/feed?trending=true&size=${limit}`);
   return extractArray(response.data);
 };
 
@@ -44,7 +47,7 @@ export const getTrendingDesigns = async (limit: number = 10): Promise<Design[]> 
  * ✅ New Arrivals Feed
  */
 export const getNewArrivals = async (limit: number = 10): Promise<Design[]> => {
-  const response = await publicApi.get(`/public/designs/feed?newArrival=true&size=${limit}`);
+  const response = await userApi.get(`/public/designs/feed?newArrival=true&size=${limit}`);
   return extractArray(response.data);
 };
 
@@ -52,18 +55,16 @@ export const getNewArrivals = async (limit: number = 10): Promise<Design[]> => {
  * ✅ Editors Choice
  */
 export const getEditorsPick = async (limit: number = 10): Promise<Design[]> => {
-  const response = await publicApi.get(`/public/designs/feed?editorsPick=true&size=${limit}`);
+  const response = await userApi.get(`/public/designs/feed?editorsPick=true&size=${limit}`);
   return extractArray(response.data);
 };
 
 /**
- * ✅ FIXED: Category Sync 
- * Explicit Path: /api/categories/public
- * matches SecurityConfig: .requestMatchers("/api/categories/public").permitAll()
+ * ✅ Category Sync 
  */
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    const response = await publicApi.get('/categories/public'); 
+    const response = await userApi.get('/categories/public'); 
     return Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     console.error("Failed to sync storefront categories:", error);
@@ -75,7 +76,7 @@ export const getCategories = async (): Promise<Category[]> => {
  * ✅ Public design detail
  */
 export const getDesignById = async (id: string | number): Promise<Design> => {
-  const response = await publicApi.get<Design>(`/public/designs/${id}`);
+  const response = await userApi.get<Design>(`/public/designs/${id}`);
   return response.data;
 };
 
@@ -83,6 +84,6 @@ export const getDesignById = async (id: string | number): Promise<Design> => {
  * ✅ Related Designs Sync
  */
 export const getRelatedDesigns = async (designId: string | number, limit: number = 4): Promise<Design[]> => {
-  const response = await publicApi.get(`/public/designs/${designId}/related?limit=${limit}`);
+  const response = await userApi.get(`/public/designs/${designId}/related?limit=${limit}`);
   return extractArray(response.data);
 };

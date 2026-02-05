@@ -1,4 +1,3 @@
-// src/components/products/ProductFilters.tsx
 import { useEffect, useState } from 'react';
 import { ProductFilter, Category } from '@/types/product';
 import { X, Filter, Loader2 } from 'lucide-react';
@@ -27,7 +26,6 @@ interface ProductFiltersProps {
   productCount: number;
 }
 
-// ✅ Sync: Segments match the Java Enum in Admin Service
 const segments = [
   { value: 'MENSWEAR', label: 'Menswear' },
   { value: 'WOMENSWEAR', label: 'Womenswear' },
@@ -60,9 +58,12 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
     fetchCategories();
   }, []);
 
-  const handleCategoryChange = (categoryId: number, checked: boolean) => {
-    // Port 8080 expects a single category or comma-separated IDs
-    onFiltersChange({ ...filters, category: checked ? categoryId : undefined });
+  // ✅ FIX 1: Category now acts as a Tag Filter (Search)
+  const handleCategoryChange = (tagName: string, checked: boolean) => {
+    onFiltersChange({
+      ...filters,
+      search: checked ? tagName.toLowerCase() : undefined,
+    });
   };
 
   const handleSegmentChange = (segment: string, checked: boolean) => {
@@ -73,12 +74,19 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
     onFiltersChange({ sortBy: filters.sortBy });
   };
 
-  const hasActiveFilters = filters.category || filters.segment || filters.premium || filters.trending;
+  const hasActiveFilters = Object.values(filters).some(
+    (v) => v !== undefined && v !== false && v !== ''
+  );
 
   return (
     <div className="space-y-8">
       {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full justify-start text-destructive hover:text-destructive">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={clearFilters} 
+          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+        >
           <X className="mr-2 h-4 w-4" />
           Clear all filters
         </Button>
@@ -93,7 +101,7 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
               <Checkbox
                 id={`seg-${seg.value}`}
                 checked={filters.segment === seg.value}
-                onCheckedChange={(checked) => handleSegmentChange(seg.value, checked as boolean)}
+                onCheckedChange={(checked) => handleSegmentChange(seg.value, !!checked)}
               />
               <Label htmlFor={`seg-${seg.value}`} className="text-sm font-normal cursor-pointer uppercase">
                 {seg.label}
@@ -103,7 +111,7 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
         </div>
       </div>
 
-      {/* Categories Section */}
+      {/* Categories Section (NOW TAG FILTERS) */}
       <div>
         <h4 className="mb-4 font-serif text-sm font-medium uppercase tracking-wider">Collections</h4>
         {loading ? (
@@ -114,8 +122,9 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
               <div key={cat.id} className="flex items-center space-x-3">
                 <Checkbox
                   id={`cat-${cat.id}`}
-                  checked={Number(filters.category) === cat.id}
-                  onCheckedChange={(checked) => handleCategoryChange(cat.id, checked as boolean)}
+                  // ✅ Matches search string to tag name
+                  checked={filters.search === cat.name.toLowerCase()}
+                  onCheckedChange={(checked) => handleCategoryChange(cat.name, !!checked)}
                 />
                 <Label htmlFor={`cat-${cat.id}`} className="text-sm font-normal cursor-pointer">
                   {cat.name}
@@ -133,16 +142,16 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
           <div className="flex items-center space-x-3">
             <Checkbox
               id="attr-premium"
-              checked={filters.premium || false}
-              onCheckedChange={(checked) => onFiltersChange({ ...filters, premium: checked as boolean })}
+              checked={!!filters.premium}
+              onCheckedChange={(checked) => onFiltersChange({ ...filters, premium: !!checked })}
             />
             <Label htmlFor="attr-premium" className="text-sm font-normal cursor-pointer">Premium Only</Label>
           </div>
           <div className="flex items-center space-x-3">
             <Checkbox
               id="attr-trending"
-              checked={filters.trending || false}
-              onCheckedChange={(checked) => onFiltersChange({ ...filters, trending: checked as boolean })}
+              checked={!!filters.trending}
+              onCheckedChange={(checked) => onFiltersChange({ ...filters, trending: !!checked })}
             />
             <Label htmlFor="attr-trending" className="text-sm font-normal cursor-pointer">Trending</Label>
           </div>
@@ -166,7 +175,7 @@ const ProductFilters = ({ filters, onFiltersChange, productCount }: ProductFilte
               <Filter className="h-4 w-4" /> Filters
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-80">
+          <SheetContent side="left" className="w-80 overflow-y-auto">
             <SheetHeader>
               <SheetTitle className="font-serif">Filter Designs</SheetTitle>
             </SheetHeader>
