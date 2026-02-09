@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import { Package, Loader2, FileText } from 'lucide-react'; // ✅ Added FileText
-import { getAssetUrl, getToken } from '@/api/apiClient';
-import { getMyOrders, downloadInvoicePdf } from '@/api/orderApi'; // ✅ Added download function
+import { Package, Loader2, FileText, Hash } from 'lucide-react'; 
+import { getToken } from '@/api/apiClient';
+import { getMyOrders, downloadInvoicePdf } from '@/api/orderApi';
 
 interface OrderItem {
   id: number;
   designId: number;
+  designIdentifier: string; // ✅ Added to match order_item table data
   assetUuid: string;
   designTitle: string;
   quantity: number;
@@ -27,7 +28,6 @@ const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Security: Restrict Right-Click across order history
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -56,7 +56,7 @@ const Orders = () => {
         return 'bg-green-50 text-green-600 border-green-100';
       case 'CANCELLED':
         return 'bg-red-50 text-red-600 border-red-100';
-      default: // CREATED, PENDING
+      default:
         return 'bg-amber-50 text-amber-600 border-amber-100';
     }
   };
@@ -100,26 +100,14 @@ const Orders = () => {
                     >
                       {/* LEFT SIDE: ASSET INFO */}
                       <div className="flex items-center gap-6 w-full md:w-auto">
-                        <div className="relative w-24 h-24 bg-secondary/20 flex-shrink-0 overflow-hidden rounded-lg border border-border select-none">
-                          
-                          {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
-                          <div 
-                            className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
-                            style={{
-                              backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='6' font-weight='900' fill='none' stroke='white' stroke-width='0.2' text-anchor='middle' transform='rotate(-35 20 20)'%3ERDC%3C/text%3E%3C/svg%3E")`,
-                              backgroundRepeat: 'repeat'
-                            }}
-                          />
-
-                          <img
-                            src={getAssetUrl(item.assetUuid)}
-                            alt=""
-                            draggable={false} // ✅ Prevent Drag
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                          />
-                          
-                          {/* Security contrast layer */}
-                          <div className="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                        
+                        {/* ✅ REPLACED IMAGE WITH DESIGN ID BOX */}
+                        <div className="relative w-24 h-24 bg-secondary/10 flex-shrink-0 flex flex-col items-center justify-center rounded-lg border border-border group-hover:bg-secondary/20 transition-colors">
+                           <Hash className="h-4 w-4 text-muted-foreground/40 mb-1" />
+                           <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Design ID</span>
+                           <span className="text-[11px] font-mono font-bold text-[#2A2623] px-2 text-center break-all leading-tight">
+                             {item.designIdentifier || `ID-${item.designId}`}
+                           </span>
                         </div>
 
                         <div className="text-left space-y-1">
@@ -144,7 +132,6 @@ const Orders = () => {
                             ₹{(item.priceCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                           </p>
                           
-                          {/* ✅ NEW: INVOICE DOWNLOAD OPTION (Only for PAID orders) */}
                           {order.status.toUpperCase() === 'PAID' && (
                             <button 
                               onClick={() => downloadInvoicePdf(order.id)}

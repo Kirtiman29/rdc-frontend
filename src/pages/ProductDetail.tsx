@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronRight, ShoppingBag, Heart, Loader2, PlayCircle, ShieldCheck } from 'lucide-react';
+import { ChevronRight, ShoppingBag, Heart, Loader2, PlayCircle, ShieldCheck, Hash } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
@@ -38,18 +38,14 @@ const ProductDetail = () => {
         setActiveMediaUrl(getAssetUrl(designData.assetUuid)); 
         setActiveMediaType('IMAGE');
 
-        // ================================================
-        // ✅ ENHANCED RELATED DESIGNS LOGIC
-        // ================================================
         try {
-          // 1. Fetch Primary + Secondary Match (Same Segment + Same Flag)
           const primaryRelated = await getDesigns({ 
             segment: designData.segment,
             trending: designData.trending || undefined,
             premium: designData.premium || undefined,
             editorsPick: designData.editorsPick || undefined,
             specialOffer: designData.specialOffer || undefined,
-            limit: 10 // Fetch extra to account for exclusions
+            limit: 10 
           });
 
           const primaryContent = (Array.isArray(primaryRelated) ? primaryRelated : primaryRelated?.content || [])
@@ -57,7 +53,6 @@ const ProductDetail = () => {
 
           let finalRelated = [...primaryContent];
 
-          // 2. Fallback: Fill remaining slots with latest designs from same segment
           if (finalRelated.length < 4) {
             const fallbackRelated = await getDesigns({ 
               segment: designData.segment, 
@@ -69,7 +64,6 @@ const ProductDetail = () => {
             finalRelated = [...finalRelated, ...fallbackContent];
           }
 
-          // 3. Final Selection: Sort by ID (Latest first) and Limit to 4
           setRelatedProducts(
             finalRelated
               .sort((a, b) => b.id - a.id)
@@ -204,6 +198,15 @@ const ProductDetail = () => {
                 <h1 className="font-serif text-4xl lg:text-6xl mb-6 text-[#1A1A1A] leading-tight tracking-tight">
                   {product.title}
                 </h1>
+
+                {/* ✅ DESIGN ID / SKU SECTION */}
+                <div className="flex items-center gap-2 mb-8 bg-zinc-50 border border-zinc-100 w-fit px-4 py-2 rounded-sm">
+                  <Hash size={10} className="text-zinc-400" />
+                  <span className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em] border-r border-zinc-200 pr-3 mr-1">Design ID</span>
+                  <span className="text-xs font-mono font-bold text-[#1A1A1A]">
+                    {product.designIdentifier || `RDC-${product.id}`}
+                  </span>
+                </div>
                 
                 <div className="flex items-baseline gap-4 mb-10">
                   <span className="font-serif text-4xl font-light text-[#1A1A1A]">

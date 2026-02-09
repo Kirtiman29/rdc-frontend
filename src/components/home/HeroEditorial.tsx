@@ -26,7 +26,8 @@ const HeroEditorial = () => {
   useEffect(() => {
     const fetchAllCategories = async () => {
       try {
-        const response = await getDesigns({ limit: 50 });
+        // Fetch a larger pool to ensure we find enough matches for specific flags
+        const response = await getDesigns({ limit: 100 }); 
         const allFetched = Array.isArray(response) ? response : (response?.content || []);
 
         const categoryConfigs = [
@@ -45,7 +46,7 @@ const HeroEditorial = () => {
           {
             label: 'NEW ARRIVALS',
             subtitle: 'FRESH, INNOVATIVE AND MODERN',
-            filter: () => true,
+            filter: (d: Design) => d.newArrival === true || true, // Default true for new arrivals
             link: '/gallery?newArrival=true',
           },
           {
@@ -63,24 +64,23 @@ const HeroEditorial = () => {
         ];
 
         const slideData: CategorySlide[] = [];
-        const usedIds = new Set<number>();
 
         categoryConfigs.forEach((config) => {
+          // ✅ FIX: Logic now independently finds the most RECENT designs per segment
           let designs = allFetched
             .filter(config.filter)
-            .sort((a: Design, b: Design) => b.id - a.id)
-            .filter(d => !usedIds.has(d.id))
+            .sort((a: Design, b: Design) => b.id - a.id) // Sort by ID descending for most recent
             .slice(0, 2);
 
+          // Fallback: If no designs have the specific flag (e.g., no Special Offers yet), 
+          // use the absolute newest designs from the general catalog to prevent empty slides.
           if (designs.length < 2) {
             const fallback = allFetched
               .sort((a: Design, b: Design) => b.id - a.id)
-              .filter(d => !usedIds.has(d.id))
+              .filter(d => !designs.some(existing => existing.id === d.id))
               .slice(0, 2 - designs.length);
             designs = [...designs, ...fallback];
           }
-
-          designs.forEach(d => usedIds.add(d.id));
 
           slideData.push({
             label: config.label,
@@ -141,7 +141,6 @@ const HeroEditorial = () => {
         onContextMenu={handleContextMenu}
       >
         <div className="container mx-auto px-2 md:px-8 max-w-[1400px]">
-          {/* ✅ FIXED: Use flex-row for all screens to keep designs side-by-side */}
           <div className="
             relative 
             flex flex-row 
@@ -151,7 +150,7 @@ const HeroEditorial = () => {
             min-h-[320px] sm:min-h-[480px] lg:min-h-[520px]
           ">
             
-            {/* 1️⃣ Left Card - Fixed width percentage */}
+            {/* 1️⃣ Left Card */}
             <div className={cn(
               'w-[28%] flex justify-center transition-all duration-700 ease-out',
               isAnimating ? 'opacity-0 -translate-x-4 scale-[0.95]' : 'opacity-100 translate-x-0 scale-100'
@@ -170,7 +169,7 @@ const HeroEditorial = () => {
               )}
             </div>
 
-            {/* 2️⃣ Center Content - Fixed width percentage */}
+            {/* 2️⃣ Center Content */}
             <div className={cn(
               'w-[44%] flex flex-col items-center justify-center text-center z-10 transition-all duration-700 ease-out',
               isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
@@ -190,7 +189,7 @@ const HeroEditorial = () => {
               </Button>
             </div>
 
-            {/* 3️⃣ Right Card - Fixed width percentage */}
+            {/* 3️⃣ Right Card */}
             <div className={cn(
               'w-[28%] flex justify-center transition-all duration-700 ease-out',
               isAnimating ? 'opacity-0 translate-x-4 scale-[0.95]' : 'opacity-100 translate-x-0 scale-100'

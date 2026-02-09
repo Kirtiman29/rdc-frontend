@@ -9,7 +9,7 @@ export interface Category {
 }
 
 /**
- * Matches Admin Service MediaDTO [cite: 122, 415]
+ * Matches Admin Service MediaDTO
  */
 export interface DesignMedia {
   url: string;
@@ -18,13 +18,15 @@ export interface DesignMedia {
 }
 
 /**
- * ✅ FIXED: Industrial Design Entity [cite: 128-131, 179-188]
+ * ✅ UPDATED: Industrial Design Entity
+ * Includes the designIdentifier (SKU) used for catalog management.
  */
 export interface Design {
   id: number;
   title: string;
   description: string;
   slug: string;
+  designIdentifier: string; // ⬅️ NEW: The Alphanumeric SKU (e.g., RDC-2024-001)
   assetUuid: string; 
   basePriceCents: number;
   finalPriceCents: number;
@@ -45,11 +47,13 @@ export interface Design {
 }
 
 /**
- * ✅ NEW: Matches Order Service OrderItemResponse [cite: 1008-1011]
+ * ✅ UPDATED: Order Item Snapshot
+ * Matches the order_items table structure where the SKU is persisted permanently.
  */
 export interface OrderItemResponse {
   id: number;
   designId: number;
+  designIdentifier: string; // ⬅️ NEW: Fetched from order_items table
   assetUuid: string;
   designTitle: string;
   quantity: number;
@@ -71,7 +75,7 @@ export interface OrderResponse {
 }
 
 /**
- * Standardized Filters for Spring Boot Pageable [cite: 22, 123-127]
+ * Standardized Filters for Spring Boot Pageable
  */
 export interface DesignFilters {
   page?: number;
