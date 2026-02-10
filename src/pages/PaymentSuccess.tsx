@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, ArrowRight, Loader2, Package, Mail } from 'lucide-react';
+import { CheckCircle, ArrowRight, Loader2, Package, Mail, ShieldCheck } from 'lucide-react';
 import { orderApi } from '@/api/apiClient';
 
 export default function PaymentSuccess() {
@@ -8,7 +8,7 @@ export default function PaymentSuccess() {
   const navigate = useNavigate();
   const orderId = searchParams.get('orderId');
   const [isVerifying, setIsVerifying] = useState(true);
-  const [countdown, setCountdown] = useState(8); // Slightly longer for reading the message
+  const [countdown, setCountdown] = useState(8); 
 
   useEffect(() => {
     let attempts = 0;
@@ -16,14 +16,13 @@ export default function PaymentSuccess() {
 
     const verifyStatus = async () => {
       try {
-        // Hits Order Service Port 8095 [cite: 162]
+        // Hits Order Service Port 8095 to verify transaction
         const { data } = await orderApi.get(`/${orderId}`);
         
-        // Ensure the order is marked as PAID in database
         if (data.status === 'PAID') {
-          setIsVerifying(false);
+          // Add a slight delay for smooth visual transition
+          setTimeout(() => setIsVerifying(false), 1500);
           
-          // Automatic redirect logic
           const timer = setInterval(() => {
             setCountdown((prev) => {
               if (prev <= 1) {
@@ -51,68 +50,77 @@ export default function PaymentSuccess() {
     if (orderId) verifyStatus();
   }, [orderId, navigate]);
 
+  // 🔄 BUFFERING / LOADING STATE
   if (isVerifying) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
-        <Loader2 className="w-10 h-10 text-[#2A2623] animate-spin mb-4" />
-        <p className="font-serif text-lg text-[#2A2623] tracking-tight">Synchronizing Archive Access...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6">
+        <div className="relative mb-8">
+            {/* Spinning outer ring */}
+            <div className="w-20 h-20 border-4 border-gray-100 border-t-[#2A2623] rounded-full animate-spin"></div>
+            {/* Inner static logo/icon */}
+            <div className="absolute inset-0 flex items-center justify-center">
+                <ShieldCheck size={24} className="text-[#2A2623] opacity-20" />
+            </div>
+        </div>
+        <div className="text-center space-y-2">
+            <h2 className="font-serif text-2xl text-[#2A2623]">Authorizing Access</h2>
+            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 animate-pulse">
+                Synchronizing Secure Archive...
+            </p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] p-6">
-      <div className="max-w-md w-full bg-white border border-border p-12 rounded-2xl shadow-xl text-center relative overflow-hidden">
-        {/* Top Progress Bar for Redirect */}
+      <div className="max-w-md w-full bg-white border border-gray-100 p-12 rounded-sm shadow-xl text-center relative overflow-hidden">
+        {/* Redirect Progress Bar */}
         <div 
-          className="absolute top-0 left-0 h-1.5 bg-green-500 transition-all duration-1000" 
+          className="absolute top-0 left-0 h-1 bg-[#2A2623] transition-all duration-1000" 
           style={{ width: `${(countdown / 8) * 100}%` }}
         />
         
-        {/* Success Header */}
         <div className="flex justify-center mb-8">
-          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center border border-green-100 animate-in zoom-in duration-500">
+          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center border border-green-100">
             <CheckCircle size={44} className="text-green-600" />
           </div>
         </div>
 
-        <h1 className="font-serif text-3xl text-[#2A2623] mb-4">Payment Successful</h1>
+        <h1 className="font-serif text-3xl text-[#2A2623] mb-4 tracking-tight">Payment Verified</h1>
         
-        {/* Delivery Message */}
-        <div className="bg-secondary/20 p-4 rounded-xl mb-8 border border-border/50">
-          <div className="flex items-center gap-3 text-left">
-            <Mail className="text-[#2A2623] flex-shrink-0" size={20} />
-            <p className="text-xs font-medium leading-relaxed text-[#2A2623]">
-              Your master <span className="font-bold">TIFF files</span> will be prepared and sent to your registered mail service within <span className="font-bold underline">24 hours</span>.
+        <div className="bg-[#FAFAFA] border border-gray-100 p-6 mb-8 text-left">
+          <div className="flex gap-4">
+            <Mail className="text-[#2A2623] shrink-0 mt-1" size={18} />
+            <p className="text-xs leading-relaxed text-gray-600">
+              Your high-resolution <span className="font-bold text-black uppercase">TIFF Master Files</span> are being prepared. Access links will be delivered to your registered email within <span className="font-bold border-b border-black">24 hours</span>.
             </p>
           </div>
         </div>
 
-        <p className="text-muted-foreground text-sm mb-8">
-          Transaction confirmed for <span className="font-bold text-[#2A2623]">ORD-{orderId}</span>. A receipt has been generated in your history.
+        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-10">
+          Transaction ID: ORD-{orderId}
         </p>
 
-        {/* Navigation Actions */}
-        <div className="grid gap-3">
+        <div className="space-y-4">
           <button 
             onClick={() => navigate('/orders')}
-            className="flex items-center justify-center gap-3 w-full bg-[#2A2623] text-white py-4 rounded-xl font-bold hover:bg-[#1a1816] transition-all shadow-lg shadow-black/5"
+            className="w-full bg-[#2A2623] text-white py-4 rounded-none text-xs font-bold uppercase tracking-widest hover:bg-black transition-all"
           >
-            <Package size={18} /> View My Order History
+            View Asset History
           </button>
           
           <button 
             onClick={() => navigate('/')}
-            className="flex items-center justify-center gap-2 w-full py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#2A2623] hover:opacity-60 transition-opacity"
+            className="flex items-center justify-center gap-2 w-full py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors"
           >
-            Go back to Storefront <ArrowRight size={14} />
+            Return to Storefront <ArrowRight size={14} />
           </button>
         </div>
 
-        {/* Countdown Footer */}
-        <div className="mt-10 pt-6 border-t border-border/50">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-            Redirecting in {countdown}s
+        <div className="mt-12 pt-6 border-t border-gray-100">
+          <p className="text-[9px] text-gray-300 uppercase tracking-[0.2em] font-bold">
+            Auto-Redirecting in {countdown}s
           </p>
         </div>
       </div>

@@ -100,7 +100,7 @@ const PremiumDesigns = () => {
               Exclusive Collection
             </span>
             <h2 className="font-serif text-3xl md:text-4xl font-medium text-white">
-              Premium Designs
+              Luxury Patterns
             </h2>
           </div>
 

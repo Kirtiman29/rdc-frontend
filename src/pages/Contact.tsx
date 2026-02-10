@@ -4,9 +4,11 @@ import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
+import { submitContactInquiry } from '@/api/contactApi'; // ✅ Connect to real API
 
 const Contact = () => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,16 +20,26 @@ const Contact = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // ✅ Send data to your Port 8080 backend
+      await submitContactInquiry(formData);
 
-    toast({
-      title: "Message sent",
-      description: "Thank you for reaching out. We'll get back to you soon.",
-    });
+      toast({
+        title: "Message sent",
+        description: "Thank you for reaching out. We'll get back to you soon.",
+      });
 
-    setFormData({ name: '', email: '', message: '' });
-    setIsSubmitting(false);
+      // Clear form on success
+      setFormData({ name: '', email: '', message: '' });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Submission failed",
+        description: "We could not process your message at this time. Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

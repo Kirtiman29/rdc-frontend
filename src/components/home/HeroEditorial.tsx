@@ -38,15 +38,15 @@ const HeroEditorial = () => {
             link: '/trends',
           },
           {
-            label: 'PREMIUM DESIGNS',
-            subtitle: 'EXCLUSIVE, REFINED AND LUXURIOUS',
+            label: 'LUXURY PATTERNS',
+            subtitle: 'EXCLUSIVE, REFINED AND PREMIUM',
             filter: (d: Design) => d.premium === true,
             link: '/premium',
           },
           {
             label: 'NEW ARRIVALS',
-            subtitle: 'FRESH, INNOVATIVE AND MODERN',
-            filter: (d: Design) => d.newArrival === true || true, // Default true for new arrivals
+            subtitle: 'MODERN, INNOVATIVE AND FRESH',
+            filter: (d: Design) => d.newArrival === true || true,
             link: '/gallery?newArrival=true',
           },
           {

@@ -11,7 +11,7 @@ import { getToken, removeToken } from '@/api/apiClient';
 const navItems = [
   { label: 'Home', href: '/' },
   { label: 'Designs', href: '/gallery', hasMegaMenu: true },
-  { label: 'Premium', href: '/premium' },
+  { label: 'Luxury', href: '/premium' },
   { label: 'Trends', href: '/trends' },
   { label: 'Special Offers', href: '/special-offers' },
 ];

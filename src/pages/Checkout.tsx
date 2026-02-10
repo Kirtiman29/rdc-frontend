@@ -1,25 +1,34 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { createOrder } from '@/api/orderApi'; 
 import { processIndustrialPayment } from '@/api/paymentApi';
 import { Button } from '@/components/ui/button';
-import { ShieldCheck, Lock, Loader2, ArrowLeft, CreditCard } from 'lucide-react';
+import { ShieldCheck, Lock, Loader2, ArrowLeft, CreditCard, Shield } from 'lucide-react';
 import { useCart } from '@/hooks/useCart'; 
 import { useAuth } from '@/hooks/useAuth';
 import { getAssetUrl } from '@/api/apiClient';
 
 export default function Checkout() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { user } = useAuth();
     const { items: cart } = useCart(); 
     const [isProcessing, setIsProcessing] = useState(false);
+    
+    // ✅ NEW: State to show buffering while waiting for redirect data
+    const [isVerifyingRedirect, setIsVerifyingRedirect] = useState(false);
 
-    // ✅ Security: Restrict Right-Click on checkout review
     const handleContextMenu = (e: React.MouseEvent) => {
         e.preventDefault();
     };
 
     useEffect(() => {
+        // ✅ LOGIC: If we return from Razorpay with an orderId, show buffering immediately
+        const orderId = searchParams.get('orderId');
+        if (orderId) {
+            setIsVerifyingRedirect(true);
+        }
+
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
@@ -27,7 +36,7 @@ export default function Checkout() {
         return () => {
             if (document.body.contains(script)) document.body.removeChild(script);
         };
-    }, []);
+    }, [searchParams]);
 
     const calculateTotal = () => cart.reduce((sum, item) => sum + (item.priceCents * item.quantity), 0);
 
@@ -47,11 +56,32 @@ export default function Checkout() {
         }
     };
 
+    // ✅ FULL SCREEN BUFFERING COMPONENT
+    if (isVerifyingRedirect) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+                <div className="relative mb-6">
+                    <div className="w-16 h-16 border-4 border-gray-100 border-t-[#2A2623] rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <Shield size={20} className="text-[#2A2623] opacity-20" />
+                    </div>
+                </div>
+                <div className="text-center">
+                    <h2 className="font-serif text-xl text-[#2A2623] mb-2">Finalizing Transaction</h2>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 animate-pulse">
+                        Synchronizing with Bank Gateway...
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen bg-[#FAFAFA]" onContextMenu={handleContextMenu}>
-            <div className="bg-white border-b border-border py-4">
+        <div className="min-h-screen bg-white" onContextMenu={handleContextMenu}>
+            {/* ... (Keep your existing Header and Main content exactly as is) ... */}
+            <div className="bg-white border-b border-gray-100 py-4">
                 <div className="container mx-auto px-6 flex justify-between items-center">
-                    <Link to="/cart" className="flex items-center gap-2 text-sm font-medium hover:text-[#2A2623] transition-colors">
+                    <Link to="/cart" className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-black transition-colors">
                         <ArrowLeft size={16} /> Back to Cart
                     </Link>
                     <div className="flex items-center gap-2 text-green-600">
@@ -61,86 +91,96 @@ export default function Checkout() {
                 </div>
             </div>
 
-            <main className="container mx-auto px-6 py-12 text-left">
-                <div className="grid lg:grid-cols-12 gap-12 items-start max-w-6xl mx-auto">
-                    <div className="lg:col-span-7 space-y-8">
-                        <div>
-                            <h1 className="font-serif text-4xl mb-2 text-[#2A2623]">Review Purchase</h1>
-                            <p className="text-muted-foreground italic">Confirm your digital asset acquisition.</p>
-                        </div>
-
-                        <div className="bg-white border border-border rounded-xl overflow-hidden shadow-sm">
-                            <div className="p-4 border-b border-border bg-secondary/10">
-                                <h2 className="font-bold text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Order Composition</h2>
-                            </div>
-                            <div className="divide-y divide-border">
-                                {cart.map((item) => (
-                                    <div key={item.id} className="p-6 flex gap-6 items-center">
-                                        {/* ✅ Protected Thumbnail */}
-                                        <div className="relative w-16 h-16 bg-secondary/30 rounded-lg overflow-hidden border border-border flex-shrink-0 select-none">
-                                            
-                                            {/* MICRO-WATERMARK OVERLAY */}
-                                            <div 
-                                                className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
-                                                style={{
-                                                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='5' font-weight='900' fill='none' stroke='white' stroke-width='0.15' text-anchor='middle' transform='rotate(-35 15 15)'%3ERDC%3C/text%3E%3C/svg%3E")`,
-                                                    backgroundRepeat: 'repeat'
-                                                }}
-                                            />
-
-                                            <img 
-                                                src={getAssetUrl(item.assetUuid)} 
-                                                alt="" 
-                                                draggable={false} // ✅ Prevent drag
-                                                className="w-full h-full object-cover" 
-                                            />
-                                        </div>
-
-                                        <div className="flex-1 min-w-0 text-left">
-                                            <h3 className="font-serif text-lg truncate text-[#2A2623]">{item.designTitle}</h3>
-                                            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Digital License × {item.quantity}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="font-bold text-[#2A2623]">₹{(item.priceCents / 100).toLocaleString('en-IN')}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+            <main className="container mx-auto px-6 py-16">
+                <div className="max-w-6xl mx-auto">
+                    <div className="mb-12">
+                        <span className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">Review Purchase</span>
+                        <h1 className="font-serif text-4xl mt-2 text-[#1A1A1A]">Confirm Acquisition</h1>
                     </div>
 
-                    <div className="lg:col-span-5">
-                        <div className="bg-white border border-border p-8 rounded-2xl shadow-xl sticky top-8 text-left">
-                            <h2 className="font-serif text-xl mb-6 text-[#2A2623]">Payment Summary</h2>
-                            <div className="space-y-4 mb-8">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground font-medium uppercase tracking-tighter">Inventory Subtotal</span>
-                                    <span className="text-[#2A2623] font-bold">₹{(calculateTotal() / 100).toLocaleString('en-IN')}</span>
-                                </div>
-                                <div className="h-[1px] bg-border my-2" />
-                                <div className="flex justify-between items-end">
-                                    <span className="text-sm font-bold uppercase tracking-widest text-[#2A2623]">Total Payable</span>
-                                    <span className="text-4xl font-bold text-[#2A2623]">
-                                        ₹{(calculateTotal() / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-                                    </span>
-                                </div>
-                            </div>
+                    <div className="grid lg:grid-cols-12 gap-16 items-start">
+                        {/* LEFT COLUMN: Order Review (Cart Style) */}
+                        <div className="lg:col-span-8 space-y-4">
+                            {cart.map((item) => (
+                                <div key={item.id} className="group relative bg-[#FAFAFA] border border-gray-100 p-6 flex gap-8 items-center transition-all">
+                                    <div className="relative w-24 h-24 bg-white overflow-hidden border border-gray-100 flex-shrink-0 select-none shadow-sm">
+                                        <div 
+                                            className="absolute inset-0 z-10 pointer-events-none opacity-[0.15]"
+                                            style={{
+                                                backgroundImage: `url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='5' font-weight='900' fill='none' stroke='black' stroke-width='0.1' text-anchor='middle' transform='rotate(-35 15 15)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                                                backgroundRepeat: 'repeat'
+                                            }}
+                                        />
+                                        <img 
+                                            src={getAssetUrl(item.assetUuid)} 
+                                            alt="" 
+                                            draggable={false}
+                                            className="w-full h-full object-cover" 
+                                        />
+                                    </div>
 
-                            <Button 
-                                onClick={handleCheckout} 
-                                disabled={isProcessing || cart.length === 0} 
-                                className="w-full h-16 bg-[#2A2623] hover:bg-black text-lg font-bold shadow-lg transition-all active:scale-[0.98] rounded-xl uppercase tracking-widest"
-                            >
-                                {isProcessing ? (
-                                    <span className="flex items-center gap-3"><Loader2 className="animate-spin" /> Authorizing...</span>
-                                ) : (
-                                    <span className="flex items-center gap-3"><Lock size={20} strokeWidth={2.5} /> Secure Checkout</span>
-                                )}
-                            </Button>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-serif text-xl text-[#1A1A1A] mb-1">{item.designTitle}</h3>
+                                        <p className="text-xs text-gray-400 font-medium">
+                                            Industrial Design Asset (Quantity: {item.quantity})
+                                        </p>
+                                        <div className="mt-4">
+                                            <span className="text-lg font-medium text-[#1A1A1A]">
+                                                ₹{(item.priceCents / 100).toLocaleString('en-IN')}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="p-2 text-gray-200">
+                                        <Lock size={18} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
 
-                            <div className="mt-6 flex items-center justify-center gap-2 text-muted-foreground opacity-50">
-                                <CreditCard size={14} />
-                                <span className="text-[10px] uppercase tracking-widest font-bold">Razorpay Secure Gateway</span>
+                        {/* RIGHT COLUMN: Summary Card */}
+                        <div className="lg:col-span-4">
+                            <div className="bg-[#FAFAFA] border border-gray-100 p-8 rounded-sm sticky top-8">
+                                <h2 className="font-serif text-2xl mb-8 text-[#1A1A1A]">Order Summary</h2>
+                                
+                                <div className="space-y-4 mb-10">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Subtotal</span>
+                                        <span className="text-gray-900 font-medium">₹{(calculateTotal() / 100).toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500">Tax</span>
+                                        <span className="text-gray-400 text-[10px] uppercase font-bold tracking-tighter">Calculated at checkout</span>
+                                    </div>
+                                    <div className="h-[1px] bg-gray-200 my-6" />
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="text-lg font-serif">Total</span>
+                                        <span className="text-3xl font-bold text-[#1A1A1A]">
+                                            ₹{(calculateTotal() / 100).toLocaleString('en-IN')}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <Button 
+                                    onClick={handleCheckout} 
+                                    disabled={isProcessing || cart.length === 0} 
+                                    className="w-full h-14 bg-[#2A2623] hover:bg-black text-white font-medium transition-all active:scale-[0.99] rounded-none uppercase tracking-widest text-xs"
+                                >
+                                    {isProcessing ? (
+                                        <span className="flex items-center gap-2"><Loader2 className="animate-spin w-4" /> Authorizing...</span>
+                                    ) : (
+                                        "Proceed to Checkout"
+                                    )}
+                                </Button>
+
+                                <p className="mt-6 text-center text-[10px] text-gray-400 italic">
+                                    Designs are delivered via secure asset streaming after payment.
+                                </p>
+                                
+                                <div className="mt-8 flex items-center justify-center gap-2 text-gray-300">
+                                    <CreditCard size={12} />
+                                    <span className="text-[9px] uppercase tracking-widest font-bold">Razorpay Secure Gateway</span>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -85,7 +85,7 @@ const Premium = () => {
               Exclusive Collection
             </span>
             <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-medium mt-4 mb-6 text-white tracking-tight">
-              Premium Designs
+              Luxury Patterns
             </h1>
             <p className="text-white/60 text-lg max-w-xl mx-auto">
               High-value textile patterns crafted for luxury brands. 

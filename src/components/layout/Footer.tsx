@@ -1,7 +1,7 @@
 // src/components/layout/Footer.tsx
 
 import { Link } from 'react-router-dom';
-import { Instagram, Linkedin, Facebook } from 'lucide-react';
+import { Instagram, Linkedin, Facebook } from 'lucide-react'; // Added Facebook here
 import rdcLogo from '@/assets/rdc-logo.png';
 
 // Pinterest icon component
@@ -99,8 +99,18 @@ const Footer = () => {
               >
                 <Instagram className="h-5 w-5" />
               </a>
+              {/* Added Facebook Link Below */}
               <a 
-                href="https://pinterest.com" 
+                href="https://www.facebook.com/Ruchitadesigncompany/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-foreground hover:text-muted-foreground transition-colors"
+                aria-label="Facebook"
+              >
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a 
+                href="https://in.pinterest.com/RuchitaDesignCompanys/" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-foreground hover:text-muted-foreground transition-colors"
@@ -109,7 +119,7 @@ const Footer = () => {
                 <Pinterest className="h-5 w-5" />
               </a>
               <a 
-                href="https://linkedin.com" 
+                href="https://in.linkedin.com/company/ruchita-design-pvt-ltd" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-foreground hover:text-muted-foreground transition-colors"
