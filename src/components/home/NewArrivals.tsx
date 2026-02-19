@@ -5,7 +5,7 @@ import { getNewArrivals } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
 
 const NewArrivals = () => {
@@ -22,21 +22,33 @@ const NewArrivals = () => {
   useEffect(() => {
     const fetchNewArrivals = async () => {
       try {
-        // Fetch a larger pool to ensure we can sort and pick the top 8
-        const data = await getNewArrivals(24);
+        /** * ✅ PRODUCTION SYNC:
+         * getNewArrivals returns the data directly from the unified apiClient interceptor.
+         */
+        const data: any = await getNewArrivals(24);
+        
+        // Handle potential Pageable response or raw array
+        const rawItems = Array.isArray(data) ? data : (data?.content || []);
         
         // ✅ 1. Sort Recent (ID Desc) -> 2. Slice strictly top 8
-        const sortedRecent = data
-          .sort((a: Design, b: Design) => b.id - a.id) // Recent first
-          .slice(0, 8); // New Limit: 8
+        const sortedRecent = [...rawItems]
+          .sort((a: Design, b: Design) => b.id - a.id)
+          .slice(0, 8);
 
         setProducts(sortedRecent);
 
-        const statusMap: Record<number, boolean> = {};
-        for (const product of sortedRecent) {
-          statusMap[product.id] = await checkWishlistStatus(product.id);
-        }
-        setWishlistState(statusMap);
+        /**
+         * ✅ PERFORMANCE FIX: Parallel Status Check
+         * Replaced sequential loop with Promise.all to avoid request waterfalls.
+         */
+        const statusEntries = await Promise.all(
+          sortedRecent.map(async (product: Design) => {
+            const isWished = await checkWishlistStatus(product.id);
+            return [product.id, isWished];
+          })
+        );
+        
+        setWishlistState(Object.fromEntries(statusEntries));
       } catch (error) {
         console.error('Failed to sync new arrivals:', error);
       } finally {
@@ -88,6 +100,7 @@ const NewArrivals = () => {
     <section className="py-20 md:py-28 bg-background" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex items-end justify-between mb-12">
+          {/* Header Section Restored */}
           <div>
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
               Just Arrived
@@ -104,7 +117,6 @@ const NewArrivals = () => {
           </Link>
         </div>
 
-        {/* Updated grid to handle 8 items cleanly */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
           {products.map((product) => (
             <div key={product.id} className="group animate-fade-in">
@@ -143,7 +155,7 @@ const NewArrivals = () => {
                   </button>
 
                   <button 
-                    className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20"
+                    className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20 shadow-lg"
                     onClick={(e) => handleAddToCart(e, product)}
                   >
                     <ShoppingBag className="h-4 w-4" />

@@ -1,13 +1,14 @@
-// src/api/authApi.ts
-
 import axios from 'axios';
-import { clearTokens } from './apiClient';
+import { clearTokens, applyIndustrialInterceptors } from './apiClient';
 
-const AUTH_BASE_URL = 'http://localhost:8081/auth';
+/** * ✅ PRODUCTION URL: Fetched from .env 
+ * Standardized to hit the /auth context path of the Auth Service
+ */
+const AUTH_BASE_URL = `${import.meta.env.VITE_AUTH_SERVICE_URL}/auth`;
 
 /**
  * ✅ Public Instance: Used for Login, Signup, and Password recovery.
- * Does not require a Bearer token to be sent.
+ * These endpoints do not require an existing token.
  */
 export const authApi = axios.create({
   baseURL: AUTH_BASE_URL,
@@ -16,55 +17,47 @@ export const authApi = axios.create({
 
 /**
  * ✅ Private Instance: Used for Profile Management (/me).
- * Attaches the JWT from localStorage but does NOT include the auto-refresh interceptor
- * to prevent infinite loop cycles during the authentication handshake.
+ * Uses the industrial interceptor for automatic data unwrapping.
  */
 export const profileApi = axios.create({
   baseURL: AUTH_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ✅ Manual Industrial Interceptor: Attach token strictly without refresh logic
-profileApi.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Apply the centralized industrial interceptors for the profile service
+// This handles Bearer token attachment and response.data unwrapping
+applyIndustrialInterceptors(profileApi);
+
+// For the public api, we only want the data unwrapper, not the token attachment
+authApi.interceptors.response.use((response) => response.data);
 
 /**
- * ✅ Industrial Sync: Register User (Port 8081)
- * Enforces the mandatory 'displayName' requirement for the RDC Vault[cite: 43, 72].
+ * ✅ Register User (Auth Service)
  */
 export const registerUser = async (data: { email: string; password: string; displayName: string }) => {
-  const res = await authApi.post('/signup', data);
-  return res.data;
+  return await authApi.post('/signup', data);
 };
 
 /**
- * ✅ Industrial Sync: Standard Login [cite: 45]
+ * ✅ Standard Login
  */
 export const loginUser = async (email: string, password: string) => {
-  const res = await authApi.post('/login', { email, password });
-  return res.data; 
+  return await authApi.post('/login', { email, password });
 };
 
 /**
- * ✅ Google OAuth2 Unification [cite: 36, 40]
+ * ✅ Google OAuth2 Unification
  */
 export const loginWithGoogle = async (idToken: string) => {
-  const res = await authApi.post('/google', { idToken });
-  return res.data;
+  return await authApi.post('/google', { idToken });
 };
 
 /**
  * ✅ Fetch User Profile
- * Hits the Port 8081 /me endpoint using numeric userId extracted from JWT.
+ * Uses the profileApi which automatically handles JWT injection
  */
 export const getProfile = async () => {
-  const res = await profileApi.get('/me');
-  return res.data;
+  return await profileApi.get('/me');
 };
 
 /**
@@ -76,19 +69,17 @@ export const logoutUser = () => {
 };
 
 /**
- * ✅ Request Password Reset [cite: 48, 51]
+ * ✅ Request Password Reset
  */
 export const requestPasswordReset = async (email: string) => {
-  const res = await authApi.post('/password/request-reset', { email });
-  return res.data;
+  return await authApi.post('/password/request-reset', { email });
 };
 
 /**
- * ✅ Submit New Password [cite: 52, 53]
+ * ✅ Submit New Password
  */
 export const resetPassword = async (token: string, newPassword: string) => {
-  const res = await authApi.post('/password/reset', { token, newPassword });
-  return res.data;
+  return await authApi.post('/password/reset', { token, newPassword });
 };
 
 export default authApi;

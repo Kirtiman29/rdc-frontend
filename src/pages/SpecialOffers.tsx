@@ -6,7 +6,7 @@ import Footer from '@/components/layout/Footer';
 import { getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
 
 const SpecialOffers = () => {
@@ -15,6 +15,7 @@ const SpecialOffers = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
+  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -22,8 +23,12 @@ const SpecialOffers = () => {
   useEffect(() => {
     const fetchOffers = async () => {
       try {
-        const response = await getDesigns({ specialOffer: true, limit: 24 });
-        const rawItems = Array.isArray(response) ? response : (response.content || []);
+        /**
+         * ✅ PRODUCTION SYNC:
+         * getDesigns returns the unwrapped data object via interceptor.
+         */
+        const response: any = await getDesigns({ specialOffer: true, limit: 24 });
+        const rawItems = response?.content || (Array.isArray(response) ? response : []);
         
         const sortedOffers = [...rawItems]
           .filter((item: Design) => item.specialOffer === true)
@@ -32,11 +37,19 @@ const SpecialOffers = () => {
 
         setOffers(sortedOffers);
 
-        const statusMap: Record<number, boolean> = {};
-        for (const item of sortedOffers) {
-          statusMap[item.id] = await checkWishlistStatus(item.id);
-        }
-        setWishlistState(statusMap);
+        /**
+         * ✅ PERFORMANCE FIX: Parallel Batch Check
+         * Using Promise.all to avoid request waterfalls when checking 
+         * statuses across microservice boundaries.
+         */
+        const statusEntries = await Promise.all(
+          sortedOffers.map(async (item) => {
+            const isWished = await checkWishlistStatus(item.id);
+            return [item.id, isWished];
+          })
+        );
+        
+        setWishlistState(Object.fromEntries(statusEntries));
       } catch (error) {
         console.error('Special Offers sync failed:', error);
       } finally {
@@ -78,7 +91,7 @@ const SpecialOffers = () => {
     <div className="flex min-h-screen flex-col bg-background" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1">
-        {/* Banner Section - Adjusted padding for mobile */}
+        {/* Banner Section Restored */}
         <section className="py-12 md:py-20 bg-secondary/30">
           <div className="container mx-auto px-4 md:px-8 text-center">
             <span className="text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-rose-600">
@@ -94,21 +107,15 @@ const SpecialOffers = () => {
           </div>
         </section>
 
-        {/* Catalog Section - Dynamic Grid Implementation */}
+        {/* Catalog Section Restored */}
         <section className="py-12 md:py-20">
           <div className="container mx-auto px-4 md:px-8">
-            {/* Responsive Breakpoints:
-                - Default (Mobile): 1 Column
-                - sm: 2 Columns
-                - lg: 3 Columns 
-            */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-10 gap-x-6 lg:gap-8">
               {offers.map((product) => (
                 <div
                   key={product.id}
                   className="group relative bg-background rounded-sm overflow-hidden border border-border hover:border-[#2A2623]/30 transition-all duration-300 shadow-sm flex flex-col h-full"
                 >
-                  {/* Label & Wishlist Buttons - Scaled for touch targets */}
                   <div className="absolute top-3 left-3 z-20">
                     <span className="px-2 py-1 bg-rose-600 text-white text-[9px] md:text-[10px] font-bold uppercase tracking-wider shadow-md">
                       {product.discountPercent}% Off
@@ -125,7 +132,6 @@ const SpecialOffers = () => {
                   </button>
 
                   <Link to={`/product/${product.id}`} className="block relative flex-shrink-0">
-                    {/* Maintain Aspect Ratio across all screens */}
                     <div className="aspect-square overflow-hidden bg-secondary/20 select-none">
                       <div 
                         className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
@@ -143,7 +149,6 @@ const SpecialOffers = () => {
                       <div className="absolute inset-0 bg-black/5 group-hover:bg-black/15 transition-colors pointer-events-none" />
                     </div>
 
-                    {/* Quick View - Hidden on touch devices typically, but kept for hover */}
                     <div className="absolute inset-0 bg-foreground/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center z-10 hidden md:flex">
                       <span className="inline-flex items-center gap-2 px-6 py-2.5 bg-white text-[#2A2623] text-xs font-bold uppercase tracking-widest shadow-2xl transform translate-y-2 group-hover:translate-y-0 transition-transform">
                         <Eye className="h-4 w-4" />

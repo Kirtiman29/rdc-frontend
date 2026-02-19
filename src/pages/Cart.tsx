@@ -6,7 +6,7 @@ import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { getCart, removeCartItem, CartSummary } from '@/api/cartApi';
 import { getAssetUrl } from '@/api/apiClient';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const Cart = () => {
   const [cartData, setCartData] = useState<CartSummary | null>(null);
@@ -14,13 +14,16 @@ const Cart = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // ✅ Security: Restrict Right-Click
+  // ✅ Security: Restrict Right-Click to protect visual assets
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
 
   const fetchCartState = async () => {
     try {
+      /** * ✅ Production Logic: 
+       * getCart returns the unwrapped data object directly via interceptor.
+       */
       const data = await getCart();
       setCartData(data);
     } catch (error) {
@@ -50,8 +53,8 @@ const Cart = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+        <Loader2 className="h-10 w-10 animate-spin text-[#2A2623]" />
       </div>
     );
   }
@@ -64,6 +67,7 @@ const Cart = () => {
       <Header />
       <main className="flex-1 bg-secondary/20">
         <div className="container mx-auto px-4 md:px-8 py-12 md:py-20">
+          {/* Header Section Restored */}
           <div className="mb-12">
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
               Shopping
@@ -80,21 +84,24 @@ const Cart = () => {
               <p className="text-muted-foreground mb-6">
                 Add some beautiful designs to get started.
               </p>
-              <Button asChild>
+              <Button asChild className="bg-[#2A2623] hover:bg-black">
                 <Link to="/gallery">Browse Designs</Link>
               </Button>
             </div>
           ) : (
             <div className="grid lg:grid-cols-3 gap-8">
+              {/* Items List Restored */}
               <div className="lg:col-span-2 space-y-4">
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="bg-background border border-border p-6 flex gap-6 animate-fade-in"
+                    className="bg-background border border-border p-6 flex gap-6 animate-fade-in shadow-sm rounded-sm"
                   >
-                    {/* ✅ Protected Thumbnail */}
-                    <Link to={`/product/${item.designId}`} className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-secondary/30 select-none">
-                      
+                    {/* Protected Thumbnail Restored */}
+                    <Link 
+                      to={`/product/${item.designId}`} 
+                      className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-secondary/30 select-none"
+                    >
                       {/* MICRO-WATERMARK OVERLAY */}
                       <div 
                         className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
@@ -107,12 +114,12 @@ const Cart = () => {
                       <img
                         src={getAssetUrl(item.assetUuid)}
                         alt={item.designTitle}
-                        draggable={false} // ✅ Prevent drag
+                        draggable={false}
                         className="w-full h-full object-cover"
                       />
                     </Link>
 
-                    <div className="flex-1 flex flex-col justify-between">
+                    <div className="flex-1 flex flex-col justify-between min-w-0">
                       <div>
                         <Link to={`/product/${item.designId}`}>
                           <h3 className="font-serif text-lg hover:text-muted-foreground transition-colors truncate">
@@ -139,8 +146,9 @@ const Cart = () => {
                 ))}
               </div>
 
+              {/* Sidebar Summary Restored */}
               <div className="lg:col-span-1">
-                <div className="bg-background border border-border p-6 sticky top-24 shadow-sm">
+                <div className="bg-background border border-border p-6 sticky top-24 shadow-sm rounded-sm">
                   <h2 className="font-serif text-xl mb-6">Order Summary</h2>
                   
                   <div className="space-y-4 pb-6 border-b border-border text-sm">
@@ -150,7 +158,7 @@ const Cart = () => {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Tax</span>
-                      <span>Calculated at checkout</span>
+                      <span className="text-xs italic">Calculated at checkout</span>
                     </div>
                   </div>
 
@@ -159,7 +167,11 @@ const Cart = () => {
                     <span className="font-serif text-xl">₹{subtotal.toLocaleString('en-IN')}</span>
                   </div>
 
-                  <Button className="w-full mt-6" size="lg" onClick={handleCheckout}>
+                  <Button 
+                    className="w-full h-12 bg-[#2A2623] hover:bg-black mt-6 uppercase text-xs font-bold tracking-[0.1em]" 
+                    size="lg" 
+                    onClick={handleCheckout}
+                  >
                     Proceed to Checkout
                   </Button>
 

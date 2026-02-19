@@ -14,15 +14,20 @@ const Wishlist = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // ✅ Security: Restrict Right-Click across the wishlist
+  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
 
   const fetchWishlist = async () => {
     try {
+      /**
+       * ✅ PRODUCTION SYNC:
+       * getWishlist returns the unwrapped data array via interceptor.
+       * Logic hits Wishlist Service on Port 8093.
+       */
       const data = await getWishlist();
-      setItems(data);
+      setItems(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Wishlist sync failed:', error);
     } finally {
@@ -57,7 +62,7 @@ const Wishlist = () => {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />
-        <main className="flex-1 flex items-center justify-center">
+        <main className="flex-1 flex items-center justify-center bg-white">
           <Loader2 className="h-10 w-10 animate-spin text-[#2A2623]" />
         </main>
         <Footer />
@@ -70,6 +75,8 @@ const Wishlist = () => {
       <Header />
       <main className="flex-1 bg-secondary/20">
         <div className="container mx-auto px-4 md:px-8 py-12 md:py-20">
+          
+          {/* Header Section Restored */}
           <div className="mb-12">
             <span className="text-xs font-bold uppercase tracking-[0.3em] text-[#2A2623]">Your Account</span>
             <h1 className="font-serif text-3xl md:text-4xl font-medium mt-2 text-[#2A2623]">Wishlist</h1>
@@ -80,15 +87,17 @@ const Wishlist = () => {
               <Heart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               <h2 className="font-serif text-xl mb-2">Your wishlist is empty</h2>
               <p className="text-muted-foreground mb-6">Save designs you love for later.</p>
-              <Button asChild className="bg-[#2A2623] hover:bg-black"><Link to="/gallery">Browse Designs</Link></Button>
+              <Button asChild className="bg-[#2A2623] hover:bg-black">
+                <Link to="/gallery">Browse Designs</Link>
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
               {items.map((item) => (
-                <div key={item.designId} className="group bg-background border border-border animate-fade-in shadow-sm hover:shadow-md transition-shadow">
+                <div key={item.designId} className="group bg-background border border-border animate-fade-in shadow-sm hover:shadow-md transition-shadow rounded-sm overflow-hidden">
                   <div className="relative aspect-[3/4] overflow-hidden select-none">
                     
-                    {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK OVERLAY */}
+                    {/* ✅ WATERMARK OVERLAY RESTORED */}
                     <div 
                       className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
                       style={{
@@ -101,7 +110,7 @@ const Wishlist = () => {
                       <img
                         src={getAssetUrl(item.assetUuid)}
                         alt={item.title}
-                        draggable={false} // ✅ Prevent drag
+                        draggable={false} 
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                       />
                     </Link>
@@ -113,7 +122,6 @@ const Wishlist = () => {
                       <Trash2 className="h-4 w-4" />
                     </button>
 
-                    {/* Security darken layer */}
                     <div className="absolute inset-0 bg-black/5 group-hover:bg-black/10 transition-colors pointer-events-none" />
                   </div>
 
@@ -124,7 +132,7 @@ const Wishlist = () => {
                     <p className="text-sm font-bold mt-1 text-[#2A2623]">₹{(item.finalPriceCents / 100).toLocaleString('en-IN')}</p>
                     <Button 
                       size="sm" 
-                      className="w-full mt-3 gap-2 bg-[#2A2623] hover:bg-black uppercase text-[10px] font-bold tracking-widest" 
+                      className="w-full mt-3 gap-2 bg-[#2A2623] hover:bg-black uppercase text-[10px] font-bold tracking-widest rounded-sm h-10" 
                       onClick={() => handleMoveToCart(item.designId, item.title)}
                     >
                       <ShoppingBag className="h-4 w-4" /> Add to Cart

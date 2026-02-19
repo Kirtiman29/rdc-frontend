@@ -16,12 +16,21 @@ const Contact = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ✅ Security: Restrict Right-Click
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      // ✅ Send data to your Port 8080 backend
+      /**
+       * ✅ PRODUCTION SYNC:
+       * Transmission of inquiry to the Admin Backend (Port 8080).
+       * The centralized apiClient handles the production base URL via env.
+       */
       await submitContactInquiry(formData);
 
       toast({
@@ -43,12 +52,12 @@ const Contact = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" onContextMenu={handleContextMenu}>
       <Header />
       
       <main className="pt-24 pb-20">
         <div className="container mx-auto px-4 md:px-8 max-w-2xl">
-          {/* Page Header */}
+          {/* Page Header Restored */}
           <div className="text-center mb-16 md:mb-20">
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
               Get In Touch
@@ -58,13 +67,13 @@ const Contact = () => {
             </h1>
           </div>
 
-          {/* Introduction */}
+          {/* Introduction Restored */}
           <p className="text-center text-muted-foreground mb-12 max-w-lg mx-auto">
             Have a question about our designs or need assistance with your order? 
             We'd love to hear from you.
           </p>
 
-          {/* Contact Form */}
+          {/* Contact Form Restored */}
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="name" className="block text-sm font-medium mb-2">
@@ -76,7 +85,7 @@ const Contact = () => {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-                className="bg-background border-border focus:border-foreground/30"
+                className="bg-background border-border focus:border-foreground/30 h-11"
                 placeholder="Your name"
               />
             </div>
@@ -91,7 +100,7 @@ const Contact = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
-                className="bg-background border-border focus:border-foreground/30"
+                className="bg-background border-border focus:border-foreground/30 h-11"
                 placeholder="your@email.com"
               />
             </div>
@@ -113,23 +122,23 @@ const Contact = () => {
 
             <Button 
               type="submit" 
-              className="w-full"
+              className="w-full h-12 bg-[#2A2623] hover:bg-black text-white font-medium transition-all"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Sending...' : 'Send Message'}
             </Button>
           </form>
 
-          {/* Alternative Contact */}
+          {/* Alternative Contact Restored */}
           <div className="mt-16 pt-12 border-t border-border text-center">
             <p className="text-sm text-muted-foreground mb-4">
               Prefer email?
             </p>
             <a 
-              href="mailto:hello@rdctextiles.com" 
-              className="text-foreground hover:underline"
+              href="mailto:hr@ruchitadesigncompany.com" 
+              className="text-[#2A2623] font-medium hover:underline"
             >
-              hello@rdctextiles.com
+              crm@ruchitadesigncompany.com
             </a>
           </div>
         </div>

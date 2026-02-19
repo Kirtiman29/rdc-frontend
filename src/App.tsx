@@ -30,21 +30,28 @@ import Terms from "./pages/Terms";
 import Privacy from "./pages/Privacy";
 import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
-
-// ✅ NEW IMPORTS for Password Recovery & Verification
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
-// ✅ Your Backend Client ID 
-const GOOGLE_CLIENT_ID = "121636299170-gmk6tc3ubdq543bjolttsa27gucgcf7o.apps.googleusercontent.com";
+/**
+ * ✅ PRODUCTION BEST PRACTICE:
+ * Pulling the Client ID from environment variables to allow 
+ * seamless switching between development and production registries.
+ */
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const token = getToken();
   const location = useLocation();
   
   if (!token) {
+    /**
+     * ✅ SESSION SECURITY:
+     * Redirects to login while preserving the intended 'from' destination.
+     * replace: true prevents the login page from cluttering the back history.
+     */
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -72,12 +79,14 @@ const App = () => (
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />
               
-              {/* ✅ NEW: Recovery & Verification Routes */}
+              {/* ✅ RECOVERY & VERIFICATION:
+                  Registry credentials management routes.
+              */}
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/verification-success" element={<Login />} />
 
-              {/* Protected Routes */}
+              {/* Protected Routes (Require Token) */}
               <Route 
                 path="/orders" 
                 element={<ProtectedRoute><Orders /></ProtectedRoute>} 
@@ -108,7 +117,7 @@ const App = () => (
                 element={<ProtectedRoute><PaymentFailure /></ProtectedRoute>} 
               />  
 
-              {/* Info Routes */}
+              {/* Info & Legal Routes */}
               <Route path="/about" element={<About />} />
               <Route path="/careers" element={<Careers />} />
               <Route path="/contact" element={<Contact />} />
@@ -116,6 +125,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
 
+              {/* Fallback */}
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

@@ -1,5 +1,3 @@
-// src/pages/Login.tsx
-
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
@@ -8,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -18,16 +16,17 @@ const Login = () => {
   
   const from = location.state?.from || "/";
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [creds, setCreds] = useState({ email: '', password: '' });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // ✅ Industrial Sync: Authenticate with email/password [cite: 36, 48]
-      const response = await loginUser(creds.email, creds.password);
       
-      // ✅ Token Strategy: Store access and refresh tokens [cite: 49, 63]
+      const response: any = await loginUser(creds.email, creds.password);
+      
+      
       setAuthState(response.accessToken, response.refreshToken);
       
       toast({ title: "Welcome back!", description: "Signed in successfully." });
@@ -44,10 +43,7 @@ const Login = () => {
   const handleGoogleSuccess = async (res: CredentialResponse) => {
     setLoading(true);
     try {
-      // ✅ Industrial Sync: Authenticate via Google ID Token [cite: 25, 30]
-      const response = await loginWithGoogle(res.credential!); 
-      
-      // ✅ Auto-Verification: Social users bypass standard email verification [cite: 121]
+      const response: any = await loginWithGoogle(res.credential!); 
       setAuthState(response.accessToken, response.refreshToken);
       
       toast({ title: "Google Login Successful" });
@@ -60,8 +56,8 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-secondary/20 py-20 px-4">
-      <div className="w-full max-w-md bg-background border p-8 md:p-12 shadow-sm animate-fade-in">
+    <div className="min-h-screen flex items-center justify-center bg-secondary/20 py-10 px-4 sm:py-20">
+      <div className="w-full max-w-[400px] bg-background border p-6 md:p-12 shadow-sm animate-fade-in rounded-sm">
         <h1 className="font-serif text-3xl text-center mb-8 tracking-tight">Sign In</h1>
         
         <form onSubmit={handleLogin} className="space-y-6">
@@ -73,6 +69,7 @@ const Login = () => {
               required 
               value={creds.email} 
               onChange={e => setCreds({...creds, email: e.target.value})} 
+              className="h-11"
             />
           </div>
 
@@ -86,13 +83,23 @@ const Login = () => {
                 Forgot?
               </Link>
             </div>
-            <Input 
-              type="password" 
-              placeholder="••••••••" 
-              required 
-              value={creds.password} 
-              onChange={e => setCreds({...creds, password: e.target.value})} 
-            />
+            <div className="relative">
+              <Input 
+                type={showPassword ? "text" : "password"} 
+                placeholder="••••••••" 
+                required 
+                value={creds.password} 
+                onChange={e => setCreds({...creds, password: e.target.value})} 
+                className="h-11 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-[#2A2623] transition-colors"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
 
           <Button className="w-full h-12 bg-[#2A2623] hover:bg-black uppercase text-xs font-bold tracking-[0.15em]" disabled={loading}>
@@ -105,14 +112,16 @@ const Login = () => {
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border"></div></div>
         </div>
 
-        <div className="w-full flex justify-center">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => toast({ variant: "destructive", title: "Google Auth Error" })}
-            theme="outline"
-            shape="rectangular"
-            width="360px"
-          />
+        <div className="w-full flex justify-center overflow-hidden">
+          <div className="w-full max-w-full scale-90 sm:scale-100">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => toast({ variant: "destructive", title: "Google Auth Error" })}
+              theme="outline"
+              shape="rectangular"
+              width="100%"
+            />
+          </div>
         </div>
 
         <p className="mt-10 text-center text-xs font-medium text-muted-foreground tracking-wide">

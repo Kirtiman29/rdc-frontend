@@ -31,11 +31,19 @@ const Header = () => {
     const fetchHeaderData = async () => {
       if (isLoggedIn) {
         try {
+          /**
+           * ✅ PRODUCTION SYNC:
+           * Uses the unwrapped getCart which calculates totalItems 
+           * from the Cart Service (Port 8091) response.
+           */
           const cart = await getCart();
-          setCartCount(cart.totalItems);
+          setCartCount(cart.totalItems || 0);
         } catch (error) {
           console.error('Cart sync failed:', error);
+          setCartCount(0);
         }
+      } else {
+        setCartCount(0);
       }
     };
     fetchHeaderData();
@@ -44,6 +52,7 @@ const Header = () => {
   const handleLogout = () => {
     removeToken();
     setShowProfileMenu(false);
+    setIsMobileMenuOpen(false);
     navigate('/login');
   };
 
@@ -53,7 +62,7 @@ const Header = () => {
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex h-16 md:h-20 items-center justify-between">
             
-            {/* 1️⃣ Mobile Menu Button - Left aligned on small screens */}
+            {/* Mobile Menu Button - Left aligned */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden p-2 -ml-2 text-foreground"
@@ -62,16 +71,15 @@ const Header = () => {
               {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
 
-            {/* 2️⃣ Logo Section - Responsive scaling */}
-            <Link to="/" className="flex items-center gap-2 shrink-0">
+            {/* Logo Section Restored */}
+            <Link to="/" className="flex items-center gap-2 shrink-0 select-none">
               <img src={rdcLogo} alt="RDC" className="h-7 sm:h-8 md:h-10 w-auto" />
-              {/* ✅ UPDATED: Hide text on tiny screens, show from sm upwards */}
               <span className="hidden sm:block font-serif text-xl md:text-2xl font-medium tracking-wide">
                 RDC
               </span>
             </Link>
 
-            {/* 3️⃣ Center Navigation - Desktop only */}
+            {/* Center Navigation - Desktop Restored */}
             <nav className="hidden lg:flex items-center gap-8">
               {navItems.map((item) => (
                 <div
@@ -98,7 +106,7 @@ const Header = () => {
               ))}
             </nav>
 
-            {/* 4️⃣ Right Icons - Improved spacing for mobile */}
+            {/* Right Icons Restored */}
             <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
               <button
                 onClick={() => setShowSearch(true)}
@@ -118,7 +126,6 @@ const Header = () => {
                 </Link>
               )}
 
-              {/* Hide wishlist on mobile to reduce clutter, as you correctly planned */}
               <Link to="/wishlist" className="hidden md:flex p-2 text-muted-foreground hover:text-foreground transition-colors" title="Wishlist">
                 <Heart className="h-5 w-5" />
               </Link>
@@ -132,7 +139,7 @@ const Header = () => {
                 )}
               </Link>
 
-              {/* Auth Toggle - Refined Mobile UI */}
+              {/* Auth Toggle Restored */}
               {!isLoggedIn ? (
                 <div className="flex items-center gap-2 sm:gap-4 ml-1 sm:ml-2">
                   <Link to="/login" className="hidden sm:block text-xs font-bold uppercase tracking-widest hover:text-foreground transition-colors">
@@ -176,7 +183,7 @@ const Header = () => {
           </div>
         </div>
 
-        {/* 5️⃣ Mobile Navigation Drawer - Improved height and height animation */}
+        {/* Mobile Navigation Drawer Restored */}
         <div className={cn(
           'lg:hidden border-t border-border bg-background transition-all duration-300 ease-in-out overflow-hidden', 
           isMobileMenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'

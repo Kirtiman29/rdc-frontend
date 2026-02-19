@@ -24,7 +24,7 @@ const details = [
 ];
 
 const InDetailsSection = () => {
-  // ✅ Security: Restrict Right-Click across the entire details section
+  // ✅ Security: Restrict Right-Click to protect intellectual property in the details grid
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -34,9 +34,9 @@ const InDetailsSection = () => {
       className="py-16 md:py-24 bg-muted/30 relative overflow-hidden" 
       onContextMenu={handleContextMenu}
     >
-      <div className="container px-4 relative z-10">
+      <div className="container px-4 relative z-10 mx-auto">
         <div className="text-center max-w-2xl mx-auto mb-12 md:mb-16">
-          <h2 className="font-serif text-3xl md:text-4xl font-medium tracking-tight text-[#2A2623] mb-4">
+          <h2 className="font-serif text-3xl md:text-4xl font-medium tracking-tight text-[#2A2623] mb-4 uppercase">
             In Details
           </h2>
           <p className="text-muted-foreground text-base md:text-lg leading-relaxed">
@@ -54,7 +54,7 @@ const InDetailsSection = () => {
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/20 transition-colors">
                 <detail.icon className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="font-serif text-lg md:text-xl font-medium text-[#2A2623] mb-3">
+              <h3 className="font-serif text-lg md:text-xl font-medium text-[#2A2623] mb-3 uppercase">
                 {detail.title}
               </h3>
               <p className="text-muted-foreground text-sm leading-relaxed">
@@ -64,7 +64,8 @@ const InDetailsSection = () => {
           ))}
         </div>
 
-        <div className="mt-12 md:mt-16 bg-background rounded-xl p-6 md:p-10 border border-border/50 relative overflow-hidden">
+        {/* Highlight Banner */}
+        <div className="mt-12 md:mt-16 bg-background rounded-xl p-6 md:p-10 border border-border/50 relative overflow-hidden shadow-sm">
           {/* ✅ HIGH-VISIBILITY INDUSTRIAL WATERMARK (Consistency layer) */}
           <div 
             className="absolute inset-0 z-0 pointer-events-none opacity-[0.05]"
@@ -76,48 +77,49 @@ const InDetailsSection = () => {
 
           <div className="grid md:grid-cols-2 gap-8 items-center relative z-10">
             <div>
-              <h3 className="font-serif text-2xl md:text-3xl font-medium text-[#2A2623] mb-4">
+              <h3 className="font-serif text-2xl md:text-3xl font-medium text-[#2A2623] mb-4 uppercase">
                 Crafted for Excellence
               </h3>
-              <p className="text-muted-foreground leading-relaxed mb-4">
+              <p className="text-muted-foreground leading-relaxed mb-6">
                 At RDC, we believe that great textile design is an art form. Our team combines 
-                traditional craftsmanship with the data-driven efficiency of our microservice architecture.
+                traditional craftsmanship with the data-driven efficiency of our production-grade architecture.
               </p>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Over 1000+ unique designs managed in our Admin Service
+              <ul className="space-y-3 text-sm text-muted-foreground font-medium">
+                <li className="flex items-center gap-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                  Over 1000+ unique designs managed in our Admin Registry
                 </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                <li className="flex items-center gap-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                   Bespoke customization available via our Home Interior segment
                 </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Secure worldwide transactions powered by Razorpay
+                <li className="flex items-center gap-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                  Secure global clearing via our Payment Gateway integration
                 </li>
-                <li className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                  Instant asset streaming from our Media Service
+                <li className="flex items-center gap-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                  Instant asset retrieval from our optimized Media Service
                 </li>
               </ul>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-muted/50 rounded-lg p-6 text-center backdrop-blur-sm border border-white/20">
                 <span className="block font-serif text-3xl md:text-4xl font-semibold text-primary mb-1">1000+</span>
-                <span className="text-sm text-muted-foreground font-bold uppercase tracking-tighter">Catalog Designs</span>
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Registry Assets</span>
               </div>
               <div className="bg-muted/50 rounded-lg p-6 text-center backdrop-blur-sm border border-white/20">
                 <span className="block font-serif text-3xl md:text-4xl font-semibold text-primary mb-1">50+</span>
-                <span className="text-sm text-muted-foreground font-bold uppercase tracking-tighter">Global Markets</span>
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Market Nodes</span>
               </div>
               <div className="bg-muted/50 rounded-lg p-6 text-center backdrop-blur-sm border border-white/20">
                 <span className="block font-serif text-3xl md:text-4xl font-semibold text-primary mb-1">15+</span>
-                <span className="text-sm text-muted-foreground font-bold uppercase tracking-tighter">Years in Textile</span>
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Years Domain</span>
               </div>
               <div className="bg-muted/50 rounded-lg p-6 text-center backdrop-blur-sm border border-white/20">
                 <span className="block font-serif text-3xl md:text-4xl font-semibold text-primary mb-1">5000+</span>
-                <span className="text-sm text-muted-foreground font-bold uppercase tracking-tighter">Verified Orders</span>
+                <span className="text-[10px] text-muted-foreground font-black uppercase tracking-widest">Fulfilled Orders</span>
               </div>
             </div>
           </div>

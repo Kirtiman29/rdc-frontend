@@ -7,7 +7,7 @@ import { getTrendingDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
 
 const Trends = () => {
@@ -23,22 +23,34 @@ const Trends = () => {
   useEffect(() => {
     const fetchTrendingData = async () => {
       try {
-        // Fetching trending data from the API
-        const data = await getTrendingDesigns(50); 
+        /**
+         * ✅ PRODUCTION SYNC:
+         * getTrendingDesigns returns unwrapped data via the interceptor.
+         */
+        const response: any = await getTrendingDesigns(50); 
+        const data = response?.content || (Array.isArray(response) ? response : []);
         
         // ✅ MANDATORY FIX: Filter strictly for trending designs only
         // ✅ SORT: Ensure newest entries (highest IDs) are shown first
-        const filteredAndSorted = data
+        const filteredAndSorted = [...data]
           .filter((product: Design) => product.trending === true)
           .sort((a, b) => b.id - a.id);
         
         setProducts(filteredAndSorted);
 
-        const statusMap: Record<number, boolean> = {};
-        for (const product of filteredAndSorted) {
-          statusMap[product.id] = await checkWishlistStatus(product.id);
-        }
-        setWishlistState(statusMap);
+        /**
+         * ✅ PERFORMANCE FIX: Parallel Batch Check
+         * Using Promise.all to avoid sequential request waterfalls 
+         * when checking wishlist statuses.
+         */
+        const statusEntries = await Promise.all(
+          filteredAndSorted.map(async (product) => {
+            const isWished = await checkWishlistStatus(product.id);
+            return [product.id, isWished];
+          })
+        );
+        
+        setWishlistState(Object.fromEntries(statusEntries));
       } catch (error) {
         console.error('Failed to sync trending collection:', error);
       } finally {
@@ -92,6 +104,7 @@ const Trends = () => {
     <div className="min-h-screen flex flex-col" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1">
+        {/* Banner Section Restored */}
         <section className="py-16 md:py-24 bg-secondary/20">
           <div className="container mx-auto px-4 md:px-8 text-center">
             <span className="text-xs font-bold uppercase tracking-[0.3em] text-[#2A2623]">
@@ -134,6 +147,7 @@ const Trends = () => {
 
                   <Link to={`/product/${product.id}`} className="block relative">
                     <div className="aspect-[3/4] overflow-hidden bg-secondary/30 select-none">
+                      {/* INDUSTRIAL WATERMARK RESTORED */}
                       <div 
                         className="absolute inset-0 z-10 pointer-events-none opacity-[0.22]"
                         style={{
@@ -156,7 +170,6 @@ const Trends = () => {
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">
                         {product.segment?.replace('_', ' ') || 'Textile'}
                       </p>
-                      {/* Title updated to remove 'italic' class for cleaner look */}
                       <h3 className="font-serif text-lg text-[#2A2623] line-clamp-1 group-hover:text-slate-600 transition-colors">
                         {product.title}
                       </h3>
@@ -166,7 +179,7 @@ const Trends = () => {
                     </div>
 
                     <button 
-                      className="w-full h-11 bg-[#2A2623] text-white text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-black transition-all shadow-sm active:scale-95"
+                      className="w-full h-11 bg-[#2A2623] text-white text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-black transition-all shadow-sm active:scale-95 rounded-sm"
                       onClick={(e) => handleAddToCart(e, product)}
                     >
                       <ShoppingBag className="h-4 w-4" />

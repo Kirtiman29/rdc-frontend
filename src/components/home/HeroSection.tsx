@@ -3,7 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const HeroSection = () => {
-  // ✅ Security: Restrict Right-Click across the entire hero area
+  // ✅ Security: Restrict Right-Click across the entire hero area to protect brand assets
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -23,7 +23,7 @@ const HeroSection = () => {
         />
       </div>
 
-      <div className="container relative flex min-h-[90vh] items-center px-4">
+      <div className="container relative flex min-h-[90vh] items-center px-4 mx-auto">
         <div className="grid gap-8 md:grid-cols-2 md:gap-12 lg:gap-20">
           {/* Text content */}
           <div className="flex flex-col justify-center relative z-20">
@@ -41,25 +41,24 @@ const HeroSection = () => {
               and timeless elegance.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Button asChild size="lg" className="group px-8 bg-[#2A2623] hover:bg-black uppercase text-xs font-bold tracking-widest">
+              <Button asChild size="lg" className="group px-8 bg-[#2A2623] hover:bg-black uppercase text-xs font-bold tracking-widest rounded-none h-14">
                 <Link to="/gallery">
                   Explore Collection
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="px-8 border-[#2A2623] text-[#2A2623] uppercase text-xs font-bold tracking-widest">
+              <Button asChild variant="outline" size="lg" className="px-8 border-[#2A2623] text-[#2A2623] uppercase text-xs font-bold tracking-widest rounded-none h-14 hover:bg-[#2A2623] hover:text-white transition-all">
+                {/* ✅ SYNC: Direct mapping to the HOME_INTERIOR segment in Admin Service */}
                 <Link to="/gallery?segment=HOME_INTERIOR">Custom Services</Link>
               </Button>
             </div>
           </div>
 
-          {/* Hero image grid with Watermark */}
+          {/* Hero image grid with Industrial Watermarks */}
           <div className="relative hidden md:block">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-4">
-                {/* Image 1 */}
-                <div className="relative aspect-[3/4] animate-fade-in overflow-hidden rounded-sm group">
-                  {/* ✅ Watermark Overlay */}
+                <div className="relative aspect-[3/4] animate-fade-in overflow-hidden rounded-sm group shadow-2xl">
                   <div 
                     className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                     style={{
@@ -68,14 +67,13 @@ const HeroSection = () => {
                     }}
                   />
                   <img
-                    src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80"
+                    src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80"
                     alt="Textile pattern detail"
-                    draggable={false} // ✅ Block Drag
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    draggable={false}
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                 </div>
-                {/* Image 2 */}
-                <div className="relative aspect-square animate-fade-in overflow-hidden rounded-sm [animation-delay:200ms] group">
+                <div className="relative aspect-square animate-fade-in overflow-hidden rounded-sm [animation-delay:200ms] group shadow-xl">
                   <div 
                     className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                     style={{
@@ -84,16 +82,15 @@ const HeroSection = () => {
                     }}
                   />
                   <img
-                    src="https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=400&q=80"
+                    src="https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&q=80"
                     alt="Premium fabric"
                     draggable={false}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                 </div>
               </div>
               <div className="space-y-4 pt-12">
-                {/* Image 3 */}
-                <div className="relative aspect-square animate-fade-in overflow-hidden rounded-sm [animation-delay:100ms] group">
+                <div className="relative aspect-square animate-fade-in overflow-hidden rounded-sm [animation-delay:100ms] group shadow-xl">
                   <div 
                     className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                     style={{
@@ -102,14 +99,13 @@ const HeroSection = () => {
                     }}
                   />
                   <img
-                    src="https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=400&q=80"
+                    src="https://images.unsplash.com/photo-1586075010923-2dd4570fb338?w=600&q=80"
                     alt="Velvet texture"
                     draggable={false}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                 </div>
-                {/* Image 4 */}
-                <div className="relative aspect-[3/4] animate-fade-in overflow-hidden rounded-sm [animation-delay:300ms] group">
+                <div className="relative aspect-[3/4] animate-fade-in overflow-hidden rounded-sm [animation-delay:300ms] group shadow-2xl">
                    <div 
                     className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                     style={{
@@ -118,10 +114,10 @@ const HeroSection = () => {
                     }}
                   />
                   <img
-                    src="https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=600&q=80"
+                    src="https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=800&q=80"
                     alt="Artisan pillows"
                     draggable={false}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
                   />
                 </div>
               </div>
@@ -132,8 +128,8 @@ const HeroSection = () => {
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 hidden -translate-x-1/2 animate-bounce md:block">
-        <div className="h-12 w-6 rounded-full border-2 border-muted-foreground/30 p-1">
-          <div className="mx-auto h-2 w-1 rounded-full bg-muted-foreground/50" />
+        <div className="h-12 w-6 rounded-full border-2 border-[#2A2623]/20 p-1">
+          <div className="mx-auto h-2 w-1 rounded-full bg-[#2A2623]/40" />
         </div>
       </div>
     </section>

@@ -13,6 +13,7 @@ const FeaturedProducts = () => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -20,18 +21,22 @@ const FeaturedProducts = () => {
   useEffect(() => {
     const fetchFeatured = async () => {
       try {
-        // Fetch curated selection from Port 8080
-        const response = await getDesigns({ limit: 20 });
-        const rawData = response.content || [];
+        /**
+         * ✅ PRODUCTION OPTIMIZATION:
+         * Request only 4 items flagged as 'editorsPick' from Port 8080.
+         * The interceptor handles the unwrapping of the response.
+         */
+        const response: any = await getDesigns({ 
+          limit: 4, 
+          editorsPick: true 
+        });
         
-        // ✅ FIXED: Using 'editorsPick' as the featured flag
-        // ✅ SORT: Descending ID for Recent First
-        const filteredFeatured = rawData
-          .filter((product: Design) => product.editorsPick === true)
-          .sort((a, b) => b.id - a.id)
-          .slice(0, 4); 
+        const rawData = response?.content || (Array.isArray(response) ? response : []);
+        
+        // Ensure strictly descending ID for the "Featured" section
+        const sortedFeatured = [...rawData].sort((a, b) => b.id - a.id);
 
-        setProducts(filteredFeatured);
+        setProducts(sortedFeatured);
       } catch (error) {
         console.error('Failed to sync featured designs:', error);
       } finally {
@@ -46,6 +51,9 @@ const FeaturedProducts = () => {
     e.preventDefault();
     e.stopPropagation();
     try {
+      /**
+       * ✅ SYNC: Direct integration with Cart Service (Port 8091)
+       */
       await addToCart(product.id, 1);
       toast({
         title: "Added to Cart",
@@ -73,6 +81,7 @@ const FeaturedProducts = () => {
   return (
     <section className="bg-background py-16 md:py-24" onContextMenu={handleContextMenu}>
       <div className="container px-4 mx-auto">
+        {/* Header Section Restored */}
         <div className="mb-12 flex flex-col items-start justify-between gap-4 md:flex-row md:items-end">
           <div>
             <span className="mb-2 inline-block font-serif text-sm uppercase tracking-[0.3em] text-muted-foreground">
@@ -101,7 +110,7 @@ const FeaturedProducts = () => {
               <Link to={`/product/${product.id}`}>
                 <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-sm bg-secondary select-none">
                   
-                  {/* Industrial Watermark */}
+                  {/* INDUSTRIAL WATERMARK RESTORED */}
                   <div 
                     className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                     style={{
@@ -117,7 +126,7 @@ const FeaturedProducts = () => {
                     className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   
-                  {/* Badges */}
+                  {/* Badges Restored */}
                   <div className="absolute left-3 top-3 z-20 flex flex-col gap-2">
                     {product.premium && (
                       <span className="rounded-sm bg-[#2A2623] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
@@ -131,7 +140,7 @@ const FeaturedProducts = () => {
                     )}
                   </div>
 
-                  {/* Add to Cart button */}
+                  {/* Add to Cart button Restored */}
                   <div className="absolute bottom-3 left-3 right-3 z-30 translate-y-2 opacity-100 md:opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                     <Button
                       className="w-full gap-2 shadow-xl bg-[#2A2623] hover:bg-black uppercase text-[10px] font-bold tracking-widest rounded-sm h-10"

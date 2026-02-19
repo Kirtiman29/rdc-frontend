@@ -5,7 +5,7 @@ import { getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
 
 const PremiumDesigns = () => {
@@ -15,6 +15,7 @@ const PremiumDesigns = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -22,23 +23,34 @@ const PremiumDesigns = () => {
   useEffect(() => {
     const fetchPremium = async () => {
       try {
-        // Fetch premium designs
-        const response = await getDesigns({ premium: true });
-        const rawData = Array.isArray(response) ? response : (response.content || []);
+        /** * ✅ PRODUCTION SYNC: 
+         * getDesigns returns data directly from the unified apiClient interceptor.
+         */
+        const response: any = await getDesigns({ premium: true });
         
-        // ✅ 1. Filter Premium -> 2. Sort Recent (ID Desc) -> 3. Slice top 8
-        const premiumOnly = rawData
+        // Handle potential Pageable response or raw array
+        const rawData = response?.content || (Array.isArray(response) ? response : []);
+        
+        // ✅ 1. Filter Premium -> 2. Sort Recent (ID Desc) -> 3. Slice top 10
+        const premiumOnly = [...rawData]
           .filter((product: Design) => product.premium === true)
-          .sort((a, b) => b.id - a.id) // ✅ Sort Newest First
-          .slice(0, 10); // Display up to 10 recent premium designs
+          .sort((a: Design, b: Design) => b.id - a.id)
+          .slice(0, 10);
 
         setProducts(premiumOnly);
 
-        const statusMap: Record<number, boolean> = {};
-        for (const product of premiumOnly) {
-          statusMap[product.id] = await checkWishlistStatus(product.id);
-        }
-        setWishlistState(statusMap);
+        /**
+         * ✅ PERFORMANCE FIX: Parallel Status Check
+         * Replaced sequential loop with Promise.all to avoid request waterfalls.
+         */
+        const statusEntries = await Promise.all(
+          premiumOnly.map(async (product: Design) => {
+            const isWished = await checkWishlistStatus(product.id);
+            return [product.id, isWished];
+          })
+        );
+        
+        setWishlistState(Object.fromEntries(statusEntries));
       } catch (error) {
         console.error('Failed to sync premium designs:', error);
       } finally {

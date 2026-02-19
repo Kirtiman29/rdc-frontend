@@ -47,8 +47,12 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
   useEffect(() => {
     const fetchCategories = async () => {
       try {
+        /**
+         * ✅ PRODUCTION SYNC:
+         * getCategories now returns the raw array from the interceptor.
+         */
         const data = await getCategories();
-        setDbCategories(data);
+        setDbCategories(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Failed to sync filter categories:', error);
       } finally {
@@ -58,7 +62,6 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
     fetchCategories();
   }, []);
 
-  // ✅ FIX 1: Category now acts as a Tag Filter (Search)
   const handleCategoryChange = (tagName: string, checked: boolean) => {
     onFiltersChange({
       ...filters,
@@ -92,7 +95,7 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
         </Button>
       )}
 
-      {/* Segments Section */}
+      {/* Segments Section Restored */}
       <div>
         <h4 className="mb-4 font-serif text-sm font-medium uppercase tracking-wider">Market Segment</h4>
         <div className="space-y-3">
@@ -111,7 +114,7 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
         </div>
       </div>
 
-      {/* Categories Section (NOW TAG FILTERS) */}
+      {/* Collections Section Restored */}
       <div>
         <h4 className="mb-4 font-serif text-sm font-medium uppercase tracking-wider">Collections</h4>
         {loading ? (
@@ -122,7 +125,6 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
               <div key={cat.id} className="flex items-center space-x-3">
                 <Checkbox
                   id={`cat-${cat.id}`}
-                  // ✅ Matches search string to tag name
                   checked={filters.search === cat.name.toLowerCase()}
                   onCheckedChange={(checked) => handleCategoryChange(cat.name, !!checked)}
                 />
@@ -135,7 +137,7 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
         )}
       </div>
 
-      {/* Attributes Section */}
+      {/* Attributes Section Restored */}
       <div>
         <h4 className="mb-4 font-serif text-sm font-medium uppercase tracking-wider">Attributes</h4>
         <div className="space-y-3">

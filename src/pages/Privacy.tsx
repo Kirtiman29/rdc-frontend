@@ -149,7 +149,7 @@ const Privacy = () => {
                 If you have questions about this Privacy Policy or our data practices, 
                 please contact us at{' '}
                 <a href="mailto:privacy@rdctextiles.com" className="text-foreground hover:underline">
-                  privacy@ruchitadesigncompany.com
+                  accounts@ruchitadesigncompany.com
                 </a>
               </p>
             </section>

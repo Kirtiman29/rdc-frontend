@@ -29,24 +29,28 @@ export interface CartSummary {
 
 /**
  * Fetch all items in the user's cart.
- * Backend: GET http://localhost:8091/api/cart/items
+ * Base URL: VITE_CART_SERVICE_URL (e.g., http://localhost:8091/api/cart)
  */
 export const getCartItems = async (): Promise<CartItem[]> => {
-  const response = await cartApi.get('/items');
-  return response.data; // Backend returns List<CartItemResponse>
+  // ✅ Data is already unwrapped by the interceptor in apiClient.ts
+  return await cartApi.get('/items');
 };
 
 /**
- * ✅ NEW: Unified Cart Fetcher (Used by Header.tsx)
+ * ✅ Unified Cart Fetcher (Used by Header.tsx)
  * Aggregates items into a summary for easier UI rendering.
  */
 export const getCart = async (): Promise<CartSummary> => {
   const items = await getCartItems();
-  const subtotalCents = items.reduce((acc, item) => acc + item.totalPriceCents, 0);
-  const totalItems = items.reduce((acc, item) => acc + item.quantity, 0);
+  
+  // Ensure items is an array before reducing to prevent crashes
+  const safeItems = Array.isArray(items) ? items : [];
+  
+  const subtotalCents = safeItems.reduce((acc, item) => acc + (item.totalPriceCents || 0), 0);
+  const totalItems = safeItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
   
   return {
-    items,
+    items: safeItems,
     subtotalCents,
     totalItems
   };
@@ -54,37 +58,32 @@ export const getCart = async (): Promise<CartSummary> => {
 
 /**
  * Add a design to the cart.
- * Backend: POST http://localhost:8091/api/cart/items
  */
 export const addToCart = async (designId: number, quantity: number = 1): Promise<CartItem> => {
-  const response = await cartApi.post('/items', { 
+  return await cartApi.post('/items', { 
     designId, 
     quantity 
   });
-  return response.data;
 };
 
 /**
  * Update quantity of an existing item.
- * Backend expects: @RequestBody Map<String, Integer> body
  */
 export const updateCartQuantity = async (itemId: number, quantity: number): Promise<CartItem> => {
-  const response = await cartApi.put(`/items/${itemId}`, { 
+  return await cartApi.put(`/items/${itemId}`, { 
     quantity 
   });
-  return response.data;
 };
 
 /**
  * Remove an item from the cart.
- * Backend: DELETE http://localhost:8091/api/cart/items/{itemId}
  */
 export const removeCartItem = async (itemId: number): Promise<void> => {
   await cartApi.delete(`/items/${itemId}`);
 };
 
 /**
- * Clear the entire cart (e.g., after successful checkout).
+ * Clear the entire cart.
  */
 export const clearCart = async (): Promise<void> => {
   await cartApi.delete('/items');
@@ -92,12 +91,12 @@ export const clearCart = async (): Promise<void> => {
 
 /**
  * Get item count for navbar badges.
- * Backend: GET http://localhost:8091/api/cart/count
  */
 export const getCartCount = async (): Promise<number> => {
-    const response = await cartApi.get('/count');
-    // Ensure we handle both raw numbers or { count: x } objects depending on API version
-    return typeof response.data === 'number' ? response.data : response.data.count;
+    const data: any = await cartApi.get('/count');
+    // Interceptor returns the JSON body directly. 
+    // Handle both { count: 5 } or raw 5.
+    return typeof data === 'number' ? data : (data?.count || 0);
 };
 
 export default cartApi;

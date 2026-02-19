@@ -22,23 +22,34 @@ const EditorsChoice = () => {
   useEffect(() => {
     const fetchPicks = async () => {
       try {
-        // Fetch a larger set to allow for proper recent sorting
-        const data = await getEditorsPick(30);
+        /** * ✅ PRODUCTION SYNC: 
+         * getEditorsPick returns data directly from the unified apiClient interceptor.
+         */
+        const data: any = await getEditorsPick(30);
         
+        // Handle potential Pageable response or raw array
+        const rawItems = data?.content || (Array.isArray(data) ? data : []);
+
         // ✅ 1. Filter picks -> 2. Sort Recent (ID Desc) -> 3. Slice top 8
-        const filteredPicks = data
+        const filteredPicks = rawItems
           .filter((product: Design) => product.editorsPick === true)
-          .sort((a, b) => b.id - a.id) // ✅ Newest Curated First
+          .sort((a: Design, b: Design) => b.id - a.id) 
           .slice(0, 8); 
 
         setProducts(filteredPicks);
 
-        // ✅ Sync wishlist status
-        const statusMap: Record<number, boolean> = {};
-        for (const product of filteredPicks) {
-          statusMap[product.id] = await checkWishlistStatus(product.id);
-        }
-        setWishlistState(statusMap);
+        /**
+         * ✅ PERFORMANCE FIX: Parallel Status Check
+         * Replaced sequential loop with Promise.all to prevent request waterfalls.
+         */
+        const statusEntries = await Promise.all(
+          filteredPicks.map(async (product: Design) => {
+            const isWished = await checkWishlistStatus(product.id);
+            return [product.id, isWished];
+          })
+        );
+        
+        setWishlistState(Object.fromEntries(statusEntries));
       } catch (error) {
         console.error('Failed to sync editor picks:', error);
       } finally {

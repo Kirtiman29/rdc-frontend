@@ -1,4 +1,3 @@
-// src/pages/Index.tsx
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import HeroEditorial from '@/components/home/HeroEditorial';
@@ -14,12 +13,25 @@ const Index = () => {
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-1">
+        {/* 1. Impact Entry */}
         <HeroEditorial />
+        
+        {/* 2. Immediate Social Proof / Trends */}
         <TrendingDesigns />
-        <PremiumDesigns />
-        <EditorsChoice />
+        
+        {/* 3. Break up the grids with a different visual style (Categories) */}
         <ShopByCategory />
+        
+        {/* 4. Luxury Highlight (Dark themed section) */}
+        <PremiumDesigns />
+        
+        {/* 5. Curated Content */}
+        <EditorsChoice />
+        
+        {/* 6. Fresh Updates */}
         <NewArrivals />
+        
+        {/* 7. Conversion Closer (Promotional) */}
         <SpecialOffers />
       </main>
       <Footer />

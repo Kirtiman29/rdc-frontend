@@ -1,5 +1,3 @@
-// src/pages/Profile.tsx
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/layout/Header';
@@ -20,19 +18,27 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({ name: '', email: '' });
 
+  // ✅ Security: Restrict Right-Click
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
       const token = getToken();
       
-      // ✅ Guard: Immediate redirect if no token is present
       if (!token) {
         navigate('/login');
         return;
       }
 
       try {
-        // Fetches profile from Auth Service on Port 8081
-        const data = await getProfile();
+        /**
+         * ✅ PRODUCTION SYNC:
+         * getProfile returns the unwrapped data via the interceptor.
+         * Hits Auth Service on Port 8081.
+         */
+        const data: any = await getProfile();
         setUser({ 
           name: data.name || 'User', 
           email: data.email 
@@ -41,7 +47,6 @@ const Profile = () => {
       } catch (error: any) {
         console.error("Profile sync failed:", error);
         
-        // Force logout if auth failed (401/403)
         if (error.response?.status === 401 || error.response?.status === 403) {
           logout();
         } else {
@@ -74,12 +79,12 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1 bg-secondary/20">
         <div className="container mx-auto px-4 md:px-8 py-12 md:py-20">
           
-          {/* Industrial User Header */}
+          {/* User Header Section Restored */}
           <div className="mb-12 flex flex-col md:flex-row md:items-center gap-6">
             <div className="h-20 w-20 bg-[#2A2623] text-white rounded-none flex items-center justify-center text-3xl font-serif shadow-lg">
               {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
@@ -94,7 +99,7 @@ const Profile = () => {
           </div>
 
           <div className="w-full max-w-3xl">
-            {/* Nav Label (Since Tabs are removed, we use a simple header) */}
+            {/* Navigation Header Restored */}
             <div className="border-b border-border mb-8">
               <div className="flex items-center gap-2 border-b-2 border-[#2A2623] w-fit px-6 py-3">
                 <User className="h-4 w-4" />
@@ -102,7 +107,7 @@ const Profile = () => {
               </div>
             </div>
 
-            <div className="bg-background border border-border p-8 md:p-10 animate-fade-in shadow-sm">
+            <div className="bg-background border border-border p-8 md:p-10 animate-fade-in shadow-sm rounded-sm">
               <h2 className="font-serif text-xs font-bold uppercase tracking-wider text-muted-foreground mb-10 pb-4 border-b border-zinc-100">
                 Studio Credentials
               </h2>
@@ -143,7 +148,7 @@ const Profile = () => {
                     className="h-12 px-8 rounded-none text-destructive hover:text-white hover:bg-destructive uppercase text-[10px] font-bold tracking-[0.2em] transition-all" 
                     onClick={logout}
                   >
-                    <LogOut className="h-4 w-4 mr-2" /> Sign Out from Archive
+                    <LogOut className="h-4 w-4 mr-2" /> Sign Out
                   </Button>
                 </div>
               </form>

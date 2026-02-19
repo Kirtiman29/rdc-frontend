@@ -1,10 +1,9 @@
-// src/api/designApi.ts
-
-import { userApi } from './apiClient'; // ✅ FIXED: Importing userApi instead of publicApi
+import { userApi } from './apiClient';
 import type { Design, Category, DesignsResponse, DesignFilters } from '../types/product';
 
 /**
  * Helper: Safely extract array from Spring Boot Pageable response
+ * Data is already unwrapped by apiClient interceptor.
  */
 const extractArray = (data: any): Design[] => {
   if (!data) return [];
@@ -14,7 +13,7 @@ const extractArray = (data: any): Design[] => {
 
 /**
  * ✅ Sync: Main Gallery Feed
- * Uses userApi with proactive refresh interceptors.
+ * Service: VITE_ADMIN_SERVICE_URL
  */
 export const getDesigns = async (filters?: DesignFilters): Promise<DesignsResponse> => {
   const params = new URLSearchParams();
@@ -30,60 +29,40 @@ export const getDesigns = async (filters?: DesignFilters): Promise<DesignsRespon
     if (filters.search) params.append('search', filters.search);
   }
 
-  // ✅ FIXED: Using userApi
-  const response = await userApi.get<DesignsResponse>(`/public/designs/feed?${params.toString()}`);
-  return response.data;
+  // ✅ Interceptor handles .data
+  return await userApi.get(`/public/designs/feed?${params.toString()}`);
 };
 
-/**
- * ✅ Trending Feed
- */
 export const getTrendingDesigns = async (limit: number = 10): Promise<Design[]> => {
-  const response = await userApi.get(`/public/designs/feed?trending=true&size=${limit}`);
-  return extractArray(response.data);
+  const data = await userApi.get(`/public/designs/feed?trending=true&size=${limit}`);
+  return extractArray(data);
 };
 
-/**
- * ✅ New Arrivals Feed
- */
 export const getNewArrivals = async (limit: number = 10): Promise<Design[]> => {
-  const response = await userApi.get(`/public/designs/feed?newArrival=true&size=${limit}`);
-  return extractArray(response.data);
+  const data = await userApi.get(`/public/designs/feed?newArrival=true&size=${limit}`);
+  return extractArray(data);
 };
 
-/**
- * ✅ Editors Choice
- */
 export const getEditorsPick = async (limit: number = 10): Promise<Design[]> => {
-  const response = await userApi.get(`/public/designs/feed?editorsPick=true&size=${limit}`);
-  return extractArray(response.data);
+  const data = await userApi.get(`/public/designs/feed?editorsPick=true&size=${limit}`);
+  return extractArray(data);
 };
 
-/**
- * ✅ Category Sync 
- */
 export const getCategories = async (): Promise<Category[]> => {
   try {
-    const response = await userApi.get('/categories/public'); 
-    return Array.isArray(response.data) ? response.data : [];
+    const data = await userApi.get('/categories/public'); 
+    return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error("Failed to sync storefront categories:", error);
     return [];
   }
 };
 
-/**
- * ✅ Public design detail
- */
 export const getDesignById = async (id: string | number): Promise<Design> => {
-  const response = await userApi.get<Design>(`/public/designs/${id}`);
-  return response.data;
+  return await userApi.get(`/public/designs/${id}`);
 };
 
-/**
- * ✅ Related Designs Sync
- */
 export const getRelatedDesigns = async (designId: string | number, limit: number = 4): Promise<Design[]> => {
-  const response = await userApi.get(`/public/designs/${designId}/related?limit=${limit}`);
-  return extractArray(response.data);
+  const data = await userApi.get(`/public/designs/${designId}/related?limit=${limit}`);
+  return extractArray(data);
 };

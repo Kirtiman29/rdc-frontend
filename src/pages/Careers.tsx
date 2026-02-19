@@ -1,20 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import { ArrowRight, X, CheckCircle2 } from 'lucide-react'; // ✅ Added CheckCircle2
+import { ArrowRight, X, CheckCircle2 } from 'lucide-react'; 
 import { publicCareerApi } from '@/api/publicCareerApi';
 
 const Careers = () => {
   const [openPositions, setOpenPositions] = useState<any[]>([]);
   const [selectedJob, setSelectedJob] = useState<any | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false); // ✅ New success state
+  const [isSuccess, setIsSuccess] = useState(false);
 
-  // Fetch live jobs from Port 8080 on mount
+  // Fetch live jobs from Registry (Admin Service)
   useEffect(() => {
     publicCareerApi.getOpenJobs()
-      .then(res => setOpenPositions(res.data))
-      .catch(err => console.error("Could not load jobs", err));
+      .then(res => {
+        /**
+         * ✅ PRODUCTION SYNC:
+         * publicCareerApi now returns the unwrapped data via the interceptor.
+         */
+        setOpenPositions(Array.isArray(res) ? res : []);
+      })
+      .catch(err => console.error("Could not load Registry jobs", err));
   }, []);
 
   const benefits = [
@@ -36,8 +42,9 @@ const Careers = () => {
       const file = formData.get('resume') as File;
       
       // 1. Upload to Asset Service (Port 8090)
-      const uploadRes = await publicCareerApi.uploadResume(file);
-      const resumeUuid = uploadRes.data.uuid;
+      // ✅ Interceptor unwraps the result: { uuid: "..." }
+      const uploadRes: any = await publicCareerApi.uploadResume(file);
+      const resumeUuid = uploadRes.uuid;
 
       // 2. Submit metadata to Admin Service (Port 8080)
       await publicCareerApi.submitApplication({
@@ -48,10 +55,8 @@ const Careers = () => {
         resumeAssetUuid: resumeUuid
       });
 
-      // ✅ Switch to UI Success State
       setIsSuccess(true);
       
-      // Auto-close modal after 6 seconds if user doesn't click close
       setTimeout(() => {
           if (isSuccess) handleCloseModal();
       }, 6000);
@@ -110,8 +115,8 @@ const Careers = () => {
 
           {/* Open Positions */}
           <section>
-            <h2 className="font-serif text-2xl md:text-3xl font-medium mb-8 text-center">
-              Open Positions
+            <h2 className="font-serif text-2xl md:text-3xl font-medium mb-8 text-center uppercase tracking-widest">
+              Open Registry Positions
             </h2>
             <div className="space-y-4">
               {openPositions.length > 0 ? (
@@ -126,7 +131,7 @@ const Careers = () => {
                         <h3 className="font-serif text-lg md:text-xl font-medium mb-2">
                           {position.title}
                         </h3>
-                        <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap gap-3 text-sm text-muted-foreground uppercase tracking-tighter">
                           <span>{position.jobType}</span>
                           <span>·</span>
                           <span>{position.location}</span>
@@ -145,8 +150,8 @@ const Careers = () => {
 
             <p className="text-center text-muted-foreground mt-8 text-sm">
               Don't see a position that fits? Send your portfolio to{' '}
-              <a href="mailto:careers@rdctextiles.com" className="text-foreground hover:underline">
-                hr@ruchitadesigncompany.com
+              <a href="mailto:hr@ruchitadesigncompany.com" className="text-foreground hover:underline">
+                accounts@ruchitadesigncompany.com
               </a>
             </p>
           </section>
@@ -156,8 +161,7 @@ const Careers = () => {
       {/* APPLICATION MODAL */}
       {selectedJob && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="bg-white border border-border w-full max-w-md p-8 relative animate-in fade-in zoom-in duration-300">
-            {/* Close Button - hidden during success message for cleaner feel */}
+          <div className="bg-white border border-border w-full max-w-md p-8 relative animate-in fade-in zoom-in duration-300 shadow-2xl">
             {!isSuccess && (
                 <button onClick={handleCloseModal} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
                     <X className="h-5 w-5" />
@@ -165,10 +169,9 @@ const Careers = () => {
             )}
 
             {isSuccess ? (
-              /* ✅ REFINED SUCCESS UI */
               <div className="py-10 text-center animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex justify-center mb-6">
-                  <CheckCircle2 className="h-12 w-12 text-foreground stroke-[1px]" />
+                  <CheckCircle2 className="h-12 w-12 text-[#2A2623] stroke-[1px]" />
                 </div>
                 <h2 className="font-serif text-2xl md:text-3xl mb-4">Application Sent</h2>
                 <p className="text-muted-foreground leading-relaxed px-4">
@@ -178,38 +181,37 @@ const Careers = () => {
                 </p>
                 <button 
                     onClick={handleCloseModal}
-                    className="mt-8 text-xs uppercase tracking-[0.3em] font-bold text-muted-foreground hover:text-foreground transition-colors border-b border-transparent hover:border-foreground"
+                    className="mt-8 text-xs uppercase tracking-[0.3em] font-bold text-muted-foreground hover:text-[#2A2623] transition-colors border-b border-transparent hover:border-[#2A2623]"
                 >
                     Return to Careers
                 </button>
               </div>
             ) : (
-              /* FORM UI */
               <>
-                <h2 className="font-serif text-2xl mb-2">Apply for {selectedJob.title}</h2>
-                <p className="text-sm text-muted-foreground mb-6">{selectedJob.location} · {selectedJob.jobType}</p>
+                <h2 className="font-serif text-2xl mb-2 uppercase tracking-tight">Apply for {selectedJob.title}</h2>
+                <p className="text-xs text-muted-foreground mb-6 uppercase tracking-widest">{selectedJob.location} · {selectedJob.jobType}</p>
                 
                 <form onSubmit={handleApply} className="space-y-4">
-                  <input name="fullName" type="text" placeholder="Full Name" required className="w-full p-3 border border-border bg-transparent outline-none focus:border-foreground transition-colors placeholder:text-muted-foreground/50" />
-                  <input name="email" type="email" placeholder="Email Address" required className="w-full p-3 border border-border bg-transparent outline-none focus:border-foreground transition-colors placeholder:text-muted-foreground/50" />
-                  <input name="phone" type="text" placeholder="Phone Number" required className="w-full p-3 border border-border bg-transparent outline-none focus:border-foreground transition-colors placeholder:text-muted-foreground/50" />
+                  <input name="fullName" type="text" placeholder="Full Name" required className="w-full p-3 border border-border bg-transparent outline-none focus:border-[#2A2623] transition-colors placeholder:text-muted-foreground/50 text-sm" />
+                  <input name="email" type="email" placeholder="Email Address" required className="w-full p-3 border border-border bg-transparent outline-none focus:border-[#2A2623] transition-colors placeholder:text-muted-foreground/50 text-sm" />
+                  <input name="phone" type="text" placeholder="Phone Number" required className="w-full p-3 border border-border bg-transparent outline-none focus:border-[#2A2623] transition-colors placeholder:text-muted-foreground/50 text-sm" />
                   
                   <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Upload Resume (PDF)</label>
+                    <label className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold">Upload Resume (PDF ONLY)</label>
                     <input 
                         name="resume" 
                         type="file" 
                         accept=".pdf" 
                         required 
-                        className="w-full text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:border-0 file:text-[10px] file:uppercase file:tracking-widest file:bg-foreground file:text-background hover:file:opacity-90 transition-all cursor-pointer" 
+                        className="w-full text-xs text-muted-foreground file:mr-4 file:py-2 file:px-4 file:border-0 file:text-[10px] file:uppercase file:tracking-widest file:bg-[#2A2623] file:text-background hover:file:opacity-90 transition-all cursor-pointer" 
                     />
                   </div>
 
                   <button 
                     disabled={isSubmitting}
-                    className="w-full py-4 bg-foreground text-background text-[11px] uppercase tracking-[0.2em] font-bold hover:opacity-90 transition-opacity mt-4"
+                    className="w-full py-4 bg-[#2A2623] text-background text-[11px] uppercase tracking-[0.2em] font-bold hover:bg-black transition-all mt-4 shadow-md"
                   >
-                    {isSubmitting ? 'Processing...' : 'Submit Application'}
+                    {isSubmitting ? 'Syncing with Registry...' : 'Transmit Application'}
                   </button>
                 </form>
               </>

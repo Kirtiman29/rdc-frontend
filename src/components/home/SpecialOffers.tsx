@@ -5,7 +5,7 @@ import { getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
 
 const SpecialOffers = () => {
@@ -14,6 +14,7 @@ const SpecialOffers = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
+  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -21,23 +22,33 @@ const SpecialOffers = () => {
   useEffect(() => {
     const fetchOffers = async () => {
       try {
-        // Fetch a larger pool to ensure we can sort and pick the top 4
-        const response = await getDesigns({ limit: 50 }); 
-        const rawData = Array.isArray(response) ? response : (response?.content || []);
+        /** * ✅ PRODUCTION SYNC: 
+         * getDesigns returns data directly from the unified apiClient interceptor.
+         * We specifically request the 'specialOffer' flag from the Admin Service.
+         */
+        const response: any = await getDesigns({ limit: 50, specialOffer: true }); 
+        const rawData = response?.content || (Array.isArray(response) ? response : []);
         
-        
-        const filteredOffers = rawData
+        // Filter and Sort by most recent curation
+        const filteredOffers = [...rawData]
           .filter((product: Design) => product.specialOffer === true)
           .sort((a: Design, b: Design) => b.id - a.id) 
           .slice(0, 4); 
 
         setProducts(filteredOffers);
 
-        const statusMap: Record<number, boolean> = {};
-        for (const product of filteredOffers) {
-          statusMap[product.id] = await checkWishlistStatus(product.id);
-        }
-        setWishlistState(statusMap);
+        /**
+         * ✅ PERFORMANCE FIX: Parallel Status Check
+         * Replaced sequential loop with Promise.all to avoid request waterfalls.
+         */
+        const statusEntries = await Promise.all(
+          filteredOffers.map(async (product: Design) => {
+            const isWished = await checkWishlistStatus(product.id);
+            return [product.id, isWished];
+          })
+        );
+        
+        setWishlistState(Object.fromEntries(statusEntries));
       } catch (error) {
         console.error('Failed to sync special offers:', error);
       } finally {
@@ -52,7 +63,7 @@ const SpecialOffers = () => {
     e.stopPropagation();
     try {
       await addToCart(product.id, 1);
-      toast({ title: "Added to Cart", description: `${product.title} is now in your selection.` });
+      toast({ title: "Added to Cart", description: `${product.title} is now in your bag.` });
     } catch (error) {
       toast({ variant: "destructive", title: "Cart Error", description: "Please login to add items." });
     }
@@ -69,7 +80,7 @@ const SpecialOffers = () => {
         await addToWishlist(product.id);
       }
       setWishlistState(prev => ({ ...prev, [product.id]: !isWished }));
-      toast({ title: isWished ? "Removed" : "Saved", description: "Your selection has been updated." });
+      toast({ title: isWished ? "Removed" : "Saved" });
     } catch (error) {
       toast({ variant: "destructive", title: "Wishlist Error", description: "Authentication required." });
     }
@@ -83,13 +94,13 @@ const SpecialOffers = () => {
     );
   }
 
-  // Only render section if there are active special offers
   if (products.length === 0) return null;
 
   return (
     <section className="py-20 md:py-28 bg-secondary/20" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex items-end justify-between mb-12">
+          {/* Header Section Restored */}
           <div>
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-destructive">
               Limited Time
@@ -99,7 +110,7 @@ const SpecialOffers = () => {
             </h2>
           </div>
           <Link 
-            to="/special-Offers" 
+            to="/special-offers" 
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden md:block"
           >
             View All Offers →
@@ -116,7 +127,7 @@ const SpecialOffers = () => {
                   <div 
                     className="absolute inset-0 z-10 pointer-events-none opacity-[0.22]"
                     style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
                       backgroundRepeat: 'repeat'
                     }}
                   />

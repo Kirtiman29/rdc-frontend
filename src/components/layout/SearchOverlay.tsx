@@ -35,14 +35,18 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
       try {
         const lowerQuery = query.trim().toLowerCase();
 
-        const response = await getDesigns({ 
+        /**
+         * ✅ PRODUCTION SYNC:
+         * getDesigns returns the unwrapped data object via interceptor.
+         */
+        const response: any = await getDesigns({ 
           search: lowerQuery, 
           limit: 10 
         });
         
-        const content = Array.isArray(response) ? response : (response?.content || []);
+        const content = response?.content || (Array.isArray(response) ? response : []);
         
-        // Sort newest first (highest ID)
+        // Sort newest first (highest ID) for relevance
         setResults([...content].sort((a, b) => b.id - a.id));
         
       } catch (error) {
@@ -103,8 +107,8 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
 
           {results.length > 0 && (
             <div className="mt-8 space-y-2 max-h-[60vh] overflow-y-auto pr-2">
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-4">
-                Found {results.length} Industrial Results
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
+                Found {results.length} results
               </p>
               <div className="space-y-2">
                 {results.map((product) => (
@@ -149,7 +153,7 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
 
           {query.trim().length < 2 && (
             <div className="mt-12">
-              <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-4">
                 Popular Searches
               </p>
               <div className="flex flex-wrap gap-2">

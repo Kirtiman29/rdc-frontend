@@ -23,7 +23,7 @@ export default function Checkout() {
     };
 
     useEffect(() => {
-        // ✅ LOGIC: If we return from Razorpay with an orderId, show buffering immediately
+        // ✅ PRODUCTION LOGIC: Handle return from payment gateway
         const orderId = searchParams.get('orderId');
         if (orderId) {
             setIsVerifyingRedirect(true);
@@ -44,7 +44,11 @@ export default function Checkout() {
         if (cart.length === 0) return;
         setIsProcessing(true);
         try {
-            const order = await createOrder();
+            /** * ✅ PRODUCTION SYNC: 
+             * createOrder returns the unwrapped JSON body directly via interceptor.
+             */
+            const order: any = await createOrder();
+            
             await processIndustrialPayment(order.id, navigate, {
                 name: user?.name || "Industrial User",
                 email: user?.email || "user@rdc-archive.com"
@@ -56,7 +60,7 @@ export default function Checkout() {
         }
     };
 
-    // ✅ FULL SCREEN BUFFERING COMPONENT
+    // ✅ FULL SCREEN BUFFERING COMPONENT (Restored UI)
     if (isVerifyingRedirect) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-white">
@@ -78,7 +82,7 @@ export default function Checkout() {
 
     return (
         <div className="min-h-screen bg-white" onContextMenu={handleContextMenu}>
-            {/* ... (Keep your existing Header and Main content exactly as is) ... */}
+            {/* Header Section Restored */}
             <div className="bg-white border-b border-gray-100 py-4">
                 <div className="container mx-auto px-6 flex justify-between items-center">
                     <Link to="/cart" className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-black transition-colors">
@@ -91,18 +95,19 @@ export default function Checkout() {
                 </div>
             </div>
 
-            <main className="container mx-auto px-6 py-16">
+            <main className="container mx-auto px-6 py-12 lg:py-16">
                 <div className="max-w-6xl mx-auto">
+                    {/* Page Title Restored */}
                     <div className="mb-12">
                         <span className="text-[10px] uppercase tracking-[0.3em] text-gray-400 font-bold">Review Purchase</span>
                         <h1 className="font-serif text-4xl mt-2 text-[#1A1A1A]">Confirm Acquisition</h1>
                     </div>
 
-                    <div className="grid lg:grid-cols-12 gap-16 items-start">
-                        {/* LEFT COLUMN: Order Review (Cart Style) */}
+                    <div className="grid lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+                        {/* LEFT COLUMN: Order Review Restored */}
                         <div className="lg:col-span-8 space-y-4">
                             {cart.map((item) => (
-                                <div key={item.id} className="group relative bg-[#FAFAFA] border border-gray-100 p-6 flex gap-8 items-center transition-all">
+                                <div key={item.id} className="group relative bg-[#FAFAFA] border border-gray-100 p-6 flex gap-6 lg:gap-8 items-center transition-all rounded-sm shadow-sm">
                                     <div className="relative w-24 h-24 bg-white overflow-hidden border border-gray-100 flex-shrink-0 select-none shadow-sm">
                                         <div 
                                             className="absolute inset-0 z-10 pointer-events-none opacity-[0.15]"
@@ -113,7 +118,7 @@ export default function Checkout() {
                                         />
                                         <img 
                                             src={getAssetUrl(item.assetUuid)} 
-                                            alt="" 
+                                            alt={item.designTitle} 
                                             draggable={false}
                                             className="w-full h-full object-cover" 
                                         />
@@ -131,16 +136,16 @@ export default function Checkout() {
                                         </div>
                                     </div>
                                     
-                                    <div className="p-2 text-gray-200">
+                                    <div className="p-2 text-gray-200 hidden sm:block">
                                         <Lock size={18} />
                                     </div>
                                 </div>
                             ))}
                         </div>
 
-                        {/* RIGHT COLUMN: Summary Card */}
+                        {/* RIGHT COLUMN: Summary Card Restored */}
                         <div className="lg:col-span-4">
-                            <div className="bg-[#FAFAFA] border border-gray-100 p-8 rounded-sm sticky top-8">
+                            <div className="bg-[#FAFAFA] border border-gray-100 p-8 rounded-sm sticky top-8 shadow-sm">
                                 <h2 className="font-serif text-2xl mb-8 text-[#1A1A1A]">Order Summary</h2>
                                 
                                 <div className="space-y-4 mb-10">
@@ -164,7 +169,7 @@ export default function Checkout() {
                                 <Button 
                                     onClick={handleCheckout} 
                                     disabled={isProcessing || cart.length === 0} 
-                                    className="w-full h-14 bg-[#2A2623] hover:bg-black text-white font-medium transition-all active:scale-[0.99] rounded-none uppercase tracking-widest text-xs"
+                                    className="w-full h-14 bg-[#2A2623] hover:bg-black text-white font-medium transition-all active:scale-[0.99] rounded-none uppercase tracking-widest text-xs shadow-md"
                                 >
                                     {isProcessing ? (
                                         <span className="flex items-center gap-2"><Loader2 className="animate-spin w-4" /> Authorizing...</span>

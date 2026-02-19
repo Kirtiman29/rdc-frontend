@@ -5,7 +5,7 @@ import { getTrendingDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
 
 const TrendingDesigns = () => {
@@ -14,6 +14,7 @@ const TrendingDesigns = () => {
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
+  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -21,21 +22,34 @@ const TrendingDesigns = () => {
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        const data = await getTrendingDesigns(50); // Fetch a larger set to allow proper sorting
+        /** * ✅ PRODUCTION SYNC: 
+         * getTrendingDesigns returns unwrapped data from the unified apiClient interceptor.
+         */
+        const data: any = await getTrendingDesigns(30); 
         
-        // ✅ 1. Filter Trending -> 2. Sort Recent First -> 3. Slice top 8
-        const filteredTrending = data
+        // Handle potential Pageable response or raw array
+        const rawItems = Array.isArray(data) ? data : (data?.content || []);
+
+        // ✅ 1. Filter Trending -> 2. Sort Recent (ID Desc) -> 3. Slice top 8
+        const filteredTrending = [...rawItems]
           .filter((product: Design) => product.trending === true)
-          .sort((a, b) => b.id - a.id) // ✅ Sort descending by ID (Newest First)
+          .sort((a: Design, b: Design) => b.id - a.id)
           .slice(0, 8); 
 
         setProducts(filteredTrending);
 
-        const statusMap: Record<number, boolean> = {};
-        for (const product of filteredTrending) {
-          statusMap[product.id] = await checkWishlistStatus(product.id);
-        }
-        setWishlistState(statusMap);
+        /**
+         * ✅ PERFORMANCE FIX: Parallel Batch Check
+         * Replaced sequential loop with Promise.all to prevent request waterfalls.
+         */
+        const statusEntries = await Promise.all(
+          filteredTrending.map(async (product: Design) => {
+            const isWished = await checkWishlistStatus(product.id);
+            return [product.id, isWished];
+          })
+        );
+        
+        setWishlistState(Object.fromEntries(statusEntries));
       } catch (error) {
         console.error('Failed to sync trending designs:', error);
       } finally {
@@ -101,6 +115,7 @@ const TrendingDesigns = () => {
     <section className="py-20 md:py-28 bg-background" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex items-end justify-between mb-12">
+          {/* Header Section Restored */}
           <div>
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
               Most Popular
@@ -125,7 +140,7 @@ const TrendingDesigns = () => {
               <Link to={`/product/${product.id}`} className="block">
                 <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none">
                   
-                  {/* Watermark Overlay */}
+                  {/* High-Visibility Watermark Overlay */}
                   <div 
                     className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                     style={{
@@ -141,7 +156,7 @@ const TrendingDesigns = () => {
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                   
-                  {/* Actions */}
+                  {/* Actions Restored */}
                   <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
                     <button 
                       className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shadow-md ${
@@ -156,7 +171,7 @@ const TrendingDesigns = () => {
                     </div>
                   </div>
 
-                  {/* Add To Cart */}
+                  {/* Add To Cart Button Restored */}
                   <button 
                     className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20 shadow-lg"
                     onClick={(e) => handleAddToCart(e, product)}

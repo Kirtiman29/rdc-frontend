@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { addToCart as cartApiService } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
 import { getAssetUrl } from '@/api/apiClient';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import type { Design } from '@/types/product';
 
@@ -26,15 +26,21 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const categoryLabel = product.category?.name || product.segment?.replace('_', ' ') || 'Textile';
 
   useEffect(() => {
+    let isMounted = true;
     const checkStatus = async () => {
       try {
+        /**
+         * ✅ PRODUCTION SYNC:
+         * Uses the unwrapped checkWishlistStatus which hits Port 8093.
+         */
         const wished = await checkWishlistStatus(product.id);
-        setIsWished(wished);
+        if (isMounted) setIsWished(wished);
       } catch (error) {
-        console.error('Failed to check wishlist status:', error);
+        console.warn('Wishlist sync unavailable');
       }
     };
     checkStatus();
+    return () => { isMounted = false; };
   }, [product.id]);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
@@ -45,7 +51,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
       await cartApiService(product.id, 1);
       toast({ title: "Added to Cart", description: `${product.title} added.` });
     } catch (error) {
-      toast({ variant: "destructive", title: "Cart Error" });
+      toast({ variant: "destructive", title: "Cart Error", description: "Please login to add items." });
     } finally {
       setIsAdding(false);
     }
@@ -59,12 +65,14 @@ const ProductCard = ({ product }: ProductCardProps) => {
       if (isWished) {
         await removeFromWishlist(product.id);
         setIsWished(false);
+        toast({ title: "Removed", description: "Design removed from wishlist." });
       } else {
         await addToWishlist(product.id);
         setIsWished(true);
+        toast({ title: "Saved", description: "Design added to wishlist." });
       }
     } catch (error) {
-      toast({ variant: "destructive", title: "Wishlist Error" });
+      toast({ variant: "destructive", title: "Wishlist Error", description: "Authentication required." });
     } finally {
       setIsWishloading(false);
     }
@@ -73,13 +81,13 @@ const ProductCard = ({ product }: ProductCardProps) => {
   return (
     <div className="group animate-fade-in relative" onContextMenu={handleContextMenu}>
       <Link to={`/product/${product.id}`}>
-        <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-sm bg-secondary select-none">
+        <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-sm bg-secondary select-none shadow-sm">
           
-          {/* ✅ RDC WATERMARK */}
+          {/* ✅ RDC WATERMARK OVERLAY RESTORED */}
           <div 
             className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
             style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.7' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.7' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
               backgroundRepeat: 'repeat'
             }}
           />
@@ -91,7 +99,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
 
-          {/* Badges (Top-Left) */}
+          {/* Badges Section Restored */}
           <div className="absolute left-3 top-3 z-20 flex flex-col gap-2">
             {product.premium && (
               <span className="rounded-sm bg-[#2A2623] px-2 py-1 text-[10px] font-bold uppercase text-white shadow-sm">
@@ -105,8 +113,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
             )}
           </div>
 
-          {/* ✅ FIXED ACTION STACK (Top-Right) */}
-          {/* We move the eye icon here instead of the middle */}
+          {/* Action Stack (Top-Right) Restored */}
           <div className="absolute right-3 top-3 z-30 flex flex-col gap-2 translate-x-2 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
             <button
               onClick={handleToggleWishlist}
@@ -123,18 +130,18 @@ const ProductCard = ({ product }: ProductCardProps) => {
             </div>
           </div>
 
-          {/* Out of stock logic */}
+          {/* Availability Layer Restored */}
           {!product.active && (
             <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/80">
               <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Unavailable</span>
             </div>
           )}
 
-          {/* Add to Cart Button (Bottom) */}
+          {/* Add to Cart Button (Bottom) Restored */}
           {product.active && (
             <div className="absolute bottom-3 left-3 right-3 z-30 translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
               <Button
-                className="w-full gap-2 shadow-xl bg-[#2A2623] hover:bg-black uppercase text-[10px] font-bold tracking-widest h-10"
+                className="w-full gap-2 shadow-xl bg-[#2A2623] hover:bg-black uppercase text-[10px] font-bold tracking-widest h-10 rounded-sm"
                 size="sm"
                 disabled={isAdding}
                 onClick={handleAddToCart}
@@ -145,7 +152,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
             </div>
           )}
           
-          {/* Subtle Darkening Overlay */}
           <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
         </div>
       </Link>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, ArrowRight, Loader2, Package, Mail, ShieldCheck } from 'lucide-react';
+import { CheckCircle, ArrowRight, Package, Mail, ShieldCheck } from 'lucide-react';
 import { orderApi } from '@/api/apiClient';
 
 export default function PaymentSuccess() {
@@ -10,16 +10,25 @@ export default function PaymentSuccess() {
   const [isVerifying, setIsVerifying] = useState(true);
   const [countdown, setCountdown] = useState(8); 
 
+  // ✅ Security: Restrict Right-Click across the success registry
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+  };
+
   useEffect(() => {
     let attempts = 0;
     const maxAttempts = 5;
 
     const verifyStatus = async () => {
       try {
-        // Hits Order Service Port 8095 to verify transaction
-        const { data } = await orderApi.get(`/${orderId}`);
+        /**
+         * ✅ PRODUCTION SYNC:
+         * orderApi now returns the response body directly via interceptor.
+         * Hits Order Service Port 8095 to verify transaction.
+         */
+        const order: any = await orderApi.get(`/${orderId}`);
         
-        if (data.status === 'PAID') {
+        if (order && order.status === 'PAID') {
           // Add a slight delay for smooth visual transition
           setTimeout(() => setIsVerifying(false), 1500);
           
@@ -50,22 +59,20 @@ export default function PaymentSuccess() {
     if (orderId) verifyStatus();
   }, [orderId, navigate]);
 
-  // 🔄 BUFFERING / LOADING STATE
+  // 🔄 BUFFERING / LOADING STATE (MAINTAINED)
   if (isVerifying) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6">
         <div className="relative mb-8">
-            {/* Spinning outer ring */}
             <div className="w-20 h-20 border-4 border-gray-100 border-t-[#2A2623] rounded-full animate-spin"></div>
-            {/* Inner static logo/icon */}
             <div className="absolute inset-0 flex items-center justify-center">
                 <ShieldCheck size={24} className="text-[#2A2623] opacity-20" />
             </div>
         </div>
         <div className="text-center space-y-2">
-            <h2 className="font-serif text-2xl text-[#2A2623]">Authorizing Access</h2>
+            <h2 className="font-serif text-2xl text-[#2A2623] uppercase tracking-tight">Authorizing Access</h2>
             <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 animate-pulse">
-                Synchronizing Secure Archive...
+                Synchronizing Secure Registry...
             </p>
         </div>
       </div>
@@ -73,7 +80,7 @@ export default function PaymentSuccess() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] p-6">
+    <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] p-6" onContextMenu={handleContextMenu}>
       <div className="max-w-md w-full bg-white border border-gray-100 p-12 rounded-sm shadow-xl text-center relative overflow-hidden">
         {/* Redirect Progress Bar */}
         <div 
@@ -87,7 +94,7 @@ export default function PaymentSuccess() {
           </div>
         </div>
 
-        <h1 className="font-serif text-3xl text-[#2A2623] mb-4 tracking-tight">Payment Verified</h1>
+        <h1 className="font-serif text-3xl text-[#2A2623] mb-4 tracking-tight uppercase">Acquisition Verified</h1>
         
         <div className="bg-[#FAFAFA] border border-gray-100 p-6 mb-8 text-left">
           <div className="flex gap-4">
@@ -98,14 +105,14 @@ export default function PaymentSuccess() {
           </div>
         </div>
 
-        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-10">
-          Transaction ID: ORD-{orderId}
+        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-10 font-mono">
+          Registry ID: ORD-{orderId}
         </p>
 
         <div className="space-y-4">
           <button 
             onClick={() => navigate('/orders')}
-            className="w-full bg-[#2A2623] text-white py-4 rounded-none text-xs font-bold uppercase tracking-widest hover:bg-black transition-all"
+            className="w-full bg-[#2A2623] text-white py-4 rounded-none text-xs font-bold uppercase tracking-widest hover:bg-black transition-all shadow-md"
           >
             View Asset History
           </button>
@@ -114,13 +121,13 @@ export default function PaymentSuccess() {
             onClick={() => navigate('/')}
             className="flex items-center justify-center gap-2 w-full py-2 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-black transition-colors"
           >
-            Return to Storefront <ArrowRight size={14} />
+            Return to Registry Storefront <ArrowRight size={14} />
           </button>
         </div>
 
         <div className="mt-12 pt-6 border-t border-gray-100">
           <p className="text-[9px] text-gray-300 uppercase tracking-[0.2em] font-bold">
-            Auto-Redirecting in {countdown}s
+            Registry Redirect in {countdown}s
           </p>
         </div>
       </div>

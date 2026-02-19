@@ -1,28 +1,41 @@
 import axios from 'axios';
 
-const ADMIN_SERVICE_URL = "http://localhost:8080/api/public/careers";
-const ASSET_SERVICE_URL = "http://localhost:8090/api/assets";
+/**
+ * ✅ PRODUCTION SYNC: Using environment variables for public routes.
+ * These bypass the Bearer token interceptors for guest access.
+ */
+const ADMIN_SERVICE_BASE = import.meta.env.VITE_ADMIN_SERVICE_URL;
+const ASSET_SERVICE_BASE = import.meta.env.VITE_ASSET_SERVICE_URL;
+
+const PUBLIC_CAREERS_URL = `${ADMIN_SERVICE_BASE}/api/public/careers`;
+const PUBLIC_ASSETS_URL = `${ASSET_SERVICE_BASE}/api/assets`;
 
 export const publicCareerApi = {
-    // 🌍 Get only OPEN jobs from the backend
-    getOpenJobs: () => axios.get(`${ADMIN_SERVICE_URL}/jobs`),
+    // Get OPEN jobs
+    getOpenJobs: async () => {
+        const response = await axios.get(`${PUBLIC_CAREERS_URL}/jobs`);
+        return response.data;
+    },
 
-    // 📤 Submit application data to Admin Service
-    submitApplication: (data: {
+    // Submit application
+    submitApplication: async (data: {
         jobId: number;
         fullName: string;
         email: string;
         phone: string;
         resumeAssetUuid: string;
-    }) => axios.post(`${ADMIN_SERVICE_URL}/apply`, data),
+    }) => {
+        const response = await axios.post(`${PUBLIC_CAREERS_URL}/apply`, data);
+        return response.data;
+    },
 
-    // 📄 Upload Resume to Asset Service (Port 8090)
-    // ✅ FIXED: Points to /resume-upload which is permitted for public use
-    uploadResume: (file: File) => {
+    // Upload Resume to Asset Service
+    uploadResume: async (file: File) => {
         const formData = new FormData();
         formData.append('file', file);
-        return axios.post(`${ASSET_SERVICE_URL}/resume-upload`, formData, {
+        const response = await axios.post(`${PUBLIC_ASSETS_URL}/resume-upload`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
+        return response.data;
     }
 };

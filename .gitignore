@@ -1,24 +1,59 @@
-# Logs
-logs
+# === SENSITIVE DATA (CRITICAL) ===
+# This prevents your JWT secrets, database passwords, and Razorpay keys 
+# from being leaked to the repository.
+**/*.env
+**/*.env.local
+**/*.env.*.local
+wishlist.env
+auth-service.env
+cart-service.env
+order-service.env
+payment-service.env
+
+# === FRONTEND (Vite/React) ===
+node_modules/
+dist/
+dist-ssr/
+.eslintcache
+.stylelintcache
+# Bun lock file (uncomment if you only use npm/package-lock)
+# bun.lockb
+
+# === BACKEND (Spring Boot) ===
+# Compiled Java class files
+**/*.class
+# Log files
 *.log
+**/logs/
+# Maven build directory
+**/target/
+# Packaged artifacts
+*.jar
+*.war
+*.ear
+# Maven wrapper executable
+.mvn/wrapper/maven-wrapper.jar
+
+# === LOCAL STORAGE & UPLOADS ===
+# Prevents committing actual design assets or resumes to Git
+**/data/uploads/
+**/uploads/**
+
+# === IDE & SYSTEM ===
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+*.sw?
+.project
+.classpath
+.settings/
+
+# === LOGS & DEBUGGING ===
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?

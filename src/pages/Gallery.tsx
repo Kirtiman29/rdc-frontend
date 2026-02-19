@@ -32,24 +32,29 @@ const Gallery = () => {
   const fetchFilteredDesigns = useCallback(async () => {
     setLoading(true);
     try {
-      // ✅ FIX 2: Clean filters before API call to remove undefined/false values
+      /**
+       * ✅ PRODUCTION SYNC:
+       * Clean filters to remove undefined/false values before API call.
+       * getDesigns returns the unwrapped data object via interceptor.
+       */
       const cleanedFilters = Object.fromEntries(
         Object.entries(filters).filter(
           ([, v]) => v !== undefined && v !== false && v !== ''
         )
       );
 
-      const response = await getDesigns({
+      const response: any = await getDesigns({
         ...cleanedFilters,
         limit: 24, // Increased limit for better grid filling
       });
 
-      const rawContent = Array.isArray(response) ? response : (response.content || []);
+      // Handle Spring Boot Pageable content or raw array
+      const rawContent = response?.content || (Array.isArray(response) ? response : []);
       
       // ✅ SORT: Ensure newest entries (highest IDs) are shown first
       const sortedContent = [...rawContent].sort((a, b) => b.id - a.id);
 
-      const total = Array.isArray(response) ? response.length : (response.totalElements || sortedContent.length);
+      const total = response?.totalElements || sortedContent.length;
       
       setDesigns(sortedContent);
       setTotalElements(total);
@@ -77,7 +82,7 @@ const Gallery = () => {
     <div className="flex min-h-screen flex-col bg-background" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1">
-        {/* Banner Section */}
+        {/* Banner Section Restored */}
         <section className="bg-secondary/30 py-12 md:py-16">
           <div className="container px-4 mx-auto md:px-8">
             <nav className="mb-4 flex items-center gap-2 text-sm text-muted-foreground font-medium">
@@ -95,18 +100,18 @@ const Gallery = () => {
           </div>
         </section>
 
-        {/* Catalog Section */}
+        {/* Catalog Section Restored */}
         <section className="py-12 md:py-16">
           <div className="container px-4 mx-auto md:px-8">
             <div className="flex flex-col gap-8 lg:flex-row">
               
-              {/* ✅ SIDEBAR: Sidebar stays unchanged as requested */}
+              {/* SIDEBAR Restored */}
               <aside className="hidden w-64 shrink-0 lg:block max-h-[calc(100vh-160px)] sticky top-32 overflow-y-auto pr-2 custom-scrollbar">
                 <h2 className="mb-6 font-serif text-lg font-bold text-[#2A2623] uppercase tracking-widest border-b border-border pb-2">Refine By</h2>
                 <FilterContent filters={filters} onFiltersChange={setFilters} />
               </aside>
 
-              {/* Grid Content */}
+              {/* Grid Content Restored */}
               <div className="flex-1">
                 <ProductFilters
                   filters={filters}
@@ -119,16 +124,13 @@ const Gallery = () => {
                     <Loader2 className="h-10 w-10 animate-spin text-[#2A2623]" />
                   </div>
                 ) : designs.length > 0 ? (
-                  /* ✅ GRID BEHAVIOR: 
-                     - 1 column on mobile (grid-cols-1)
-                     - 2 columns on tablet (md:grid-cols-2)
-                     - 3 columns on desktop (xl:grid-cols-3)
-                     - 4 columns on large desktop (2xl:grid-cols-4)
+                  /* ✅ GRID BEHAVIOR RESTORED: 
+                      - 1 column mobile, 2 tablet, 3 desktop, 4 large desktop
                   */
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-x-6 gap-y-10">
                     {designs.map((design) => (
                       <div key={design.id} className="relative group overflow-hidden select-none w-full">
-                        {/* ✅ WATERMARK: Preservation of visibility and proportional scaling */}
+                        {/* ✅ WATERMARK RESTORED */}
                         <div 
                           className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
                           style={{
@@ -136,7 +138,6 @@ const Gallery = () => {
                             backgroundRepeat: 'repeat'
                           }}
                         />
-                        {/* ✅ DESIGN CARD: Proportional scaling is handled inside ProductCard component */}
                         <ProductCard product={design} />
                       </div>
                     ))}

@@ -8,7 +8,7 @@ import { getMyOrders, downloadInvoicePdf } from '@/api/orderApi';
 interface OrderItem {
   id: number;
   designId: number;
-  designIdentifier: string; // ✅ Added to match order_item table data
+  designIdentifier: string; 
   assetUuid: string;
   designTitle: string;
   quantity: number;
@@ -28,6 +28,7 @@ const Orders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -39,8 +40,13 @@ const Orders = () => {
         return;
       }
       try {
-        const data = await getMyOrders(); 
-        setOrders(data || []);
+        /**
+         * ✅ PRODUCTION SYNC:
+         * getMyOrders returns the array directly because 
+         * of the interceptor unwrapper in apiClient.ts.
+         */
+        const data: any = await getMyOrders(); 
+        setOrders(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Failed to sync order history:', error);
       } finally {
@@ -66,7 +72,7 @@ const Orders = () => {
       <div className="min-h-screen flex flex-col bg-white">
         <Header />
         <main className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          <Loader2 className="h-8 w-8 animate-spin text-[#2A2623]" />
         </main>
         <Footer />
       </div>
@@ -79,13 +85,14 @@ const Orders = () => {
       <main className="flex-1">
         <div className="container mx-auto px-6 md:px-12 py-16">
           <div className="max-w-5xl mx-auto">
+            {/* Header Section Restored */}
             <div className="mb-10 text-left">
               <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-muted-foreground mb-2">Your Account</p>
               <h1 className="font-serif text-4xl text-[#2A2623]">Order History</h1>
             </div>
 
             {orders.length === 0 ? (
-              <div className="text-center py-32 bg-white border border-dashed rounded-xl">
+              <div className="text-center py-32 bg-white border border-dashed rounded-xl shadow-sm">
                 <Package className="h-12 w-12 text-muted-foreground/20 mx-auto mb-4" />
                 <h2 className="font-serif text-xl">No assets found</h2>
                 <p className="text-muted-foreground text-sm mt-2">Your purchase history is currently empty.</p>
@@ -98,10 +105,9 @@ const Orders = () => {
                       key={`${order.id}-${item.id}`}
                       className="group bg-white border border-border/60 hover:border-[#2A2623]/30 p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-8 transition-all duration-300 rounded-xl shadow-sm"
                     >
-                      {/* LEFT SIDE: ASSET INFO */}
+                      {/* LEFT SIDE: ASSET INFO Restored */}
                       <div className="flex items-center gap-6 w-full md:w-auto">
-                        
-                        {/* ✅ REPLACED IMAGE WITH DESIGN ID BOX */}
+                        {/* DESIGN ID BOX Restored */}
                         <div className="relative w-24 h-24 bg-secondary/10 flex-shrink-0 flex flex-col items-center justify-center rounded-lg border border-border group-hover:bg-secondary/20 transition-colors">
                            <Hash className="h-4 w-4 text-muted-foreground/40 mb-1" />
                            <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground/60">Design ID</span>
@@ -125,7 +131,7 @@ const Orders = () => {
                         </div>
                       </div>
 
-                      {/* RIGHT SIDE: PRICE & STATUS */}
+                      {/* RIGHT SIDE: PRICE & STATUS Restored */}
                       <div className="flex items-center justify-between md:justify-end gap-10 w-full md:w-auto border-t md:border-0 pt-4 md:pt-0">
                         <div className="text-right">
                           <p className="text-xl font-bold text-[#2A2623]">
