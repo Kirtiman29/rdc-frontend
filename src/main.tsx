@@ -1,9 +1,14 @@
+//src/main.tsx
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-/**
- * Entry point for the Textile Treasures Showcase.
- * The '!' ensures TypeScript that the 'root' element exists in index.html.
- */
+
+if (import.meta.env.PROD) {
+    console.log = () => {};
+    console.error = () => {};
+    console.debug = () => {};
+    console.warn = () => {};
+}
+
 createRoot(document.getElementById("root")!).render(<App />);

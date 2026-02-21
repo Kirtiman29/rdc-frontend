@@ -129,16 +129,11 @@ export const paymentApi = axios.create({ baseURL: `${PAYMENT_URL}/api/payments` 
 
 [publicApi, userApi, cartApi, orderApi, wishlistApi, paymentApi].forEach(applyIndustrialInterceptors);
 
-/* =========================================
-   ASSET HELPER
-   ✅ FIXED: Dynamically resolves localhost URLs to fix Mixed Content
-========================================= */
 export const getAssetUrl = (urlOrUuid?: string | null) => {
   if (!urlOrUuid || urlOrUuid === 'null' || urlOrUuid === '') {
     return 'https://placehold.co/600x800?text=Design+Pending';
   }
 
-  // 1. Resolve Legacy Localhost URLs (Fixes Mixed Content Warnings)
   if (urlOrUuid.includes('localhost')) {
      const parts = urlOrUuid.split('/');
      const uuid = parts[parts.length - 1] || parts[parts.length - 2];

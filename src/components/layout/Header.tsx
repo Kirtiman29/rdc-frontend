@@ -23,19 +23,24 @@ const Header = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   
   const [cartCount, setCartCount] = useState(0);
   const isLoggedIn = !!getToken();
+
+  // Handle Scroll Shadow
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     const fetchHeaderData = async () => {
       if (isLoggedIn) {
         try {
-          /**
-           * ✅ PRODUCTION SYNC:
-           * Uses the unwrapped getCart which calculates totalItems 
-           * from the Cart Service (Port 8091) response.
-           */
           const cart = await getCart();
           setCartCount(cart.totalItems || 0);
         } catch (error) {
@@ -58,28 +63,33 @@ const Header = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-background border-b border-border/50">
+      <header className={cn(
+        "sticky top-0 z-50 w-full bg-background transition-all duration-300 border-b border-border/50",
+        scrolled && "shadow-sm border-transparent"
+      )}>
         <div className="container mx-auto px-4 md:px-8">
-          <div className="flex h-16 md:h-20 items-center justify-between">
+          {/* Header Height adjusted for Mobile (h-14) */}
+          <div className="flex h-14 md:h-20 items-center justify-between">
             
-            {/* Mobile Menu Button - Left aligned */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 -ml-2 text-foreground"
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
+            {/* Mobile Left: Hamburger + Logo Group */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="lg:hidden p-2 -ml-2 text-foreground"
+                aria-label="Open menu"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
 
-            {/* Logo Section Restored */}
-            <Link to="/" className="flex items-center gap-2 shrink-0 select-none">
-              <img src={rdcLogo} alt="RDC" className="h-7 sm:h-8 md:h-10 w-auto" />
-              <span className="hidden sm:block font-serif text-xl md:text-2xl font-medium tracking-wide">
-                RDC
-              </span>
-            </Link>
+              <Link to="/" className="flex items-center gap-2 shrink-0 select-none">
+                <img src={rdcLogo} alt="RDC" className="h-6 sm:h-8 md:h-10 w-auto" />
+                <span className="hidden sm:block font-serif text-xl md:text-2xl font-medium tracking-wide">
+                  RDC
+                </span>
+              </Link>
+            </div>
 
-            {/* Center Navigation - Desktop Restored */}
+            {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8">
               {navItems.map((item) => (
                 <div
@@ -106,8 +116,8 @@ const Header = () => {
               ))}
             </nav>
 
-            {/* Right Icons Restored */}
-            <div className="flex items-center gap-1 sm:gap-2 md:gap-3">
+            {/* Right Icons: Spacing adjusted (gap-2) */}
+            <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setShowSearch(true)}
                 className="p-2 text-muted-foreground hover:text-foreground transition-colors"
@@ -126,7 +136,7 @@ const Header = () => {
                 </Link>
               )}
 
-              <Link to="/wishlist" className="hidden md:flex p-2 text-muted-foreground hover:text-foreground transition-colors" title="Wishlist">
+              <Link to="/wishlist" className="p-2 text-muted-foreground hover:text-foreground transition-colors" title="Wishlist">
                 <Heart className="h-5 w-5" />
               </Link>
 
@@ -139,26 +149,25 @@ const Header = () => {
                 )}
               </Link>
 
-              {/* Auth Toggle Restored */}
+              {/* Profile/Auth Toggle */}
               {!isLoggedIn ? (
-                <div className="flex items-center gap-2 sm:gap-4 ml-1 sm:ml-2">
-                  <Link to="/login" className="hidden sm:block text-xs font-bold uppercase tracking-widest hover:text-foreground transition-colors">
+                <div className="hidden sm:flex items-center gap-4 ml-2">
+                  <Link to="/login" className="text-xs font-bold uppercase tracking-widest hover:text-foreground transition-colors">
                     Login
                   </Link>
-                  <Link to="/signup" className="px-3 sm:px-4 py-2 bg-[#2A2623] text-white text-[9px] sm:text-[10px] font-bold uppercase tracking-widest rounded-sm hover:bg-black transition-all">
+                  <Link to="/signup" className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest rounded-sm hover:opacity-90 transition-all">
                     Register
                   </Link>
                 </div>
               ) : (
                 <div 
-                  className="relative ml-1 sm:ml-2" 
+                  className="relative ml-1" 
                   onMouseEnter={() => setShowProfileMenu(true)} 
                   onMouseLeave={() => setShowProfileMenu(false)}
                 >
                   <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
                     <User className="h-5 w-5" />
                   </button>
-                  
                   {showProfileMenu && (
                     <div className="absolute right-0 top-full w-48 bg-white border border-border shadow-xl py-2 animate-in fade-in zoom-in-95 duration-200">
                       <Link to="/profile" className="block px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-secondary/50 hover:text-foreground">
@@ -168,12 +177,8 @@ const Header = () => {
                         My Orders
                       </Link>
                       <div className="border-t border-border my-1" />
-                      <button 
-                        onClick={handleLogout}
-                        className="w-full text-left px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-50 flex items-center gap-2"
-                      >
-                        <LogOut className="h-3 w-3" />
-                        Logout
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-50 flex items-center gap-2">
+                        <LogOut className="h-3 w-3" /> Logout
                       </button>
                     </div>
                   )}
@@ -183,35 +188,95 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Navigation Drawer Restored */}
-        <div className={cn(
-          'lg:hidden border-t border-border bg-background transition-all duration-300 ease-in-out overflow-hidden', 
-          isMobileMenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
-        )}>
-          <nav className="container mx-auto px-4 py-6 flex flex-col gap-4">
-            {navItems.map((item) => (
-              <Link 
-                key={item.label} 
-                to={item.href} 
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2 border-b border-border/30" 
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
-            {isLoggedIn && (
-              <Link to="/orders" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2 border-b border-border/30" onClick={() => setIsMobileMenuOpen(false)}>
-                My Orders
-              </Link>
+        {/* MOBILE DRAWER SYSTEM */}
+        <>
+          {/* Softer Glass Overlay */}
+          <div 
+            className={cn(
+              "fixed inset-0 bg-black/30 backdrop-blur-sm z-[60] transition-opacity lg:hidden",
+              isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
-            {!isLoggedIn && (
-              <div className="flex flex-col gap-4 pt-4">
-                <Link to="/login" className="text-xs font-bold uppercase tracking-widest" onClick={() => setIsMobileMenuOpen(false)}>Login</Link>
-                <Link to="/signup" className="text-xs font-bold uppercase tracking-widest text-[#c9a96e]" onClick={() => setIsMobileMenuOpen(false)}>Register Account</Link>
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          
+          {/* Branded Side Drawer */}
+          <div className={cn(
+            'fixed top-0 left-0 bottom-0 w-[85%] max-w-[340px] bg-background z-[70] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] lg:hidden shadow-2xl', 
+            isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          )}>
+            <div className="flex flex-col h-full">
+              {/* Branded Drawer Header */}
+              <div className="flex items-center justify-between p-5 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                  <img src={rdcLogo} className="h-6 w-auto" alt="Logo" />
+                  <span className="font-serif text-lg tracking-wide">RDC</span>
+                </div>
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 -mr-2">
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-            )}
-          </nav>
-        </div>
+              
+              <nav className="flex flex-col p-6 overflow-y-auto">
+                {navItems.map((item) => (
+                  <Link 
+                    key={item.label} 
+                    to={item.href} 
+                    className={cn(
+                      "text-base font-light tracking-wide transition-all py-4 border-b border-border/20",
+                      location.pathname === item.href 
+                        ? "text-foreground font-medium" 
+                        : "text-foreground/70"
+                    )}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                
+                {/* Mobile Order/Profile Link sync */}
+                {isLoggedIn && (
+                  <>
+                    <Link to="/orders" className="text-base font-light tracking-wide text-foreground/70 py-4 border-b border-border/20" onClick={() => setIsMobileMenuOpen(false)}>
+                      My Orders
+                    </Link>
+                    <Link to="/profile" className="text-base font-light tracking-wide text-foreground/70 py-4 border-b border-border/20" onClick={() => setIsMobileMenuOpen(false)}>
+                      My Profile
+                    </Link>
+                  </>
+                )}
+                
+                {/* Premium Mobile Buttons */}
+                <div className="mt-auto pt-10 pb-6 flex flex-col gap-4">
+                  {!isLoggedIn ? (
+                    <>
+                      <Link 
+                        to="/login" 
+                        className="w-full py-3 border border-foreground/30 text-center text-sm tracking-widest hover:bg-foreground hover:text-white transition-all duration-300" 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        LOGIN
+                      </Link>
+                      <Link 
+                        to="/signup" 
+                        className="w-full py-3 bg-foreground text-background text-center text-sm tracking-widest hover:opacity-90 transition-all duration-300" 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        CREATE ACCOUNT
+                      </Link>
+                    </>
+                  ) : (
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full py-3 border border-rose-200 text-rose-600 text-sm tracking-widest flex items-center justify-center gap-2 hover:bg-rose-50 transition-all"
+                    >
+                      <LogOut className="h-4 w-4" /> LOGOUT
+                    </button>
+                  )}
+                </div>
+              </nav>
+            </div>
+          </div>
+        </>
       </header>
 
       <SearchOverlay isOpen={showSearch} onClose={() => setShowSearch(false)} />

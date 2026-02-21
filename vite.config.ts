@@ -6,25 +6,24 @@ import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
   server: {
-    https: {},              // ✅ FIX: object instead of boolean
-    host: "localhost",      // ✅ IPv4 safe on Windows
+    https: undefined, 
+    host: "0.0.0.0", 
     port: 3000,
     hmr: {
       overlay: false,
     },
-  //   headers: {
-  //   "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
-  //   "Cross-Origin-Embedder-Policy": "require-corp",
-  // }
   },
   plugins: [
     react(),
-    mkcert(),
+    mode === "development" ? mkcert() : null,
     mode === "development" && componentTagger(),
-  ],
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+  },
+  esbuild: {
+    drop: mode === 'production' ? ['console', 'debugger'] : [],
   },
 }));

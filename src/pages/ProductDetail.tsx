@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronRight, ShoppingBag, Heart, Loader2, PlayCircle, ShieldCheck, Hash, AlertCircle } from 'lucide-react';
 import Header from '@/components/layout/Header';
@@ -11,6 +11,7 @@ import { addToCart } from '@/api/cartApi';
 import { checkWishlistStatus, addToWishlist, removeFromWishlist } from '@/api/wishlistApi';
 import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
+import { cn } from '@/lib/utils';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,40 +26,66 @@ const ProductDetail = () => {
   const [activeMediaUrl, setActiveMediaUrl] = useState<string>('');
   const [activeMediaType, setActiveMediaType] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
 
+  // --- PROTECTION STATES ---
+  const [isBlurred, setIsBlurred] = useState(false);
+  const [showLens, setShowLens] = useState(false);
+  const [lensPosition, setLensPosition] = useState({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // --- MOBILE DETECTION ---
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current || isMobile) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setLensPosition({ x, y });
+  };
 
   useEffect(() => {
     const fetchFullData = async () => {
       if (!id) return;
       setLoading(true);
+      setIsBlurred(false); 
       try {
-        // ✅ PRODUCTION SYNC: Unwrapped JSON object from interceptor
         const designData: any = await getDesignById(Number(id)); 
         setProduct(designData);
-        
         setActiveMediaUrl(getAssetUrl(designData.assetUuid)); 
         setActiveMediaType('IMAGE');
 
+        // ✅ AUTO-BLUR TIMER: Triggers after 5 seconds (Only for Desktop)
+        const timer = setTimeout(() => {
+          if (!isMobile) setIsBlurred(true);
+        }, 5000);
+
         try {
-          const primaryRelated: any = await getDesigns({ 
+          const res: any = await getDesigns({ 
             segment: designData.segment,
             limit: 10 
           });
-
-          const primaryContent = (Array.isArray(primaryRelated) ? primaryRelated : primaryRelated?.content || [])
+          const content = (Array.isArray(res) ? res : res?.content || [])
             .filter((p: Design) => p.id !== designData.id);
-
-          setRelatedProducts(
-            [...primaryContent]
-              .sort((a, b) => b.id - a.id)
-              .slice(0, 4)
-          );
-        } catch (relatedError) {
-          console.error('Related sync failed:', relatedError);
+          setRelatedProducts([...content].sort((a, b) => b.id - a.id).slice(0, 4));
+        } catch (err) {
+          console.error('Related sync failed:', err);
         }
 
         const wished = await checkWishlistStatus(designData.id);
         setIsWished(wished);
+
+        return () => clearTimeout(timer);
       } catch (error) {
         console.error('Sync failed:', error);
       } finally {
@@ -66,7 +93,7 @@ const ProductDetail = () => {
       }
     };
     fetchFullData();
-  }, [id]);
+  }, [id, isMobile]);
 
   const handleAddToCart = async () => {
     if (!product) return;
@@ -75,7 +102,7 @@ const ProductDetail = () => {
       await addToCart(product.id, 1);
       toast({ title: "Added to Bag", description: `${product.title} is ready for checkout.` });
     } catch (error) {
-      toast({ variant: "destructive", title: "Authentication Required", description: "Please login to add designs to your cart." });
+      toast({ variant: "destructive", title: "Authentication Required", description: "Please login." });
     } finally {
       setIsAdding(false);
     }
@@ -123,28 +150,79 @@ const ProductDetail = () => {
               
               {/* LEFT: MEDIA SHOWCASE */}
               <div className="w-full lg:w-3/5 flex flex-col gap-6">
-                <div className="relative aspect-square overflow-hidden bg-[#F9F9F9] border border-slate-100 shadow-sm rounded-sm">
-                   <div 
-                    className="absolute inset-0 z-10 pointer-events-none opacity-[0.08]"
+                <div 
+                  ref={containerRef}
+                  className={cn(
+                    "relative aspect-square overflow-hidden bg-[#F9F9F9] border border-slate-100 shadow-sm rounded-sm",
+                    !isMobile && "cursor-crosshair"
+                  )}
+                  onMouseMove={handleMouseMove}
+                  onMouseEnter={() => !isMobile && setShowLens(true)}
+                  onMouseLeave={() => setShowLens(false)}
+                >
+                  {/* WATERMARK: Visible on both mobile and desktop */}
+                  <div 
+                    className="absolute inset-0 z-10 pointer-events-none opacity-20"
                     style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='serif' font-size='14' fill='black' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='200' height='200' viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='serif' font-size='36' fill='black' text-anchor='middle' transform='rotate(-30 100 100)'%3ERDC%3C/text%3E%3C/svg%3E")`,
                       backgroundRepeat: 'repeat'
                     }}
-                   />
-                   <div className="absolute inset-0 z-20" onContextMenu={handleContextMenu} />
-                   {activeMediaType === 'VIDEO' ? (
-                     <video src={activeMediaUrl} autoPlay loop muted className="w-full h-full object-cover" />
-                   ) : (
-                     <img src={activeMediaUrl} alt={product.title} className="w-full h-full object-cover transition-transform duration-[2s] hover:scale-110" draggable={false} />
-                   )}
+                  />
+                  
+                  <div className="absolute inset-0 z-20" onContextMenu={handleContextMenu} />
+                  
+                  {/* Main Image: Blur ONLY applies to Desktop and remains even when lens is active */}
+                  {activeMediaType === 'VIDEO' ? (
+                    <video src={activeMediaUrl} autoPlay loop muted className="w-full h-full object-cover" />
+                  ) : (
+                    <img 
+                      src={activeMediaUrl} 
+                      alt={product.title} 
+                      className={cn(
+                        "w-full h-full object-cover transition-all duration-700",
+                        isBlurred && !isMobile ? 'blur-md scale-105' : 'blur-0'
+                      )} 
+                      draggable={false} 
+                    />
+                  )}
+
+                  {/* ✅ LENS EFFECT: Desktop Only. Main image stays blurred while lens is clear */}
+                  {showLens && !isMobile && activeMediaType === 'IMAGE' && (
+                    <div
+                      className="absolute z-30 pointer-events-none rounded-full border-2 border-white shadow-2xl overflow-hidden"
+                      style={{
+                        width: 200,
+                        height: 200,
+                        top: lensPosition.y - 100,
+                        left: lensPosition.x - 100,
+                        backgroundImage: `url(${activeMediaUrl})`,
+                        backgroundSize: '250%', 
+                        backgroundPosition: `${(lensPosition.x / (containerRef.current?.offsetWidth || 1)) * 100}% ${(lensPosition.y / (containerRef.current?.offsetHeight || 1)) * 100}%`,
+                        backgroundRepeat: 'no-repeat'
+                      }}
+                    >
+                      {/* Internal Watermark in Lens */}
+                      <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='serif' font-size='12' fill='white' text-anchor='middle' transform='rotate(-30 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`, backgroundRepeat: 'repeat'}} />
+                    </div>
+                  )}
+
+                  {/* DESKTOP ONLY HINT: Hidden on Mobile */}
+                  {isBlurred && !showLens && !isMobile && (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/5 pointer-events-none">
+                       <span className="bg-white/90 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-800 rounded-full shadow-lg border border-white">
+                         Hover to inspect details
+                       </span>
+                    </div>
+                  )}
                 </div>
 
+                {/* Thumbnails */}
                 {product.media && product.media.length > 1 && (
                   <div className="flex flex-row gap-4 overflow-x-auto pb-2 scrollbar-hide">
                     {product.media.map((m, idx) => (
                       <button 
                         key={idx}
-                        onClick={() => { setActiveMediaUrl(m.url); setActiveMediaType(m.type as any); }}
+                        onClick={() => { setActiveMediaUrl(m.url); setActiveMediaType(m.type as any); setIsBlurred(false); }}
                         className={`relative w-24 h-24 border transition-all duration-500 rounded-sm ${activeMediaUrl === m.url ? 'border-zinc-900 shadow-lg' : 'border-slate-100 opacity-60 hover:opacity-100'}`}
                       >
                         {m.type === 'VIDEO' ? (
@@ -200,7 +278,7 @@ const ProductDetail = () => {
                   {product.description}
                 </p>
 
-                {/* ✅ IMPROVED TECHNICAL SPECS: Sans-Serif, Simple, Highly Visible */}
+                {/* TECHNICAL SPECS */}
                 <div className="mb-12 space-y-6 bg-zinc-50/50 p-8 rounded-sm border border-zinc-100 font-sans">
                   <h4 className="text-[#1A1A1A] font-bold text-[11px] uppercase tracking-[0.2em] border-b border-zinc-200 pb-3">
                     Master File Specs
@@ -227,7 +305,6 @@ const ProductDetail = () => {
                     </div>
                   </div>
 
-                  {/* ✅ IMPROVED DISCLAIMER: Simple fonts, No italics, High Visibility */}
                   <div className="pt-6 border-t border-zinc-200 flex gap-3">
                     <AlertCircle size={16} className="text-zinc-500 shrink-0 mt-0.5" />
                     <div className="space-y-3">
@@ -235,7 +312,7 @@ const ProductDetail = () => {
                         <span className="font-bold text-zinc-900 uppercase tracking-tighter mr-1">Purchase Policy:</span> 
                         Digital design assets are strictly non-refundable once the master file link is generated.
                       </p>
-                      <p className="text-[11px] text-zinc-600 leading-relaxed">
+                       <p className="text-[11px] text-zinc-600 leading-relaxed">
                         <span className="font-bold text-zinc-900 uppercase tracking-tighter mr-1">Color Accuracy:</span> 
                         Please note that shades may vary based on display quality and hardware calibration. We recommend reviewing on professional-grade monitors.
                       </p>
