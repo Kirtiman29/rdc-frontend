@@ -5,6 +5,7 @@ import mkcert from "vite-plugin-mkcert";
 import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
+  base: "/",
   server: {
     https: undefined, 
     host: "0.0.0.0", 

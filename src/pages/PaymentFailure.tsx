@@ -1,3 +1,4 @@
+// src/pages/PaymentFailure.tsx
 import React from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { XCircle, RefreshCcw, ArrowLeft, AlertCircle } from 'lucide-react';

@@ -1,4 +1,4 @@
-import axios, { type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
 
 /* =========================================
    TOKEN STORAGE
@@ -19,7 +19,8 @@ export const clearTokens = () => {
   localStorage.removeItem(REFRESH_KEY);
 };
 
-export const removeToken = clearTokens;
+// ✅ Alias for legacy imports in Header.tsx
+export const removeToken = clearTokens; 
 
 /* =========================================
    TOKEN UTIL
@@ -27,10 +28,17 @@ export const removeToken = clearTokens;
 export const isTokenExpired = (token: string | null): boolean => {
   if (!token) return true;
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    // Proactive refresh 30s before actual expiry
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      window.atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
     return payload.exp * 1000 < Date.now() + 30000;
-  } catch {
+  } catch (e) {
     return true;
   }
 };
@@ -38,13 +46,9 @@ export const isTokenExpired = (token: string | null): boolean => {
 /* =========================================
    PRODUCTION SERVICE URLS
 ========================================= */
-const AUTH_URL = import.meta.env.VITE_AUTH_SERVICE_URL;
-const ADMIN_URL = import.meta.env.VITE_ADMIN_SERVICE_URL;
-const ASSET_URL = import.meta.env.VITE_ASSET_SERVICE_URL;
-const CART_URL = import.meta.env.VITE_CART_SERVICE_URL;
-const ORDER_URL = import.meta.env.VITE_ORDER_SERVICE_URL;
-const WISHLIST_URL = import.meta.env.VITE_WISHLIST_SERVICE_URL;
-const PAYMENT_URL = import.meta.env.VITE_PAYMENT_SERVICE_URL;
+const BASE_URL = import.meta.env.VITE_ADMIN_SERVICE_URL || ''; 
+const AUTH_URL = import.meta.env.VITE_AUTH_SERVICE_URL || BASE_URL; 
+const ASSET_URL = import.meta.env.VITE_ASSET_SERVICE_URL || BASE_URL;
 
 /* =========================================
    REFRESH LOCK & QUEUE
@@ -53,15 +57,14 @@ let isRefreshing = false;
 let refreshQueue: ((token: string) => void)[] = [];
 
 const processQueue = (token: string) => {
-  refreshQueue.forEach(callback => callback(token));
+  refreshQueue.forEach((callback) => callback(token));
   refreshQueue = [];
 };
 
 /* =========================================
    INTERCEPTOR LOGIC
 ========================================= */
-export const applyIndustrialInterceptors = (instance: any) => {
-
+export const applyIndustrialInterceptors = (instance: AxiosInstance) => {
   instance.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
       let token = getToken();
@@ -71,46 +74,52 @@ export const applyIndustrialInterceptors = (instance: any) => {
           isRefreshing = true;
           try {
             const refreshToken = getRefreshToken();
-            const res = await axios.post(`${AUTH_URL}/auth/refresh`, { refreshToken });
+            const refreshUrl = `${AUTH_URL}/api/auth/refresh`.replace(/([^:]\/)\/+/g, "$1");
             
-            saveTokens(res.data.accessToken, res.data.refreshToken);
-            processQueue(res.data.accessToken);
-            token = res.data.accessToken;
-          } catch (error) {
-            clearTokens();
-            if (window.location.pathname !== '/login') {
-              window.location.href = '/login';
+            const res = await axios.post(refreshUrl, { refreshToken });
+            const data = res.data?.data || res.data;
+            const newAccess = data.accessToken;
+            const newRefresh = data.refreshToken;
+
+            if (newAccess && newRefresh) {
+              saveTokens(newAccess, newRefresh);
+              processQueue(newAccess);
+              token = newAccess;
+            } else {
+              throw new Error("Session Invalid");
             }
-            return Promise.reject('SESSION_EXPIRED');
+          } catch (err) {
+            clearTokens();
+            if (window.location.pathname !== '/login') window.location.href = '/login';
+            return Promise.reject(err);
           } finally {
             isRefreshing = false;
           }
         } else {
-          await new Promise(resolve => {
-            refreshQueue.push((newToken) => {
-              token = newToken;
-              resolve(true);
+          return new Promise((resolve) => {
+            refreshQueue.push((newToken: string) => {
+              config.headers.Authorization = `Bearer ${newToken}`;
+              resolve(config);
             });
           });
         }
       }
 
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      if (token) config.headers.Authorization = `Bearer ${token}`;
       return config;
     },
-    (error: any) => Promise.reject(error)
+    (error) => Promise.reject(error)
   );
 
   instance.interceptors.response.use(
-    (response: any) => response.data, 
-    async (error: any) => {
+    (response: AxiosResponse) => {
+      if (response.data && response.data.data !== undefined) return response.data.data;
+      return response.data;
+    },
+    async (error) => {
       if (error.response?.status === 401) {
         clearTokens();
-        if (window.location.pathname !== '/login') {
-          window.location.href = '/login';
-        }
+        if (window.location.pathname !== '/login') window.location.href = '/login';
       }
       return Promise.reject(error);
     }
@@ -120,33 +129,31 @@ export const applyIndustrialInterceptors = (instance: any) => {
 /* =========================================
    API INSTANCES
 ========================================= */
-export const publicApi = axios.create({ baseURL: `${ADMIN_URL}/api` });
-export const userApi = axios.create({ baseURL: `${ADMIN_URL}/api` });
-export const cartApi = axios.create({ baseURL: `${CART_URL}/api/cart` });
-export const orderApi = axios.create({ baseURL: `${ORDER_URL}/api/orders` });
-export const wishlistApi = axios.create({ baseURL: `${WISHLIST_URL}/api/wishlist` });
-export const paymentApi = axios.create({ baseURL: `${PAYMENT_URL}/api/payments` });
+const createUrl = (path: string) => `${BASE_URL}/api${path}/`.replace(/([^:]\/)\/+/g, "$1");
+
+export const publicApi = axios.create({ baseURL: createUrl('') });
+export const userApi = axios.create({ baseURL: createUrl('') });
+export const cartApi = axios.create({ baseURL: createUrl('/cart') });
+export const orderApi = axios.create({ baseURL: createUrl('/orders') });
+export const wishlistApi = axios.create({ baseURL: createUrl('/wishlist') });
+export const paymentApi = axios.create({ baseURL: createUrl('/payments') });
 
 [publicApi, userApi, cartApi, orderApi, wishlistApi, paymentApi].forEach(applyIndustrialInterceptors);
 
+/* =========================================
+   ASSET UTILS
+========================================= */
 export const getAssetUrl = (urlOrUuid?: string | null) => {
   if (!urlOrUuid || urlOrUuid === 'null' || urlOrUuid === '') {
     return 'https://placehold.co/600x800?text=Design+Pending';
   }
-
-  if (urlOrUuid.includes('localhost')) {
-     const parts = urlOrUuid.split('/');
-     const uuid = parts[parts.length - 1] || parts[parts.length - 2];
-     return `${ASSET_URL}/api/assets/download/${uuid}`;
+  const baseDownloadUrl = `${ASSET_URL}/api/assets/download/`.replace(/([^:]\/)\/+/g, "$1");
+  if (urlOrUuid.includes('localhost') || urlOrUuid.includes('http')) {
+    const parts = urlOrUuid.split('/');
+    const uuid = parts.filter(Boolean).pop();
+    return `${baseDownloadUrl}${uuid}`;
   }
-
-  // 2. Resolve Relative Path or raw UUIDs
-  if (!urlOrUuid.startsWith('http')) {
-    return `${ASSET_URL}/api/assets/download/${urlOrUuid}`;
-  }
-
-  // 3. Return as-is if already a valid external HTTP/HTTPS URL
-  return urlOrUuid;
+  return `${baseDownloadUrl}${urlOrUuid}`;
 };
 
 export default userApi;
