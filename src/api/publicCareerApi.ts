@@ -24,12 +24,14 @@ export const publicCareerApi = {
         email: string;
         phone: string;
         resumeAssetUuid: string;
+        portfolioAssetUuid?: string | null; // Added optional portfolio field
     }) => {
         const response = await axios.post(`${PUBLIC_CAREERS_URL}/apply`, data);
         return response.data;
     },
 
-    // Upload Resume to Asset Service
+    // Upload Files to Asset Service
+    // Note: Reusing the same endpoint for both Resume and Portfolio
     uploadResume: async (file: File) => {
         const formData = new FormData();
         formData.append('file', file);

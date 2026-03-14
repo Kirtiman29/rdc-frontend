@@ -1,8 +1,14 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
-export default {
+const config: Config = {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}"
+  ],
   prefix: "",
   theme: {
     container: {
@@ -62,15 +68,18 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
       },
+
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+
       fontFamily: {
-        serif: ["Cormorant Garamond", "serif"],
-        sans: ["Inter", "sans-serif"],
-      },
+  serif: ["Cormorant Garamond", "serif"],
+  sans: ["Helvetica Neue","Helvetica","Arial","ui-sans-serif","system-ui","sans-serif"],
+},
+
       keyframes: {
         "accordion-down": {
           from: { height: "0" },
@@ -93,6 +102,7 @@ export default {
           to: { opacity: "1", transform: "translateX(0)" },
         },
       },
+
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
@@ -102,5 +112,8 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
-} satisfies Config;
+
+  plugins: [tailwindcssAnimate],
+};
+
+export default config;

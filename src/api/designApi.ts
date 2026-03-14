@@ -17,20 +17,36 @@ const extractArray = (data: any): Design[] => {
  */
 export const getDesigns = async (filters?: DesignFilters): Promise<DesignsResponse> => {
   const params = new URLSearchParams();
+  
   if (filters) {
+    // Pagination
     if (filters.page !== undefined) params.append('page', String(filters.page));
-    if (filters.limit !== undefined) params.append('size', String(filters.limit)); 
-    if (filters.category) params.append('category', String(filters.category));
-    if (filters.segment) params.append('segment', filters.segment);
-    if (filters.premium !== undefined) params.append('premium', String(filters.premium));
+    if (filters.size !== undefined) params.append('size', String(filters.size));
+    
+    // Business Logic Filters
+    if (filters.categoryId !== undefined) {
+  params.append('categoryId', String(filters.categoryId));
+}
+    if (filters.segment) params.append('segment', String(filters.segment));
+    
+    // ✅ FIXED: Changed .luxury to .luxury to match types/product.ts
+    if (filters.luxury !== undefined) params.append('luxury', String(filters.luxury));
+    
     if (filters.trending !== undefined) params.append('trending', String(filters.trending));
     if (filters.editorsPick !== undefined) params.append('editorsPick', String(filters.editorsPick));
     if (filters.specialOffer !== undefined) params.append('specialOffer', String(filters.specialOffer));
+    
+    // ✅ ADDED: newArrival flag check
+    if (filters.newArrival !== undefined) params.append('newArrival', String(filters.newArrival));
+    
     if (filters.search) params.append('search', filters.search);
+    if (filters.sortBy) params.append('sort', filters.sortBy); // Spring Data usually expects 'sort'
   }
 
   // ✅ Interceptor handles .data
-  return await userApi.get(`/public/designs/feed?${params.toString()}`);
+  return await userApi.get('/public/designs/feed', {
+  params
+});
 };
 
 export const getTrendingDesigns = async (limit: number = 10): Promise<Design[]> => {

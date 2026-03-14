@@ -1,55 +1,65 @@
+// src/api/orderApi.ts
 import { orderApi } from './apiClient';
 import axios from 'axios';
 import type { OrderResponse } from '../types/product'; 
 
-/**
- * ✅ Create a new order from current cart
- * Hits: POST https://ruchitadesigncompany.in/api/orders
- * * Note: Your apiClient interceptor already unwraps 'response.data'.
- * If your Java backend returns a wrapper like { status: 200, data: {...} },
- * you might need to return 'res.data' here.
- */
-export const createOrder = async (): Promise<OrderResponse> => {
-    // Hits the base URL of the instance directly
-    const response: any = await orderApi.post('');
-    return response;
-};
+export interface OrderItemRequest {
+    designId: number;
+    quantity: number;
+    priceCents: number;
+    designTitle?: string;
+}
+
+export interface CreateOrderRequest {
+    userId: number;
+    customerName: string;
+    customerEmail: string;
+    customerPhone?: string;
+    
+    // New Billing Fields
+    organizationName?: string;
+    addressOne: string;
+    addressTwo?: string;
+    city: string;
+    pincode: string;
+    country?: string; // Default 'India' usually handled by backend
+    
+    billingState: string;
+    customerGstin: string | null;
+    totalPriceCents: number;
+    items: OrderItemRequest[];
+}
 
 /**
- * ✅ Get details for a specific order
- * Hits: GET https://ruchitadesigncompany.in/api/orders/{orderId}
+ * ✅ Creates a new order with full billing/GST details
  */
-export const getOrderDetails = async (orderId: number): Promise<OrderResponse> => {
+export const createOrder = async (orderPayload: CreateOrderRequest): Promise<any> => {
+    // Note: orderApi (apiClient) handles the base /api/orders path
+    return await orderApi.post('', orderPayload);
+};
+
+export const getOrderDetails = async (orderId: string | number): Promise<OrderResponse> => {
     return await orderApi.get(`/${orderId}`);
 };
 
-/**
- * ✅ Fetch user's order history
- * Hits: GET https://ruchitadesigncompany.in/api/orders
- */
 export const getMyOrders = async (): Promise<OrderResponse[]> => {
     return await orderApi.get('');
 };
 
-/**
- * ✅ Get download link for assets in an order
- * Hits: GET https://ruchitadesigncompany.in/api/orders/{orderId}/download
- */
 export const getOrderDownloadLink = async (orderId: number): Promise<{ downloadUrl: string }> => {
     return await orderApi.get(`/${orderId}/download`);
 };
 
 /**
- * ✅ PDF Invoice Download
- * Logic: Uses standard axios to handle binary blob data
+ * ✅ Logic to fetch and download the Generated GST Invoice PDF
  */
 export const downloadInvoicePdf = async (orderId: number) => {
     try {
         const token = localStorage.getItem('accessToken');
-        // Fallback to the same base URL if VITE_ORDER_SERVICE_URL isn't set
-        const ORDER_URL = import.meta.env.VITE_ORDER_SERVICE_URL || import.meta.env.VITE_ADMIN_SERVICE_URL;
+        // Use the baseURL from the instance to stay consistent with production/dev environments
+        const baseUrl = orderApi.defaults.baseURL;
 
-        const response = await axios.get(`${ORDER_URL}/api/orders/${orderId}/invoice`, {
+        const response = await axios.get(`${baseUrl}/${orderId}/invoice`, {
             responseType: 'blob',
             headers: { 
                 Authorization: `Bearer ${token}`,
@@ -62,7 +72,7 @@ export const downloadInvoicePdf = async (orderId: number) => {
         
         const fileLink = document.createElement('a');
         fileLink.href = fileURL;
-        fileLink.setAttribute('download', `Invoice-RDC-${orderId}.pdf`);
+        fileLink.setAttribute('download', `Invoice-RDC-ORD${orderId}.pdf`);
         document.body.appendChild(fileLink);
         fileLink.click();
         
@@ -71,7 +81,7 @@ export const downloadInvoicePdf = async (orderId: number) => {
         window.URL.revokeObjectURL(fileURL);
     } catch (error) {
         console.error('❌ Download failed:', error);
-        alert('Invoice generation failed. Please try again later.');
+        alert('Invoice generation failed or not yet available.');
     }
 };
 

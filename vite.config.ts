@@ -6,25 +6,45 @@ import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
   base: "/",
+
   server: {
-    https: undefined, 
-    host: "0.0.0.0", 
+    https: undefined,
+    host: "0.0.0.0",
     port: 3000,
     hmr: {
       overlay: false,
     },
   },
+
   plugins: [
     react(),
     mode === "development" ? mkcert() : null,
     mode === "development" && componentTagger(),
   ].filter(Boolean),
+
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
+
   esbuild: {
-    drop: mode === 'production' ? ['console', 'debugger'] : [],
+    drop: mode === "production" ? ["console", "debugger"] : [],
+  },
+
+  build: {
+    target: "esnext",
+    cssCodeSplit: true,
+    sourcemap: false,
+    minify: "esbuild",
+
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom"],
+          vendor: ["lucide-react"],
+        },
+      },
+    },
   },
 }));

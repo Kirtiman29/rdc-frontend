@@ -2,20 +2,22 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, ArrowRight, Package, Mail, ShieldCheck } from 'lucide-react';
+import { CheckCircle, ArrowRight, Mail, ShieldCheck, Loader2 } from 'lucide-react';
 import { orderApi } from '@/api/apiClient';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const orderId = searchParams.get('orderId');
-  const [isVerifying, setIsVerifying] = useState(true);
-  const [countdown, setCountdown] = useState(8); 
+  
+  /** * ✅ PERFORMANCE OPTIMIZATION:
+   * We set isVerifying to false by default so the Success UI renders instantly.
+   * isSyncing tracks the background verification with the backend.
+   */
+  const [isSyncing, setIsSyncing] = useState(true);
+  const [countdown, setCountdown] = useState(8);
 
-  // ✅ Security: Restrict Right-Click across the success registry
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-  };
+  const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
 
   useEffect(() => {
     let attempts = 0;
@@ -23,27 +25,13 @@ export default function PaymentSuccess() {
 
     const verifyStatus = async () => {
       try {
-        /**
-         * ✅ PRODUCTION SYNC:
-         * orderApi now returns the response body directly via interceptor.
-         * Hits Order Service Port 8095 to verify transaction.
-         */
+        // Hit Order Service Port 8095
         const order: any = await orderApi.get(`/${orderId}`);
         
         if (order && order.status === 'PAID') {
-          // Add a slight delay for smooth visual transition
-          setTimeout(() => setIsVerifying(false), 1500);
-          
-          const timer = setInterval(() => {
-            setCountdown((prev) => {
-              if (prev <= 1) {
-                clearInterval(timer);
-                navigate('/');
-                return 0;
-              }
-              return prev - 1;
-            });
-          }, 1000);
+          // Sync complete
+          setIsSyncing(false);
+          startCountdown();
           return;
         }
 
@@ -51,39 +39,41 @@ export default function PaymentSuccess() {
         if (attempts < maxAttempts) {
           setTimeout(verifyStatus, 2000);
         } else {
-          setIsVerifying(false);
+          // Stop pulsing even if API fails, user is already on success page
+          setIsSyncing(false);
+          startCountdown();
         }
       } catch (err) {
-        setIsVerifying(false);
+        setIsSyncing(false);
+        startCountdown();
       }
     };
 
-    if (orderId) verifyStatus();
-  }, [orderId, navigate]);
+    const startCountdown = () => {
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            navigate('/');
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    };
 
-  // 🔄 BUFFERING / LOADING STATE (MAINTAINED)
-  if (isVerifying) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-white p-6">
-        <div className="relative mb-8">
-            <div className="w-20 h-20 border-4 border-gray-100 border-t-[#2A2623] rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-                <ShieldCheck size={24} className="text-[#2A2623] opacity-20" />
-            </div>
-        </div>
-        <div className="text-center space-y-2">
-            <h2 className="font-serif text-2xl text-[#2A2623] uppercase tracking-tight">Authorizing Access</h2>
-            <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-400 animate-pulse">
-                Synchronizing Secure Registry...
-            </p>
-        </div>
-      </div>
-    );
-  }
+    if (orderId) {
+        verifyStatus();
+    } else {
+        setIsSyncing(false);
+        startCountdown();
+    }
+  }, [orderId, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA] p-6" onContextMenu={handleContextMenu}>
       <div className="max-w-md w-full bg-white border border-gray-100 p-12 rounded-sm shadow-xl text-center relative overflow-hidden">
+        
         {/* Redirect Progress Bar */}
         <div 
           className="absolute top-0 left-0 h-1 bg-[#2A2623] transition-all duration-1000" 
@@ -96,7 +86,22 @@ export default function PaymentSuccess() {
           </div>
         </div>
 
-        <h1 className="font-serif text-3xl text-[#2A2623] mb-4 tracking-tight uppercase">Acquisition Verified</h1>
+        <h1 className="font-serif text-3xl text-[#2A2623] mb-2 tracking-tight uppercase">Acquisition Verified</h1>
+        
+        {/* Background Sync Indicator */}
+        <div className="h-6 flex items-center justify-center mb-6">
+            {isSyncing ? (
+                <div className="flex items-center gap-2 text-gray-400 animate-pulse">
+                    <Loader2 size={12} className="animate-spin" />
+                    <span className="text-[8px] font-bold uppercase tracking-[0.2em]">Synchronizing Registry...</span>
+                </div>
+            ) : (
+                <div className="flex items-center gap-2 text-green-600">
+                    <ShieldCheck size={12} />
+                    <span className="text-[8px] font-bold uppercase tracking-[0.2em]">Secure Record Confirmed</span>
+                </div>
+            )}
+        </div>
         
         <div className="bg-[#FAFAFA] border border-gray-100 p-6 mb-8 text-left">
           <div className="flex gap-4">
@@ -108,7 +113,7 @@ export default function PaymentSuccess() {
         </div>
 
         <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-10 font-mono">
-          Registry ID: ORD-{orderId}
+          Registry ID: ORD-{orderId || 'N/A'}
         </p>
 
         <div className="space-y-4">

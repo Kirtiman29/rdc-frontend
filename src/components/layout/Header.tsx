@@ -4,14 +4,15 @@ import { Search, User, Heart, ShoppingBag, Package, Menu, X, LogOut } from 'luci
 import { cn } from '@/lib/utils';
 import MegaMenu from './MegaMenu';
 import SearchOverlay from './SearchOverlay';
-import rdcLogo from '@/assets/rdc-logo.png';
 import { getCart } from '@/api/cartApi';
-import { getToken, removeToken } from '@/api/apiClient';
+import { getToken, clearTokens } from '@/api/apiClient';
+// Assuming you have a getWishlist API or similar
+// import { getWishlist } from '@/api/wishlistApi'; 
 
 const navItems = [
   { label: 'Home', href: '/' },
   { label: 'Designs', href: '/gallery', hasMegaMenu: true },
-  { label: 'Luxury', href: '/premium' },
+  { label: 'Luxury', href: '/luxury' },
   { label: 'Trends', href: '/trends' },
   { label: 'Special Offers', href: '/special-offers' },
 ];
@@ -26,7 +27,39 @@ const Header = () => {
   const [scrolled, setScrolled] = useState(false);
   
   const [cartCount, setCartCount] = useState(0);
+  const [hasWishlistItems, setHasWishlistItems] = useState(false);
   const isLoggedIn = !!getToken();
+
+  // 1️⃣ Header Sync Logic (Cart & Wishlist)
+  useEffect(() => {
+    const syncHeaderData = async () => {
+      if (!isLoggedIn) {
+        setCartCount(0);
+        setHasWishlistItems(false);
+        return;
+      }
+
+      try {
+        // Parallel fetching for better performance
+        const cart = await getCart();
+        setCartCount(cart.totalItems || 0);
+
+        // Optional: Add Wishlist check logic here if API exists
+        // const wishlist = await getWishlist();
+        // setHasWishlistItems(wishlist.items?.length > 0);
+      } catch (error) {
+        console.error('Header sync failed:', error);
+      }
+    };
+
+    syncHeaderData();
+
+    // Event Listener for real-time updates from other components
+    const handleCartUpdate = () => syncHeaderData();
+    window.addEventListener("cart-updated", handleCartUpdate);
+
+    return () => window.removeEventListener("cart-updated", handleCartUpdate);
+  }, [isLoggedIn]);
 
   // Handle Scroll Shadow
   useEffect(() => {
@@ -37,27 +70,12 @@ const Header = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  useEffect(() => {
-    const fetchHeaderData = async () => {
-      if (isLoggedIn) {
-        try {
-          const cart = await getCart();
-          setCartCount(cart.totalItems || 0);
-        } catch (error) {
-          console.error('Cart sync failed:', error);
-          setCartCount(0);
-        }
-      } else {
-        setCartCount(0);
-      }
-    };
-    fetchHeaderData();
-  }, [location.pathname, isLoggedIn]);
-
   const handleLogout = () => {
-    removeToken();
+    clearTokens();
     setShowProfileMenu(false);
     setIsMobileMenuOpen(false);
+    setCartCount(0);
+    setHasWishlistItems(false);
     navigate('/login');
   };
 
@@ -68,7 +86,6 @@ const Header = () => {
         scrolled && "shadow-sm border-transparent"
       )}>
         <div className="container mx-auto px-4 md:px-8">
-          {/* Header Height adjusted for Mobile (h-14) */}
           <div className="flex h-14 md:h-20 items-center justify-between">
             
             {/* Mobile Left: Hamburger + Logo Group */}
@@ -82,7 +99,7 @@ const Header = () => {
               </button>
 
               <Link to="/" className="flex items-center gap-2 shrink-0 select-none">
-                <img src={rdcLogo} alt="RDC" className="h-6 sm:h-8 md:h-10 w-auto" />
+                <img src="/rdc-logo.png" alt="RDC" className="h-6 sm:h-8 md:h-10 w-auto" />
                 <span className="hidden sm:block font-serif text-xl md:text-2xl font-medium tracking-wide">
                   RDC
                 </span>
@@ -116,7 +133,7 @@ const Header = () => {
               ))}
             </nav>
 
-            {/* Right Icons: Spacing adjusted (gap-2) */}
+            {/* Right Icons */}
             <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setShowSearch(true)}
@@ -136,14 +153,23 @@ const Header = () => {
                 </Link>
               )}
 
-              <Link to="/wishlist" className="p-2 text-muted-foreground hover:text-foreground transition-colors" title="Wishlist">
+              {/* Wishlist with Premium Indicator */}
+              <Link 
+                to="/wishlist" 
+                className="relative p-2 text-muted-foreground hover:text-foreground transition-colors" 
+                title="Wishlist"
+              >
                 <Heart className="h-5 w-5" />
+                {hasWishlistItems && (
+                  <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-red-500 rounded-full animate-in fade-in zoom-in duration-300"></span>
+                )}
               </Link>
 
+              {/* Cart with Professional Bubble */}
               <Link to="/cart" className="relative p-2 text-muted-foreground hover:text-foreground transition-colors" title="Cart">
                 <ShoppingBag className="h-5 w-5" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 h-4 w-4 bg-foreground text-background text-[10px] font-medium rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-black text-white text-[10px] font-semibold rounded-full flex items-center justify-center animate-in zoom-in duration-300">
                     {cartCount}
                   </span>
                 )}
@@ -190,7 +216,6 @@ const Header = () => {
 
         {/* MOBILE DRAWER SYSTEM */}
         <>
-          {/* Softer Glass Overlay */}
           <div 
             className={cn(
               "fixed inset-0 bg-black/30 backdrop-blur-sm z-[60] transition-opacity lg:hidden",
@@ -199,16 +224,14 @@ const Header = () => {
             onClick={() => setIsMobileMenuOpen(false)}
           />
           
-          {/* Branded Side Drawer */}
           <div className={cn(
             'fixed top-0 left-0 bottom-0 w-[85%] max-w-[340px] bg-background z-[70] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] lg:hidden shadow-2xl', 
             isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
           )}>
             <div className="flex flex-col h-full">
-              {/* Branded Drawer Header */}
               <div className="flex items-center justify-between p-5 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                  <img src={rdcLogo} className="h-6 w-auto" alt="Logo" />
+                  <img src="/rdc-logo.png" className="h-6 w-auto" alt="Logo" />
                   <span className="font-serif text-lg tracking-wide">RDC</span>
                 </div>
                 <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 -mr-2">
@@ -233,7 +256,6 @@ const Header = () => {
                   </Link>
                 ))}
                 
-                {/* Mobile Order/Profile Link sync */}
                 {isLoggedIn && (
                   <>
                     <Link to="/orders" className="text-base font-light tracking-wide text-foreground/70 py-4 border-b border-border/20" onClick={() => setIsMobileMenuOpen(false)}>
@@ -245,7 +267,6 @@ const Header = () => {
                   </>
                 )}
                 
-                {/* Premium Mobile Buttons */}
                 <div className="mt-auto pt-10 pb-6 flex flex-col gap-4">
                   {!isLoggedIn ? (
                     <>

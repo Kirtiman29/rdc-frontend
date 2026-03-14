@@ -2,7 +2,6 @@
 
 import { Link } from 'react-router-dom';
 import { Instagram, Linkedin, Facebook } from 'lucide-react'; // Added Facebook here
-import rdcLogo from '@/assets/rdc-logo.png';
 
 // Pinterest icon component
 const Pinterest = ({ className }: { className?: string }) => (
@@ -19,11 +18,11 @@ const Footer = () => {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <img src={rdcLogo} alt="RDC" className="h-8 w-auto" />
+              <img src="/rdc-logo.png" alt="RDC" className="h-8 w-auto" />
               <span className="font-serif text-xl font-medium tracking-wide text-foreground">RDC</span>
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed max-w-xs">
-              Premium textile design patterns for fashion and lifestyle brands worldwide.
+              Luxury textile design patterns for fashion and lifestyle brands worldwide.
             </p>
           </div>
 

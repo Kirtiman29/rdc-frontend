@@ -49,7 +49,7 @@ const MegaMenu = () => {
          * ✅ PRODUCTION SYNC:
          * getDesigns returns data directly via the interceptor.
          */
-        const res: any = await getDesigns({ limit: 100 });
+        const res: any = await getDesigns({ size: 100 });
         
         // Safety check for Spring Boot content format vs raw array
         const data = res?.content || (Array.isArray(res) ? res : []);

@@ -1,8 +1,9 @@
+// paymentApi.ts
 import { paymentApi } from './apiClient';
 
 /**
  * ✅ Step 1: Request Payment Session from Backend
- * Hits: POST https://ruchitadesigncompany.in/api/payments/create
+ * Hits: POST /api/payments/create
  */
 const initiateGatewaySession = async (orderId: number) => {
     /** * Ensuring orderId is sent exactly as the backend expects.
@@ -13,12 +14,15 @@ const initiateGatewaySession = async (orderId: number) => {
 
 /**
  * ✅ Step 2: Send Razorpay credentials back for verification
- * Hits: POST https://ruchitadesigncompany.in/api/payments/verify
+ * Hits: POST /api/payments/verify
  */
 const verifyPayment = async (verificationData: any) => {
     return await paymentApi.post('/verify', verificationData);
 };
 
+/**
+ * Main Industrial Payment Processor
+ */
 export const processIndustrialPayment = async (
     orderId: number, 
     navigate: any, 
@@ -37,10 +41,12 @@ export const processIndustrialPayment = async (
         const { gatewayOrderId, amountCents, razorpayKey } = data;
         
         /**
+         * ✅ RAZORPAY UNIT LOGIC
          * Razorpay expects 'amount' in paise (smallest currency unit).
-         * If your backend sends 500.00 cents, we ensure it's a clean integer.
+         * Our backend already calculates totals in cents/paise.
+         * We use Math.round(Number * 1) to ensure it's a clean integer for the JS SDK.
          */
-        const amountPaise = Math.round(Number(amountCents));
+        const amountPaise = Math.round(Number(amountCents) * 1);
 
         const options = {
             key: razorpayKey,
@@ -51,9 +57,9 @@ export const processIndustrialPayment = async (
             description: `Production Assets: Order #${orderId}`,
             theme: { color: "#CC000E" },
             prefill: {
-                name: userProfile.name || "Industrial User",
-                email: userProfile.email || "user@rdc-archive.com",
-                contact: "9999999999"
+                name: userProfile.name || "User",
+                email: userProfile.email || "",
+                contact: ""
             },
             handler: async (response: any) => {
                 try {
@@ -66,7 +72,7 @@ export const processIndustrialPayment = async (
 
                     /**
                      * ✅ VERIFICATION LOGIC
-                     * We handle both 'SUCCESS' and 'PAID' statuses depending on backend DTO.
+                     * Success statuses can be 'SUCCESS' or 'PAID'
                      */
                     if (verifyData.status === 'SUCCESS' || verifyData.status === 'PAID') {
                         navigate(`/payment-success?orderId=${orderId}`);
@@ -86,9 +92,9 @@ export const processIndustrialPayment = async (
             }
         };
 
+        // Initialize Razorpay
         const rzp = new (window as any).Razorpay(options);
         
-        // Handle failure to open (e.g., blocked by popup blocker)
         rzp.on('payment.failed', function (response: any) {
             console.error("Payment Failed Callback:", response.error);
         });

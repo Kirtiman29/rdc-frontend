@@ -5,6 +5,8 @@ import Footer from '@/components/layout/Footer';
 import { Package, Loader2, FileText, Hash } from 'lucide-react'; 
 import { getToken } from '@/api/apiClient';
 import { getMyOrders, downloadInvoicePdf } from '@/api/orderApi';
+// ✅ Import the utility
+import { formatPrice } from '@/utils/price';
 
 interface OrderItem {
   id: number;
@@ -40,14 +42,11 @@ const Orders = () => {
         return;
       }
       try {
-        // ✅ UPDATE: Added explicit typing to match the unwrapped Axios response
         const data = await getMyOrders(); 
-        
-        // ✅ DEFENSIVE CHECK: Ensure we always have an array even if backend returns null
         setOrders(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Failed to sync order history:', error);
-        setOrders([]); // Set empty array on error to stop loading state cleanly
+        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -55,7 +54,7 @@ const Orders = () => {
     fetchOrders();
   }, []);
 
-  const getStatusStyles = (status: string = '') => { // ✅ Default value to prevent .toUpperCase() errors
+  const getStatusStyles = (status: string = '') => {
     switch (status.toUpperCase()) {
       case 'PAID':
         return 'bg-green-50 text-green-600 border-green-100';
@@ -79,7 +78,7 @@ const Orders = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FAFAFA]" onContextMenu={handleContextMenu}>
+    <div className="min-h-screen flex flex-col bg-[#FAFAFA] font-sans" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1">
         <div className="container mx-auto px-6 md:px-12 py-16">
@@ -98,7 +97,6 @@ const Orders = () => {
             ) : (
               <div className="space-y-4">
                 {orders.map((order) => (
-                  // ✅ KEY UPDATE: Added optional chaining (order.items?) to prevent map errors
                   order.items?.map((item) => (
                     <div
                       key={`${order.id}-${item.id}`}
@@ -119,7 +117,7 @@ const Orders = () => {
                             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                               Order ORD-{order.id.toString().padStart(3, '0')}
                             </p>
-                            <p className="text-[10px] text-muted-foreground font-medium">
+                            <p className="text-[10px] text-muted-foreground font-medium font-sans">
                               Purchased on {new Date(order.createdAt).toLocaleDateString('en-US', {
                                 month: 'long', day: 'numeric', year: 'numeric'
                               })}
@@ -128,13 +126,13 @@ const Orders = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between md:justify-end gap-10 w-full md:w-auto border-t md:border-0 pt-4 md:pt-0">
+                      <div className="flex items-center justify-between md:justify-end gap-10 w-full md:w-auto border-t md:border-0 pt-4 md:pt-0 font-sans">
                         <div className="text-right">
                           <p className="text-xl font-bold text-[#2A2623]">
-                            ₹{(item.priceCents / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                            {/* ✅ Applied formatPrice utility for order items */}
+                            {formatPrice(item.priceCents)}
                           </p>
                           
-                          {/* ✅ Ensure order.status exists before check */}
                           {order.status?.toUpperCase() === 'PAID' && (
                             <button 
                               onClick={() => downloadInvoicePdf(order.id)}

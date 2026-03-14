@@ -23,31 +23,47 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      
+      /**
+       * ✅ FIX: Explicitly unwrap response to match Backend TokenResponse
+       * structure: { accessToken, refreshToken, tokenType, expiresIn }
+       */
       const response: any = await loginUser(creds.email, creds.password);
+      const { accessToken, refreshToken } = response;
       
-      
-      setAuthState(response.accessToken, response.refreshToken);
-      
-      toast({ title: "Welcome back!", description: "Signed in successfully." });
-      navigate(from, { replace: true });
+      if (accessToken && refreshToken) {
+        setAuthState(accessToken, refreshToken);
+        toast({ title: "Welcome back!", description: "Signed in successfully." });
+        navigate(from, { replace: true });
+      } else {
+        throw new Error("Invalid token structure received");
+      }
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
         title: "Login Failed", 
         description: error.response?.data?.error || "Invalid email or password." 
       });
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const handleGoogleSuccess = async (res: CredentialResponse) => {
     setLoading(true);
     try {
+      /**
+       * ✅ FIX: Apply same unwrap logic for Google Authentication response
+       */
       const response: any = await loginWithGoogle(res.credential!); 
-      setAuthState(response.accessToken, response.refreshToken);
-      
-      toast({ title: "Google Login Successful" });
-      navigate(from, { replace: true });
+      const { accessToken, refreshToken } = response;
+
+      if (accessToken && refreshToken) {
+        setAuthState(accessToken, refreshToken);
+        toast({ title: "Google Login Successful" });
+        navigate(from, { replace: true });
+      } else {
+        throw new Error("Invalid Google token structure received");
+      }
     } catch (err: any) {
       toast({ variant: "destructive", title: "Google Auth Failed" });
     } finally {

@@ -1,5 +1,6 @@
+//src/components/home/PremiumDesigns.tsx
 import { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Loader2, ChevronLeft, ChevronRight, ShoppingBag, Eye } from 'lucide-react';
 import { getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
@@ -7,15 +8,17 @@ import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
 import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
+// ✅ Import the utility
+import { formatPrice } from '@/utils/price';
 
 const PremiumDesigns = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -23,28 +26,25 @@ const PremiumDesigns = () => {
   useEffect(() => {
     const fetchPremium = async () => {
       try {
-        /** * ✅ PRODUCTION SYNC: 
-         * getDesigns returns data directly from the unified apiClient interceptor.
-         */
-        const response: any = await getDesigns({ premium: true });
+        const response: any = await getDesigns({
+          luxury: true,
+          size: 20
+        });
         
-        // Handle potential Pageable response or raw array
         const rawData = response?.content || (Array.isArray(response) ? response : []);
         
-        // ✅ 1. Filter Premium -> 2. Sort Recent (ID Desc) -> 3. Slice top 10
-        const premiumOnly = [...rawData]
-          .filter((product: Design) => product.premium === true)
-          .sort((a: Design, b: Design) => b.id - a.id)
+        const LuxuryOnly = [...rawData]
+          .filter((product: Design) => product.luxury === true)
+          .sort(
+            (a: Design, b: Design) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
           .slice(0, 10);
 
-        setProducts(premiumOnly);
+        setProducts(LuxuryOnly);
 
-        /**
-         * ✅ PERFORMANCE FIX: Parallel Status Check
-         * Replaced sequential loop with Promise.all to avoid request waterfalls.
-         */
         const statusEntries = await Promise.all(
-          premiumOnly.map(async (product: Design) => {
+          LuxuryOnly.map(async (product: Design) => {
             const isWished = await checkWishlistStatus(product.id);
             return [product.id, isWished];
           })
@@ -52,7 +52,7 @@ const PremiumDesigns = () => {
         
         setWishlistState(Object.fromEntries(statusEntries));
       } catch (error) {
-        console.error('Failed to sync premium designs:', error);
+        console.error('Failed to sync luxury designs:', error);
       } finally {
         setLoading(false);
       }
@@ -71,17 +71,39 @@ const PremiumDesigns = () => {
   };
 
   const handleAddToCart = async (e: React.MouseEvent, product: Design) => {
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
+
+    const token = localStorage.getItem("accessToken");
+
+    if (!token) {
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "Redirecting to login..."
+      });
+      setTimeout(() => navigate("/login"), 500);
+      return;
+    }
+
     try {
       await addToCart(product.id, 1);
-      toast({ title: "Premium Item Added", description: `${product.title} has been added to your cart.` });
-    } catch (error) {
-      toast({ variant: "destructive", title: "Cart Error" });
+      toast({
+        title: "Premium Item Added",
+        description: `${product.title} added to cart`
+      });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Cart Error"
+      });
     }
   };
 
   const toggleWishlist = async (e: React.MouseEvent, product: Design) => {
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault(); 
+    e.stopPropagation();
+    
     const isWished = wishlistState[product.id];
     try {
       if (isWished) { await removeFromWishlist(product.id); } 
@@ -101,7 +123,13 @@ const PremiumDesigns = () => {
     );
   }
 
-  if (products.length === 0) return null;
+  if (!loading && products.length === 0) {
+    return (
+      <section className="py-24 bg-[#0a0a0a] text-center text-neutral-500">
+        No premium designs available
+      </section>
+    );
+  }
 
   return (
     <section className="py-24 md:py-32 bg-[#0a0a0a] text-white" onContextMenu={handleContextMenu}>
@@ -111,13 +139,13 @@ const PremiumDesigns = () => {
             <span className="text-[10px] font-bold uppercase tracking-[0.6em] text-[#c9a962]">
               Exclusive Collection
             </span>
-            <h2 className="font-serif text-3xl md:text-4xl font-medium text-white">
+            <h2 className="font-sans text-3xl md:text-4xl font-medium text-white">
               Luxury Patterns
             </h2>
           </div>
 
           <div className="flex items-center gap-6">
-            <Link to="/premium" className="text-neutral-400 hover:text-white transition-colors text-xs font-medium border-b border-neutral-800 pb-1 hidden sm:block">
+            <Link to="/gallery" className="text-neutral-400 hover:text-white transition-colors text-xs font-medium border-b border-neutral-800 pb-1 hidden sm:block">
               View All
             </Link>
             
@@ -139,9 +167,7 @@ const PremiumDesigns = () => {
         >
           {products.map((product) => (
             <div key={product.id} className="flex-none w-[300px] sm:w-[340px] md:w-[380px] group">
-              <div className="relative aspect-[3/4] bg-neutral-900 overflow-hidden mb-6 select-none">
-                
-                {/* Watermark Overlay */}
+              <Link to={`/product/${product.id}`} className="block relative aspect-[3/4] bg-neutral-900 overflow-hidden mb-6 select-none">
                 <div 
                   className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                   style={{
@@ -151,7 +177,9 @@ const PremiumDesigns = () => {
                 />
 
                 <img
-                  src={getAssetUrl(product.assetUuid)}
+                  src={getAssetUrl(
+                    product.media?.find(m => m.role === "COVER")?.url || product.assetUuid
+                  )}
                   alt={product.title}
                   draggable={false}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
@@ -173,12 +201,9 @@ const PremiumDesigns = () => {
                     <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
                   </button>
                   
-                  <Link 
-                    to={`/product/${product.id}`}
-                    className="w-10 h-10 bg-white/10 backdrop-blur-sm text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-all"
-                  >
+                  <div className="w-10 h-10 bg-white/10 backdrop-blur-sm text-white rounded-full flex items-center justify-center hover:bg-white/20 transition-all">
                     <Eye className="h-4 w-4" />
-                  </Link>
+                  </div>
                 </div>
 
                 <button 
@@ -190,11 +215,11 @@ const PremiumDesigns = () => {
                 </button>
 
                 <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors pointer-events-none" />
-              </div>
+              </Link>
 
               <div className="space-y-2 px-1">
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-serif text-xl text-white group-hover:text-[#c9a962] transition-colors line-clamp-1 italic">
+                  <h3 className="font-sans text-xl text-white group-hover:text-[#c9a962] transition-colors line-clamp-1">
                     {product.title}
                   </h3>
                 </Link>
@@ -202,7 +227,8 @@ const PremiumDesigns = () => {
                   {product.description}
                 </p>
                 <p className="text-lg text-[#c9a962] font-medium tracking-tight">
-                  ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
+                  {/* ✅ Using formatPrice for luxury pattern display */}
+                  {formatPrice(product.finalPriceCents)}
                 </p>
               </div>
             </div>

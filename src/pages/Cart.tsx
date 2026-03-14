@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+//src/pages/Cart.tsx
+import { useEffect, useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, ShoppingBag, Loader2 } from 'lucide-react';
 import Header from '@/components/layout/Header';
@@ -7,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { getCart, removeCartItem, CartSummary } from '@/api/cartApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { useToast } from '@/hooks/use-toast';
+// ✅ Import the utility
+import { formatPrice } from '@/utils/price';
 
 const Cart = () => {
   const [cartData, setCartData] = useState<CartSummary | null>(null);
@@ -14,16 +17,12 @@ const Cart = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // ✅ Security: Restrict Right-Click to protect visual assets
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
 
   const fetchCartState = async () => {
     try {
-      /** * ✅ Production Logic: 
-       * getCart returns the unwrapped data object directly via interceptor.
-       */
       const data = await getCart();
       setCartData(data);
     } catch (error) {
@@ -36,6 +35,11 @@ const Cart = () => {
   useEffect(() => {
     fetchCartState();
   }, []);
+
+  const items = useMemo(() => 
+    Array.isArray(cartData?.items) ? cartData.items : [], 
+    [cartData]
+  );
 
   const handleRemove = async (itemId: number) => {
     try {
@@ -59,15 +63,11 @@ const Cart = () => {
     );
   }
 
-  const items = cartData?.items || [];
-  const subtotal = (cartData?.subtotalCents || 0) / 100;
-
   return (
     <div className="min-h-screen flex flex-col" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1 bg-secondary/20">
         <div className="container mx-auto px-4 md:px-8 py-12 md:py-20">
-          {/* Header Section Restored */}
           <div className="mb-12">
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
               Shopping
@@ -90,19 +90,16 @@ const Cart = () => {
             </div>
           ) : (
             <div className="grid lg:grid-cols-3 gap-8">
-              {/* Items List Restored */}
               <div className="lg:col-span-2 space-y-4">
                 {items.map((item) => (
                   <div
                     key={item.id}
                     className="bg-background border border-border p-6 flex gap-6 animate-fade-in shadow-sm rounded-sm"
                   >
-                    {/* Protected Thumbnail Restored */}
                     <Link 
                       to={`/product/${item.designId}`} 
                       className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-secondary/30 select-none"
                     >
-                      {/* MICRO-WATERMARK OVERLAY */}
                       <div 
                         className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
                         style={{
@@ -112,7 +109,7 @@ const Cart = () => {
                       />
 
                       <img
-                        src={getAssetUrl(item.assetUuid)}
+                        src={item.assetUuid ? getAssetUrl(item.assetUuid) : '/placeholder.png'}
                         alt={item.designTitle}
                         draggable={false}
                         className="w-full h-full object-cover"
@@ -127,12 +124,13 @@ const Cart = () => {
                           </h3>
                         </Link>
                         <p className="text-sm text-muted-foreground mt-1">
-                          Industrial Design Asset (Quantity: {item.quantity})
+                          Industrial Design Asset (Quantity: {item.quantity ?? 1})
                         </p>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="font-medium">
-                          ₹{(item.priceCents / 100).toLocaleString('en-IN')}
+                          {/* ✅ Used formatPrice for item price */}
+                          {formatPrice(item.priceCents ?? 0)}
                         </span>
                         <button 
                           className="text-muted-foreground hover:text-destructive transition-colors p-2"
@@ -146,7 +144,6 @@ const Cart = () => {
                 ))}
               </div>
 
-              {/* Sidebar Summary Restored */}
               <div className="lg:col-span-1">
                 <div className="bg-background border border-border p-6 sticky top-24 shadow-sm rounded-sm">
                   <h2 className="font-serif text-xl mb-6">Order Summary</h2>
@@ -154,7 +151,8 @@ const Cart = () => {
                   <div className="space-y-4 pb-6 border-b border-border text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>₹{subtotal.toLocaleString('en-IN')}</span>
+                      {/* ✅ Used formatPrice for subtotal */}
+                      <span>{formatPrice(cartData?.subtotalCents ?? 0)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Tax</span>
@@ -164,7 +162,9 @@ const Cart = () => {
 
                   <div className="flex justify-between py-6 border-b border-border">
                     <span className="font-medium">Total</span>
-                    <span className="font-serif text-xl">₹{subtotal.toLocaleString('en-IN')}</span>
+                    {/* ✅ Used formatPrice for total */}
+                    <span className="font-serif text-xl">{formatPrice(cartData?.subtotalCents ?? 0)}</span>
+                    <p className="text-xs italic text-muted-foreground">Taxes calculated at checkout</p>
                   </div>
 
                   <Button 

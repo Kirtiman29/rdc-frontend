@@ -1,3 +1,5 @@
+// src/components/home/FeaturedProducts.tsx
+
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, ShoppingBag, Loader2 } from 'lucide-react';
@@ -27,7 +29,7 @@ const FeaturedProducts = () => {
          * The interceptor handles the unwrapping of the response.
          */
         const response: any = await getDesigns({ 
-          limit: 4, 
+          size: 4, 
           editorsPick: true 
         });
         
@@ -128,9 +130,9 @@ const FeaturedProducts = () => {
                   
                   {/* Badges Restored */}
                   <div className="absolute left-3 top-3 z-20 flex flex-col gap-2">
-                    {product.premium && (
+                    {product.luxury && (
                       <span className="rounded-sm bg-[#2A2623] px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-white shadow-sm">
-                        Premium
+                        Luxury
                       </span>
                     )}
                     {product.newArrival && (

@@ -1,3 +1,4 @@
+//src/pages/Premium.tsx
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Eye, Loader2 } from 'lucide-react';
@@ -8,9 +9,11 @@ import { getAssetUrl } from '@/api/apiClient';
 import { checkWishlistStatus, addToWishlist, removeFromWishlist } from '@/api/wishlistApi';
 import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
+// ✅ Import the utility
+import { formatPrice } from '@/utils/price';
 
 const Premium = () => {
-  const [premiumProducts, setPremiumProducts] = useState<Design[]>([]);
+  const [luxuryProducts, setPremiumProducts] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
@@ -22,11 +25,11 @@ const Premium = () => {
   useEffect(() => {
     const fetchPremiumData = async () => {
       try {
-        const response: any = await getDesigns({ premium: true, limit: 24 });
+        const response: any = await getDesigns({ luxury: true, size: 24 });
         const items = response?.content || (Array.isArray(response) ? response : []);
         
         const sortedPremium = [...items]
-          .filter((item: Design) => item.premium === true)
+          .filter((item: Design) => item.luxury === true)
           .sort((a, b) => b.id - a.id);
 
         setPremiumProducts(sortedPremium);
@@ -40,7 +43,7 @@ const Premium = () => {
         
         setWishlistState(Object.fromEntries(statusEntries));
       } catch (error) {
-        console.error('Failed to sync premium collection:', error);
+        console.error('Failed to sync luxury collection:', error);
       } finally {
         setLoading(false);
       }
@@ -77,7 +80,7 @@ const Premium = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col" onContextMenu={handleContextMenu}>
+    <div className="min-h-screen flex flex-col font-sans" onContextMenu={handleContextMenu}>
       <Header />
       <main className="flex-1 bg-[#1a1a1a]">
         <section className="py-16 md:py-24">
@@ -96,26 +99,25 @@ const Premium = () => {
 
         <section className="pb-24">
           <div className="container mx-auto px-4 md:px-8">
-            {premiumProducts.length === 0 ? (
+            {luxuryProducts.length === 0 ? (
               <div className="text-center py-20">
-                <p className="text-white/40 font-medium uppercase tracking-widest text-xs">No premium registry designs available.</p>
+                <p className="text-white/40 font-medium uppercase tracking-widest text-xs">No luxury registry designs available.</p>
               </div>
             ) : (
-              // ✅ GRID FIX: Increased to 4 columns on desktop to reduce card size
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 lg:gap-8">
-                {premiumProducts.map((product) => (
+                {luxuryProducts.map((product) => (
                   <div key={product.id} className="group relative bg-[#252525] rounded-none overflow-hidden border border-white/5 hover:border-[#c9a96e]/30 transition-all duration-500 shadow-lg">
                     
-                    {/* Badge & Wishlist - Sized down */}
+                    {/* Badge & Wishlist */}
                     <div className="absolute top-3 left-3 z-20">
                       <span className="px-2 py-1 bg-[#c9a96e] text-[#1a1a1a] text-[9px] font-black uppercase tracking-wider">
-                        Premium
+                        Luxury
                       </span>
                     </div>
 
                     <button
                       onClick={(e) => toggleWishlist(e, product.id)}
-                      className={`absolute top-3 right-3 z-20 w-8 h-8 backdrop-blur-md rounded-full flex items-center justify-center transition-all ${
+                      className={`absolute top-3 right-3 z-20 w-8 h-8 backdrop-blur-md rounded-full flex items-center justify-center transition-all shadow-lg ${
                           wishlistState[product.id] ? 'bg-[#c9a96e] text-[#1a1a1a]' : 'bg-white/10 text-white/70 hover:bg-white/20'
                       }`}
                     >
@@ -127,7 +129,7 @@ const Premium = () => {
                         <div 
                           className="absolute inset-0 z-10 pointer-events-none opacity-[0.15]"
                           style={{
-                            backgroundImage: `url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='12' font-weight='900' fill='none' stroke='white' stroke-width='0.4' text-anchor='middle' transform='rotate(-35 40 40)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.4' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
                             backgroundRepeat: 'repeat'
                           }}
                         />
@@ -147,17 +149,17 @@ const Premium = () => {
                       </div>
                     </Link>
 
-                    {/* ✅ CONTENT FIX: Reduced padding and font sizes */}
                     <div className="p-5">
                       <h3 className="font-serif text-lg text-white mb-1 line-clamp-1 group-hover:text-[#c9a96e] transition-colors italic uppercase tracking-tight">
                         {product.title}
                       </h3>
-                      <p className="text-white/40 text-[11px] mb-4 line-clamp-2 leading-relaxed font-light">
+                      <p className="text-white/40 text-[11px] mb-4 line-clamp-2 leading-relaxed font-light font-sans">
                         {product.description}
                       </p>
-                      <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                      <div className="flex items-center justify-between pt-3 border-t border-white/5 font-sans">
                         <span className="font-serif text-xl text-[#c9a96e] font-bold">
-                          ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
+                          {/* ✅ Applied formatPrice for Luxury pricing */}
+                          {formatPrice(product.finalPriceCents)}
                         </span>
                         <span className="text-[8px] text-white/30 font-black uppercase tracking-[0.2em]">
                           Exclusive

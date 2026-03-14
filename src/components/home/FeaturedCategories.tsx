@@ -24,7 +24,7 @@ const FeaturedProducts = () => {
     const fetchFeatured = async () => {
       try {
         // ✅ Sync: Fetch real-time designs from Admin Service (Port 8080)
-        const response = await getDesigns({ limit: 4, trending: true });
+        const response = await getDesigns({ size: 4, trending: true });
         setProducts(response.content || []);
       } catch (error) {
         console.error('Failed to sync featured designs:', error);
@@ -115,9 +115,9 @@ const FeaturedProducts = () => {
                   />
                   
                   {/* Premium badge */}
-                  {product.premium && (
+                  {product.luxury && (
                     <span className="absolute left-3 top-3 z-20 rounded-sm bg-[#2A2623] px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm">
-                      Premium
+                      Luxury
                     </span>
                   )}
 

@@ -1,4 +1,3 @@
-// src/api/cartApi.ts
 import { cartApi } from './apiClient';
 
 // ==========================================
@@ -29,31 +28,41 @@ export interface CartSummary {
 
 /**
  * Fetch all items in the user's cart.
- * Base URL: VITE_CART_SERVICE_URL (e.g., http://localhost:8091/api/cart)
  */
 export const getCartItems = async (): Promise<CartItem[]> => {
-  // ✅ Data is already unwrapped by the interceptor in apiClient.ts
-  return await cartApi.get('/items');
+  try {
+    // ✅ Data is already unwrapped by the interceptor
+    const data = await cartApi.get('/items');
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error("Cart API Error (getCartItems):", error);
+    return []; // Return empty array to prevent .map() errors in UI
+  }
 };
 
 /**
- * ✅ Unified Cart Fetcher (Used by Header.tsx)
+ * ✅ Unified Cart Fetcher (Used by Header.tsx and useCart hook)
  * Aggregates items into a summary for easier UI rendering.
  */
 export const getCart = async (): Promise<CartSummary> => {
-  const items = await getCartItems();
-  
-  // Ensure items is an array before reducing to prevent crashes
-  const safeItems = Array.isArray(items) ? items : [];
-  
-  const subtotalCents = safeItems.reduce((acc, item) => acc + (item.totalPriceCents || 0), 0);
-  const totalItems = safeItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
-  
-  return {
-    items: safeItems,
-    subtotalCents,
-    totalItems
-  };
+  try {
+    const items = await getCartItems();
+    
+    // Safety check: ensure we are working with an array
+    const safeItems = Array.isArray(items) ? items : [];
+    
+    const subtotalCents = safeItems.reduce((acc, item) => acc + (item.totalPriceCents || 0), 0);
+    const totalItems = safeItems.reduce((acc, item) => acc + (item.quantity || 0), 0);
+    
+    return {
+      items: safeItems,
+      subtotalCents,
+      totalItems
+    };
+  } catch (error) {
+    console.error("Cart API Error (getCart):", error);
+    return { items: [], subtotalCents: 0, totalItems: 0 };
+  }
 };
 
 /**
@@ -93,10 +102,13 @@ export const clearCart = async (): Promise<void> => {
  * Get item count for navbar badges.
  */
 export const getCartCount = async (): Promise<number> => {
+  try {
     const data: any = await cartApi.get('/count');
-    // Interceptor returns the JSON body directly. 
-    // Handle both { count: 5 } or raw 5.
+    // Handle both { count: 5 } or raw 5 based on interceptor logic
     return typeof data === 'number' ? data : (data?.count || 0);
+  } catch (error) {
+    return 0; // Return 0 instead of crashing the Navbar
+  }
 };
 
 export default cartApi;

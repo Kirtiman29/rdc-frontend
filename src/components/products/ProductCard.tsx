@@ -1,3 +1,4 @@
+// src/components/products/ProductCard.tsx
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Heart, Loader2, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +8,8 @@ import { getAssetUrl } from '@/api/apiClient';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import type { Design } from '@/types/product';
+// ✅ Import the price utility
+import { formatPrice } from '@/utils/price';
 
 interface ProductCardProps {
   product: Design;
@@ -18,7 +21,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
   const [isWished, setIsWished] = useState(false);
   const [isWishloading, setIsWishloading] = useState(false);
 
-  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -29,10 +31,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
     let isMounted = true;
     const checkStatus = async () => {
       try {
-        /**
-         * ✅ PRODUCTION SYNC:
-         * Uses the unwrapped checkWishlistStatus which hits Port 8093.
-         */
         const wished = await checkWishlistStatus(product.id);
         if (isMounted) setIsWished(wished);
       } catch (error) {
@@ -79,15 +77,15 @@ const ProductCard = ({ product }: ProductCardProps) => {
   };
 
   return (
-    <div className="group animate-fade-in relative" onContextMenu={handleContextMenu}>
+    <div className="group animate-fade-in relative font-sans" onContextMenu={handleContextMenu}>
       <Link to={`/product/${product.id}`}>
         <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-sm bg-secondary select-none shadow-sm">
           
-          {/* ✅ RDC WATERMARK OVERLAY RESTORED */}
+          {/* RDC WATERMARK OVERLAY */}
           <div 
             className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
             style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.7' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.7' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
               backgroundRepeat: 'repeat'
             }}
           />
@@ -99,11 +97,10 @@ const ProductCard = ({ product }: ProductCardProps) => {
             className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
 
-          {/* Badges Section Restored */}
           <div className="absolute left-3 top-3 z-20 flex flex-col gap-2">
-            {product.premium && (
+            {product.luxury && (
               <span className="rounded-sm bg-[#2A2623] px-2 py-1 text-[10px] font-bold uppercase text-white shadow-sm">
-                Premium
+                Luxury
               </span>
             )}
             {product.discountPercent > 0 && (
@@ -113,7 +110,6 @@ const ProductCard = ({ product }: ProductCardProps) => {
             )}
           </div>
 
-          {/* Action Stack (Top-Right) Restored */}
           <div className="absolute right-3 top-3 z-30 flex flex-col gap-2 translate-x-2 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
             <button
               onClick={handleToggleWishlist}
@@ -130,14 +126,12 @@ const ProductCard = ({ product }: ProductCardProps) => {
             </div>
           </div>
 
-          {/* Availability Layer Restored */}
           {!product.active && (
             <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/80">
               <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Unavailable</span>
             </div>
           )}
 
-          {/* Add to Cart Button (Bottom) Restored */}
           {product.active && (
             <div className="absolute bottom-3 left-3 right-3 z-30 translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
               <Button
@@ -165,10 +159,17 @@ const ProductCard = ({ product }: ProductCardProps) => {
             {product.title}
           </h3>
         </Link>
+        
+        {/* ✅ Price Display Refactored for Whole Rupees */}
         <div className="flex items-center gap-2">
           <span className="font-bold text-[#2A2623]">
-            ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
+            {formatPrice(product.finalPriceCents)}
           </span>
+          {product.discountPercent > 0 && (
+            <span className="text-xs text-muted-foreground line-through font-light">
+              {formatPrice(product.basePriceCents)}
+            </span>
+          )}
         </div>
       </div>
     </div>

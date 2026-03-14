@@ -1,5 +1,6 @@
+//src/components/home/TrendingDesigns.tsx
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Heart, Eye, ShoppingBag, Loader2 } from 'lucide-react';
 import { getTrendingDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
@@ -7,14 +8,14 @@ import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
 import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
-
+import { formatPrice } from '@/utils/price';
 const TrendingDesigns = () => {
   const [products, setProducts] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
+  const navigate = useNavigate();
 
-  // ✅ Security: Restrict Right-Click
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
@@ -22,34 +23,28 @@ const TrendingDesigns = () => {
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        /** * ✅ PRODUCTION SYNC: 
-         * getTrendingDesigns returns unwrapped data from the unified apiClient interceptor.
-         */
-        const data: any = await getTrendingDesigns(30); 
-        
-        // Handle potential Pageable response or raw array
+        const data: any = await getTrendingDesigns(12); 
         const rawItems = Array.isArray(data) ? data : (data?.content || []);
 
-        // ✅ 1. Filter Trending -> 2. Sort Recent (ID Desc) -> 3. Slice top 8
         const filteredTrending = [...rawItems]
           .filter((product: Design) => product.trending === true)
-          .sort((a: Design, b: Design) => b.id - a.id)
+          .sort((a: Design, b: Design) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
           .slice(0, 8); 
 
         setProducts(filteredTrending);
 
-        /**
-         * ✅ PERFORMANCE FIX: Parallel Batch Check
-         * Replaced sequential loop with Promise.all to prevent request waterfalls.
-         */
-        const statusEntries = await Promise.all(
-          filteredTrending.map(async (product: Design) => {
-            const isWished = await checkWishlistStatus(product.id);
-            return [product.id, isWished];
-          })
-        );
-        
-        setWishlistState(Object.fromEntries(statusEntries));
+        const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+        if (token) {
+          const statusEntries = await Promise.all(
+            filteredTrending.map(async (product: Design) => {
+              const isWished = await checkWishlistStatus(product.id);
+              return [product.id, isWished];
+            })
+          );
+          setWishlistState(Object.fromEntries(statusEntries));
+        }
       } catch (error) {
         console.error('Failed to sync trending designs:', error);
       } finally {
@@ -62,17 +57,30 @@ const TrendingDesigns = () => {
   const handleAddToCart = async (e: React.MouseEvent, product: Design) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+
+    if (!token) {
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "Redirecting to login..."
+      });
+      setTimeout(() => navigate("/login"), 500);
+      return;
+    }
+
     try {
       await addToCart(product.id, 1);
       toast({ 
-        title: "Added to Cart", 
+        title: "Added to Bag", 
         description: `${product.title} has been added to your selection.` 
       });
     } catch (error) {
       toast({ 
         variant: "destructive", 
         title: "Cart Error", 
-        description: "Please login to manage your cart." 
+        description: "Something went wrong." 
       });
     }
   };
@@ -80,7 +88,21 @@ const TrendingDesigns = () => {
   const toggleWishlist = async (e: React.MouseEvent, product: Design) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+
+    if (!token) {
+      toast({
+        variant: "destructive",
+        title: "Login Required",
+        description: "Please login to save designs."
+      });
+      setTimeout(() => navigate("/login"), 500);
+      return;
+    }
+
     const isWished = wishlistState[product.id];
+
     try {
       if (isWished) {
         await removeFromWishlist(product.id);
@@ -90,13 +112,12 @@ const TrendingDesigns = () => {
       setWishlistState(prev => ({ ...prev, [product.id]: !isWished }));
       toast({ 
         title: isWished ? "Removed" : "Saved", 
-        description: "Your wishlist has been updated." 
+        description: "Your selection has been updated." 
       });
     } catch (error) {
       toast({ 
         variant: "destructive", 
-        title: "Wishlist Error", 
-        description: "You must be logged in to save designs." 
+        title: "Wishlist Error" 
       });
     }
   };
@@ -112,91 +133,90 @@ const TrendingDesigns = () => {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-20 md:py-28 bg-background" onContextMenu={handleContextMenu}>
+    <section className="py-20 md:py-28 bg-background font-sans" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex items-end justify-between mb-12">
-          {/* Header Section Restored */}
           <div>
-            <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">
+            <span className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
               Most Popular
             </span>
-            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2 text-[#2A2623]">
+            <h2 className="text-3xl md:text-4xl font-semibold mt-2 text-[#2A2623]">
               Trending Designs
             </h2>
           </div>
           <div className="hidden md:block">
             <Link 
-              to="/trends" 
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              to="/gallery" 
+              className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors border-b border-muted-foreground/30 pb-1"
             >
-              View All Trending Collection →
+              Explore Collection
             </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
           {products.map((product) => (
             <div key={product.id} className="group animate-fade-in">
-              <Link to={`/product/${product.id}`} className="block">
-                <div className="relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none">
-                  
-                  {/* High-Visibility Watermark Overlay */}
-                  <div 
-                    className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
-                    style={{
-                      backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='Arial, sans-serif' font-size='22' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
-                      backgroundRepeat: 'repeat'
-                    }}
-                  />
+              <Link to={`/product/${product.id}`} className="block relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none rounded-sm">
+                
+                {/* Watermark Overlay */}
+                <div 
+                  className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
+                  style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='22' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
+                    backgroundRepeat: 'repeat'
+                  }}
+                />
 
-                  <img
-                    src={getAssetUrl(product.assetUuid)}
-                    alt={product.title}
-                    draggable={false}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  
-                  {/* Actions Restored */}
-                  <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
-                    <button 
-                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors shadow-md ${
-                        wishlistState[product.id] ? 'bg-primary text-primary-foreground' : 'bg-background text-foreground hover:bg-secondary'
-                      }`}
-                      onClick={(e) => toggleWishlist(e, product)}
-                    >
-                      <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
-                    </button>
-                    <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center text-foreground hover:bg-secondary transition-colors shadow-md">
-                      <Eye className="h-4 w-4" />
-                    </div>
-                  </div>
-
-                  {/* Add To Cart Button Restored */}
+                <img
+                  src={getAssetUrl(
+                    product.media?.find(m => m.role === "COVER")?.url || product.assetUuid
+                  )}
+                  alt={product.title}
+                  draggable={false}
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                />
+                
+                {/* Actions Layer */}
+                <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
                   <button 
-                    className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20 shadow-lg"
-                    onClick={(e) => handleAddToCart(e, product)}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-md ${
+                      wishlistState[product.id] ? 'bg-[#2A2623] text-white' : 'bg-white text-[#2A2623] hover:bg-slate-50'
+                    }`}
+                    onClick={(e) => toggleWishlist(e, product)}
                   >
-                    <ShoppingBag className="h-4 w-4" />
-                    Add to Cart
+                    <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
                   </button>
 
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
+                  <div className="w-9 h-9 bg-white text-[#2A2623] rounded-full flex items-center justify-center shadow-md hover:bg-slate-50 transition-all">
+                    <Eye className="h-4 w-4" />
+                  </div>
                 </div>
+
+                <button 
+                  className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20 shadow-lg"
+                  onClick={(e) => handleAddToCart(e, product)}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  Add to Cart
+                </button>
+
+                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
               </Link>
 
-              <div className="space-y-1">
+              <div className="space-y-1 px-1">
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-serif text-lg text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1 italic">
+                  <h3 className="font-sans text-lg font-medium text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1">
                     {product.title}
                   </h3>
                 </Link>
-                <p className="text-sm font-medium text-slate-600">
-                  ₹{(product.finalPriceCents / 100).toLocaleString('en-IN')}
-                </p>
+                <p className="text-sm text-slate-500 font-bold">
+  {formatPrice(product.finalPriceCents || product.basePriceCents)}
+</p>
               </div>
             </div>
           ))}
-        </div>
+        </div>  
       </div>
     </section>
   );

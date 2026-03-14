@@ -41,7 +41,7 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
          */
         const response: any = await getDesigns({ 
           search: lowerQuery, 
-          limit: 10 
+          size: 10 
         });
         
         const content = response?.content || (Array.isArray(response) ? response : []);
@@ -157,7 +157,7 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
                 Popular Searches
               </p>
               <div className="flex flex-wrap gap-2">
-                {['Menswear', 'Womenswear', 'Floral', 'Premium', 'Special Offer'].map((term) => (
+                {['Menswear', 'Womenswear', 'Floral', 'Luxury', 'Special Offer'].map((term) => (
                   <button
                     key={term}
                     onClick={() => setQuery(term)}

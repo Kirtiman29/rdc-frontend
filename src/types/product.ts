@@ -18,51 +18,60 @@ export interface DesignMedia {
 }
 
 /**
- * ✅ UPDATED: Industrial Design Entity
- * Includes the designIdentifier (SKU) used for catalog management.
+ * ✅ UPDATED: Industrial Design Entity with Specifications
+ * This matches your backend schema for Textile/Graphic Design Marketplace
  */
 export interface Design {
   id: number;
   title: string;
   description: string;
   slug: string;
-  designIdentifier: string; // ⬅️ NEW: The Alphanumeric SKU (e.g., RDC-2024-001)
+  designIdentifier: string; // The Alphanumeric SKU (e.g., AG-WOMEN-001)
   assetUuid: string; 
   basePriceCents: number;
   finalPriceCents: number;
   discountPercent: number;
   specialOffer: boolean;
-  premium: boolean;
+  
+  // High-level Flags
+  luxury: boolean;
   newArrival: boolean;
   trending: boolean;
   editorsPick: boolean;
   active: boolean;
   draft: boolean;
-  segment: 'MENSWEAR' | 'WOMENSWEAR' | 'KIDSWEAR' | 'HOME_INTERIOR';
-  media: DesignMedia[]; 
-  category?: Category;
+  
+  // Classification
+  // Classification
+segment?: 'MENSWEAR' | 'WOMENSWEAR' | 'KIDSWEAR' | 'HOME_INTERIOR' | 'ACCESSORIES';
+segments?: (
+  | 'MENSWEAR'
+  | 'WOMENSWEAR'
+  | 'KIDSWEAR'
+  | 'HOME_INTERIOR'
+  | 'ACCESSORIES'
+)[];
+  
+  // Industrial Specifications
+  imageFormat?: string;   // e.g. TIFF, PSD, PNG
+  imageType?: string;     // e.g. VECTOR, BITMAP
+  repeatSize?: string;    // e.g. 64x64
+  colorCount?: number;    // e.g. 12
+  resolution?: string;    // e.g. 300 DPI
+  designType?: string;    // e.g. DIGITAL, ROTARY
+
+  // Relationships & Collections
+  categories?: Category[]; // Multi-category support
+  category?: Category;     // Legacy single category support
   tags: string[];
+  media: DesignMedia[]; 
+  
   createdAt: string;
   updatedAt?: string;
 }
 
 /**
- * ✅ UPDATED: Order Item Snapshot
- * Matches the order_items table structure where the SKU is persisted permanently.
- */
-export interface OrderItemResponse {
-  id: number;
-  designId: number;
-  designIdentifier: string; // ⬅️ NEW: Fetched from order_items table
-  assetUuid: string;
-  designTitle: string;
-  quantity: number;
-  priceCents: number;
-  totalPriceCents: number;
-}
-
-/**
- * ✅ NEW: Matches Order Service OrderResponse 
+ * Matches Order Service OrderResponse 
  */
 export interface OrderResponse {
   id: number;
@@ -75,16 +84,34 @@ export interface OrderResponse {
 }
 
 /**
+ * Order Item Snapshot
+ */
+export interface OrderItemResponse {
+  id: number;
+  designId: number;
+  designIdentifier: string; 
+  assetUuid: string;
+  designTitle: string;
+  quantity: number;
+  priceCents: number;
+  totalPriceCents: number;
+}
+
+/**
  * Standardized Filters for Spring Boot Pageable
+ * Used for catalog searching and gallery filtering
  */
 export interface DesignFilters {
-  page?: number;
-  limit?: number; 
-  category?: number | string;
-  segment?: string;
+  // Spring Boot Pagination Parameters
+  page?: number;  // The zero-based page index
+  size?: number;  // The size of the page (Replaces 'limit')
+  
+  // Business Logic Filters
+  categoryId?: number;
+  segment?: string | string[];
   minPrice?: number;
   maxPrice?: number;
-  premium?: boolean;
+  luxury?: boolean;
   trending?: boolean;
   newArrival?: boolean;
   editorsPick?: boolean;
@@ -93,6 +120,10 @@ export interface DesignFilters {
   sortBy?: string;
 }
 
+/**
+ * Full Spring Data Page Wrapper
+ * Use this when fetching designs from the API
+ */
 export interface DesignsResponse {
   content: Design[];
   totalElements: number;

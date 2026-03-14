@@ -4,11 +4,10 @@ import { clearTokens, applyIndustrialInterceptors } from './apiClient';
 /** * ✅ PRODUCTION URL: Fetched from .env 
  * Standardized to hit the /auth context path of the Auth Service
  */
-const AUTH_BASE_URL = `${import.meta.env.VITE_AUTH_SERVICE_URL}/auth`;
+const AUTH_BASE_URL = `${import.meta.env.VITE_AUTH_SERVICE_URL}/auth`.replace(/([^:]\/)\/+/g, "$1");
 
 /**
  * ✅ Public Instance: Used for Login, Signup, and Password recovery.
- * These endpoints do not require an existing token.
  */
 export const authApi = axios.create({
   baseURL: AUTH_BASE_URL,
@@ -17,19 +16,19 @@ export const authApi = axios.create({
 
 /**
  * ✅ Private Instance: Used for Profile Management (/me).
- * Uses the industrial interceptor for automatic data unwrapping.
  */
 export const profileApi = axios.create({
   baseURL: AUTH_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Apply the centralized industrial interceptors for the profile service
-// This handles Bearer token attachment and response.data unwrapping
+/**
+ * ✅ FIX 5: Apply Interceptors to both
+ * This ensures that if any auth endpoint needs a token (like profile) 
+ * or needs response unwrapping, it's handled consistently.
+ */
+applyIndustrialInterceptors(authApi);
 applyIndustrialInterceptors(profileApi);
-
-// For the public api, we only want the data unwrapper, not the token attachment
-authApi.interceptors.response.use((response) => response.data);
 
 /**
  * ✅ Register User (Auth Service)
@@ -54,14 +53,13 @@ export const loginWithGoogle = async (idToken: string) => {
 
 /**
  * ✅ Fetch User Profile
- * Uses the profileApi which automatically handles JWT injection
  */
 export const getProfile = async () => {
   return await profileApi.get('/me');
 };
 
 /**
- * ✅ Global Logout: Purges local security context
+ * ✅ Global Logout
  */
 export const logoutUser = () => {
   clearTokens();

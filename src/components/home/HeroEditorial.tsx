@@ -1,3 +1,4 @@
+// src/components/home/HeroEditorial
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
@@ -30,7 +31,7 @@ const HeroEditorial = () => {
   useEffect(() => {
     const fetchAllCategories = async () => {
       try {
-        const response: any = await getDesigns({ limit: 50 }); 
+        const response: any = await getDesigns({ size: 50 }); 
         const allFetched = response?.content || (Array.isArray(response) ? response : []);
 
         if (allFetched.length === 0) {
@@ -40,7 +41,7 @@ const HeroEditorial = () => {
 
         const categoryConfigs = [
           { label: 'TRENDING DESIGNS', subtitle: 'COLOURFUL, GEOMETRICAL AND SOPHISTICATED', filter: (d: Design) => d.trending === true, link: '/trends' },
-          { label: 'LUXURY PATTERNS', subtitle: 'EXCLUSIVE, REFINED AND PREMIUM', filter: (d: Design) => d.premium === true, link: '/premium' },
+          { label: 'LUXURY PATTERNS', subtitle: 'EXCLUSIVE, REFINED AND PREMIUM', filter: (d: Design) => d.luxury === true, link: '/luxury' },
           { label: 'NEW ARRIVALS', subtitle: 'MODERN, INNOVATIVE AND FRESH', filter: (d: Design) => d.newArrival === true, link: '/gallery?newArrival=true' },
           { label: "EDITORS' CHOICE", subtitle: 'CURATED, AUTHENTIC AND UNIQUE', filter: (d: Design) => d.editorsPick === true, link: '/gallery?editorsPick=true' },
           { label: 'SPECIAL OFFERS', subtitle: 'LIMITED, ACCESSIBLE AND ELITE', filter: (d: Design) => d.specialOffer === true, link: '/special-offers' },
@@ -157,7 +158,7 @@ const HeroEditorial = () => {
               <p className="text-[7px] sm:text-[10px] md:text-xs uppercase tracking-[0.35em] font-medium text-[#6b7280] mb-2 sm:mb-5">
                 {currentSlide.subtitle}
               </p>
-              <h1 className="font-serif text-lg sm:text-4xl md:text-6xl lg:text-7xl font-normal text-[#1a1a1a] leading-tight tracking-tight mb-4 sm:mb-10 italic">
+              <h1 className="font-serif text-lg sm:text-4xl md:text-6xl lg:text-7xl font-normal text-[#1a1a1a] leading-tight tracking-tight mb-4 sm:mb-10">
                 {currentSlide.label}
               </h1>
               <Button

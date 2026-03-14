@@ -1,7 +1,5 @@
 // src/components/hooks/useCart.ts
-// ✅ FIXED: Transitioned from in-memory to Port 8091 Persistence
-
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   getCart, 
   addToCart as apiAddToCart, 
@@ -17,22 +15,32 @@ export const useCart = () => {
   const [items, setItems] = useState<ApiCartItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const isInitialMount = useRef(true);
 
-  // ✅ Fetch cart data from Port 8091
   const fetchCart = useCallback(async () => {
-    if (!getToken()) return;
+    const token = getToken();
+    if (!token) {
+      // If no token, reset state and stop to prevent infinite loops
+      setItems([]);
+      setTotalCount(0);
+      return;
+    }
+
     try {
       const summary = await getCart();
-      setItems(summary.items);
+      // Only update if data actually changed to prevent render cycles
+      setItems(prev => JSON.stringify(prev) === JSON.stringify(summary.items) ? prev : summary.items);
       setTotalCount(summary.totalItems);
     } catch (error) {
       console.error('Failed to sync cart:', error);
     }
   }, []);
 
-  // Initial load
   useEffect(() => {
-    fetchCart();
+    if (isInitialMount.current) {
+      fetchCart();
+      isInitialMount.current = false;
+    }
   }, [fetchCart]);
 
   const addToCart = useCallback(async (product: Design) => {
@@ -47,10 +55,8 @@ export const useCart = () => {
 
     setLoading(true);
     try {
-      // ✅ Persist to Cart DB (Port 8091)
       await apiAddToCart(product.id, 1);
-      await fetchCart(); // Refresh local state
-      
+      await fetchCart();
       toast({
         title: "Added to cart",
         description: `${product.title} has been added to your cart.`,
@@ -59,7 +65,7 @@ export const useCart = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Could not add item to cart. Please try again.",
+        description: "Could not add item to cart.",
       });
     } finally {
       setLoading(false);

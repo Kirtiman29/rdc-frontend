@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ProductFilter, Category } from '@/types/product';
-import { X, Filter, Loader2 } from 'lucide-react';
+import { X, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -47,10 +47,6 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        /**
-         * ✅ PRODUCTION SYNC:
-         * getCategories now returns the raw array from the interceptor.
-         */
         const data = await getCategories();
         setDbCategories(Array.isArray(data) ? data : []);
       } catch (error) {
@@ -62,23 +58,31 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
     fetchCategories();
   }, []);
 
-  const handleCategoryChange = (tagName: string, checked: boolean) => {
+  const handleCategoryChange = (categoryId: number, checked: boolean) => {
     onFiltersChange({
       ...filters,
-      search: checked ? tagName.toLowerCase() : undefined,
+      categoryId: checked ? categoryId : undefined,
+      page: 0,
     });
   };
 
   const handleSegmentChange = (segment: string, checked: boolean) => {
-    onFiltersChange({ ...filters, segment: checked ? segment : undefined });
+    onFiltersChange({ 
+      ...filters, 
+      segment: checked ? segment : undefined, 
+      page: 0 
+    });
   };
 
   const clearFilters = () => {
-    onFiltersChange({ sortBy: filters.sortBy });
+    onFiltersChange({ 
+      sortBy: 'createdAt,desc',
+      page: 0 
+    });
   };
 
-  const hasActiveFilters = Object.values(filters).some(
-    (v) => v !== undefined && v !== false && v !== ''
+  const hasActiveFilters = Object.entries(filters).some(
+    ([key, v]) => key !== 'sortBy' && key !== 'page' && v !== undefined && v !== false && v !== ''
   );
 
   return (
@@ -95,7 +99,7 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
         </Button>
       )}
 
-      {/* Segments Section Restored */}
+      {/* Market Segments */}
       <div>
         <h4 className="mb-4 font-serif text-sm font-medium uppercase tracking-wider">Market Segment</h4>
         <div className="space-y-3">
@@ -114,19 +118,19 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
         </div>
       </div>
 
-      {/* Collections Section Restored */}
+      {/* Collections */}
       <div>
         <h4 className="mb-4 font-serif text-sm font-medium uppercase tracking-wider">Collections</h4>
         {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <p className="text-xs text-muted-foreground animate-pulse">Loading collections...</p>
         ) : (
           <div className="space-y-3">
             {dbCategories.map((cat) => (
               <div key={cat.id} className="flex items-center space-x-3">
                 <Checkbox
                   id={`cat-${cat.id}`}
-                  checked={filters.search === cat.name.toLowerCase()}
-                  onCheckedChange={(checked) => handleCategoryChange(cat.name, !!checked)}
+                  checked={filters.categoryId === cat.id}
+                  onCheckedChange={(checked) => handleCategoryChange(cat.id, !!checked)}
                 />
                 <Label htmlFor={`cat-${cat.id}`} className="text-sm font-normal cursor-pointer">
                   {cat.name}
@@ -137,25 +141,83 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
         )}
       </div>
 
-      {/* Attributes Section Restored */}
+      {/* Attributes Section - UPDATED TO USE 'luxury' */}
       <div>
-        <h4 className="mb-4 font-serif text-sm font-medium uppercase tracking-wider">Attributes</h4>
+        <h4 className="mb-4 font-serif text-sm font-medium uppercase tracking-wider">
+          Attributes
+        </h4>
+
         <div className="space-y-3">
+          {/* Luxury (mapped to luxury) */}
           <div className="flex items-center space-x-3">
             <Checkbox
-              id="attr-premium"
-              checked={!!filters.premium}
-              onCheckedChange={(checked) => onFiltersChange({ ...filters, premium: !!checked })}
+              id="attr-luxury"
+              checked={!!filters.luxury}
+              onCheckedChange={(checked) =>
+                onFiltersChange({
+                  ...filters,
+                  luxury: !!checked,
+                  page: 0
+                })
+              }
             />
-            <Label htmlFor="attr-premium" className="text-sm font-normal cursor-pointer">Premium Only</Label>
+            <Label htmlFor="attr-luxury" className="text-sm font-normal cursor-pointer">
+              Luxury Designs
+            </Label>
           </div>
+
+          {/* Trending */}
           <div className="flex items-center space-x-3">
             <Checkbox
               id="attr-trending"
               checked={!!filters.trending}
-              onCheckedChange={(checked) => onFiltersChange({ ...filters, trending: !!checked })}
+              onCheckedChange={(checked) =>
+                onFiltersChange({
+                  ...filters,
+                  trending: !!checked,
+                  page: 0
+                })
+              }
             />
-            <Label htmlFor="attr-trending" className="text-sm font-normal cursor-pointer">Trending</Label>
+            <Label htmlFor="attr-trending" className="text-sm font-normal cursor-pointer">
+              Trending
+            </Label>
+          </div>
+
+          {/* Editors Pick */}
+          <div className="flex items-center space-x-3">
+            <Checkbox
+              id="attr-editors"
+              checked={!!filters.editorsPick}
+              onCheckedChange={(checked) =>
+                onFiltersChange({
+                  ...filters,
+                  editorsPick: !!checked,
+                  page: 0
+                })
+              }
+            />
+            <Label htmlFor="attr-editors" className="text-sm font-normal cursor-pointer">
+              Editor's Choice
+            </Label>
+          </div>
+
+          {/* New Arrival */}
+          <div className="flex items-center space-x-3">
+            <Checkbox
+              id="attr-new"
+              checked={!!filters.newArrival}
+              onCheckedChange={(checked) =>
+                onFiltersChange({
+                  ...filters,
+                  newArrival: !!checked,
+                  page: 0
+                })
+              }
+            />
+            <Label htmlFor="attr-new" className="text-sm font-normal cursor-pointer">
+              New Arrival
+            </Label>
           </div>
         </div>
       </div>
@@ -165,7 +227,7 @@ const FilterContent = ({ filters, onFiltersChange }: Omit<ProductFiltersProps, '
 
 const ProductFilters = ({ filters, onFiltersChange, productCount }: ProductFiltersProps) => {
   const handleSortChange = (value: string) => {
-    onFiltersChange({ ...filters, sortBy: value });
+    onFiltersChange({ ...filters, sortBy: value, page: 0 });
   };
 
   return (
