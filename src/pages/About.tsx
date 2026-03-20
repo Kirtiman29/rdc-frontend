@@ -21,115 +21,109 @@ const About = () => {
           </div>
 
           {/* Content */}
-          <div className="space-y-12 md:space-y-16">
-            
-            {/* Our Vision */}
-            <section className="text-center">
-              <h2 className="text-sm font-medium uppercase tracking-widest text-primary mb-4">
-                Textile Innovation. Global Production. Digital Speed.
-              </h2>
-              <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
-                Ruchita Design Company (RDC) is a premier digital destination for textile innovation, bridging the gap between world-class creative vision and global industrial production. At the forefront of an ever-evolving industry, we are redefining how textile designs are sourced, licensed, and integrated into the modern supply chain.
-              </p>
-            </section>
+<div className="space-y-12 md:space-y-16">
 
-            {/* Our Identity */}
-            <section>
-              <h2 className="font-serif text-2xl md:text-3xl font-medium mb-6">
-                The Synthesis of Art and Industry
-              </h2>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                At Ruchita Design Company, we have synthesized years of design mastery with deep-rooted expertise in textile manufacturing, global trend-forecasting, and digital technology. Our mission has been to evolve into the industry's go-to virtual textile studio platform—providing a seamless, high-end design experience for the world's most discerning brands.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                By merging artistic soul with technical precision, we deliver a streamlined digital solution that empowers our clients to stay ahead of the curve.
-              </p>
-            </section>
+  {/* Intro */}
+  <section className="text-center">
+    <h2 className="text-sm font-medium uppercase tracking-widest text-primary mb-4">
+      Built for Modern Textile Production
+    </h2>
+    <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-3xl mx-auto">
+      RDC Studio is a modern digital textile studio built for today’s fast-moving
+      design and manufacturing world. We simplify how textile designs are discovered,
+      selected, and brought into production—bridging strong creative vision with real-world
+      manufacturing needs.
+    </p>
+  </section>
 
-            {/* Our Foundation */}
-            <section>
-              <h2 className="font-serif text-2xl md:text-3xl font-medium mb-6">
-                History & Leadership
-              </h2>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                Founded in 2020 by a visionary team of industry insiders, Ruchita Design Company was established with a singular mission: to empower global brands by making the sourcing of world-class textile design more seamless and accessible than ever before.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                Led by Directors Ruchita Gudhka and Vatsal Gudhka, we connect the industry's most sophisticated creative talent with market leaders across the worlds of Fashion, Homeware, Interiors, and Lifestyle. As a specialized B2B service and design platform, we offer a high-speed, streamlined experience where clients can discover curated artwork and instantly acquire production-ready digital files.
-              </p>
-            </section>
+  {/* What We Do */}
+  <section>
+    <h2 className="font-serif text-2xl md:text-3xl font-medium mb-6">
+      Designs That Perform Beyond the Screen
+    </h2>
+    <p className="text-muted-foreground leading-relaxed mb-4">
+      At RDC, we don’t just create patterns—we create designs that are ready to perform
+      visually, technically, and commercially. Our platform gives brands 24/7 access to
+      a curated library of production-ready surface patterns aligned with global trends.
+    </p>
+    <p className="text-muted-foreground leading-relaxed">
+      Whether you're an emerging label or an established manufacturer, RDC helps you
+      move faster—from idea to execution—without unnecessary delays or guesswork.
+    </p>
+  </section>
 
-           {/* The Collection */}
-<section>
-  <h2 className="font-serif text-2xl md:text-3xl font-medium mb-8">
-    Curated for Excellence. Engineered for Production.
-  </h2>
+  {/* What Makes Us Different */}
+  <section>
+    <h2 className="font-serif text-2xl md:text-3xl font-medium mb-6">
+      What Makes RDC Different
+    </h2>
+    <p className="text-muted-foreground leading-relaxed mb-4">
+      In the textile industry, a good design is not enough—it must translate seamlessly
+      into production. That’s where RDC stands apart.
+    </p>
 
-  <ul className="space-y-8">
-    <li className="flex gap-4">
-      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
-      <div>
-        <h3 className="text-foreground font-medium mb-2">
-          Seamless Navigation
-        </h3>
-        <p className="text-muted-foreground leading-relaxed">
-          Our intuitive platform is designed for the modern buyer. A simple-to-use
-          search and filtering system enables you to effortlessly navigate through
-          our collection—from latest trend arrivals to extensive archives.
-        </p>
-      </div>
-    </li>
+    <ul className="space-y-4">
+      <li className="flex gap-3">
+        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
+        <p className="text-muted-foreground">Thoughtful research behind every design</p>
+      </li>
+      <li className="flex gap-3">
+        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
+        <p className="text-muted-foreground">Strong color understanding and trend alignment</p>
+      </li>
+      <li className="flex gap-3">
+        <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
+        <p className="text-muted-foreground">Deep practical knowledge of textile manufacturing</p>
+      </li>
+    </ul>
 
-    <li className="flex gap-4">
-      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
-      <div>
-        <h3 className="text-foreground font-medium mb-2">
-          Flexible Licensing
-        </h3>
-        <p className="text-muted-foreground leading-relaxed">
-          We offer several license formats tailored to your specific needs,
-          whether for exclusive commercial use or specialized industrial projects.
-        </p>
-      </div>
-    </li>
+    <p className="text-muted-foreground leading-relaxed mt-4">
+      This ensures that what you see on screen is exactly what works in real production.
+    </p>
+  </section>
 
-    <li className="flex gap-4">
-      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-primary shrink-0"></span>
-      <div>
-        <h3 className="text-foreground font-medium mb-2">
-          Instant Delivery
-        </h3>
-        <p className="text-muted-foreground leading-relaxed">
-          From secure payment to the direct download of high-resolution digital
-          files, the entire transaction is completed within the secure RDC
-          platform—ensuring you move from inspiration to production without delay.
-        </p>
-      </div>
-    </li>
-  </ul>
-</section>
+  {/* Approach */}
+  <section>
+    <h2 className="font-serif text-2xl md:text-3xl font-medium mb-6">
+      Our Approach
+    </h2>
+    <p className="text-muted-foreground leading-relaxed mb-4">
+      We combine creativity with clarity. Art with application. Design with purpose.
+    </p>
+    <p className="text-muted-foreground leading-relaxed">
+      Our goal is simple—to give brands designs they can trust. From curated collections
+      to ready-to-download files, everything at RDC is built to save time, reduce errors,
+      and support better decision-making.
+    </p>
+  </section>
 
+  {/* Founder Story */}
+  <section>
+    <h2 className="font-serif text-2xl md:text-3xl font-medium mb-6">
+      Our Founder’s Vision
+    </h2>
+    <p className="text-muted-foreground leading-relaxed mb-4">
+      In 2020, Ruchita Gudhka started her textile design studio with one clear mission:
+      to create designs that don’t just look good on screen but also work in real production.
+    </p>
+    <p className="text-muted-foreground leading-relaxed">
+      With years of experience in the fashion industry, she identified a major gap—many
+      designs lacked proper research and technical understanding, leading to delays and
+      inefficiencies for manufacturers. RDC was built to solve this problem through
+      in-house research, ready-to-print designs, and a deep understanding of real
+      manufacturing needs.
+    </p>
+  </section>
 
-            {/* Inspiration & Trends */}
-            <section>
-              <h2 className="font-serif text-2xl md:text-3xl font-medium mb-6">
-                The Pulse of Global Culture
-              </h2>
-              <p className="text-muted-foreground leading-relaxed mb-4">
-                Our specialized trends team acts as the heartbeat of the RDC Studio. From international catwalks and emerging street style to contemporary art exhibitions and global trade shows—we analyze the shifts so you don't have to. 
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                We translate complex cultural movements into actionable design insights, ensuring that when you partner with us, your brand isn't just following the curve—it's staying ahead of it.
-              </p>
-            </section>
+  {/* Closing */}
+  <section className="text-center pt-8 border-t border-border">
+    <blockquote className="font-serif text-xl md:text-2xl italic text-foreground/80 max-w-2xl mx-auto">
+      "More than just a design library—RDC is a complete system built for real brands,
+      real production, and real results."
+    </blockquote>
+  </section>
 
-            {/* Mission Statement / Quote */}
-            <section className="text-center pt-8 border-t border-border">
-              <blockquote className="font-serif text-xl md:text-2xl italic text-foreground/80 max-w-2xl mx-auto">
-                "We provide brands with 24/7 access to high-caliber, production-ready patterns engineered for technical precision and designed to lead global trends."
-              </blockquote>
-            </section>
-          </div>
+</div>
         </div>
       </main>
 

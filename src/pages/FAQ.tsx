@@ -9,35 +9,55 @@ import {
 
 const FAQ = () => {
   const faqs = [
-    {
-      question: 'What file format are the designs delivered in?',
-      answer: 'All our designs are delivered as high-resolution TIFF files, ensuring maximum quality for professional printing and production. Files are typically 300 DPI or higher and include seamless repeat information where applicable.',
-    },
-    {
-      question: 'Can I use the designs for commercial purposes?',
-      answer: 'Yes, all purchases include a commercial license that allows you to use the designs for manufacturing and selling products. Please review our Terms & Conditions for specific usage rights and limitations.',
-    },
-    {
-      question: 'How do I download my purchased designs?',
-      answer: 'After completing your purchase, you will receive an email with a download link. You can also access your purchased designs anytime from your account dashboard under "My Orders".',
-    },
-    {
-      question: 'Do you offer custom design services?',
-      answer: 'Yes, we offer custom design services for brands looking for exclusive patterns. Please contact us through our Contact page to discuss your requirements and receive a quote.',
-    },
-    {
-      question: 'What is your refund policy?',
-      answer: 'Due to the digital nature of our products, we do not offer refunds once a design has been downloaded. However, if you experience any technical issues, please contact our support team and we will assist you.',
-    },
-    {
-      question: 'How often do you release new designs?',
-      answer: 'We release new collections seasonally, with additional individual designs added throughout the year. Subscribe to our newsletter to stay updated on new releases.',
-    },
-    {
-      question: 'Do you offer bulk discounts?',
-      answer: 'Yes, we offer volume discounts for bulk purchases. Please contact our sales team for pricing on orders of 100 or more designs.',
-    },
-  ];
+  {
+    question: 'What file formats are included with my purchase?',
+    answer: 'You will receive your textile design in multiple high-resolution formats including JPG, TIFF, and PSD. These files are suitable for editing, textile printing, and professional production workflows.',
+  },
+  {
+    question: 'Are the files editable?',
+    answer: 'Yes, the designs are provided with editable files, allowing you to adjust colors, scale, and repeat settings based on your production requirements.',
+  },
+  {
+    question: 'Will I receive seamless repeat patterns?',
+    answer: 'Yes, all our designs are created as seamless repeat patterns, ensuring smooth and continuous printing on fabric without visible gaps or breaks.',
+  },
+  {
+    question: 'Can I use the designs for commercial purposes?',
+    answer: 'Yes, all designs can be used for commercial purposes including garments, fashion products, and fabric-based items. Please refer to our Terms & Conditions for detailed usage rights.',
+  },
+  {
+    question: 'How do I download my purchased designs?',
+    answer: 'After completing your purchase, you will receive an email with a download link within 24 hours. You can also access your files anytime from your account dashboard under "My Orders".',
+  },
+  {
+    question: 'Do you offer exclusive textile designs?',
+    answer: 'Yes, we offer exclusive designs for single-buyer use. Once purchased as exclusive, the design will not be sold to other customers.',
+  },
+  {
+    question: 'Can I request customization or a custom textile design?',
+    answer: 'Yes, we offer custom design services. You can contact us at crm@ruchitadesigncompany.com to discuss your requirements.',
+  },
+  {
+    question: 'Are the designs suitable for digital fabric printing?',
+    answer: 'Yes, all designs are created in high resolution and are fully suitable for digital fabric printing, ensuring clear and high-quality output.',
+  },
+  {
+    question: 'Are the designs suitable for fashion and home textiles?',
+    answer: 'Yes, our designs are suitable for a wide range of applications including fashion garments, apparel, and home décor textiles.',
+  },
+  {
+    question: 'Do you offer bulk purchases or wholesale pricing?',
+    answer: 'Yes, we offer bulk purchasing options and wholesale pricing. Please contact us at crm@ruchitadesigncompany.com for more details.',
+  },
+  {
+    question: 'What is the quality of the designs for printing?',
+    answer: 'All designs are created in high resolution (300 DPI or higher), ensuring excellent clarity and professional quality for textile printing.',
+  },
+  {
+    question: 'How can I contact you for design inquiries?',
+    answer: 'You can contact us anytime at crm@ruchitadesigncompany.com for design inquiries, support, or custom requests.',
+  },
+];
 
   return (
     <div className="min-h-screen bg-background">

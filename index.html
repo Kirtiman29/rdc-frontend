@@ -100,20 +100,22 @@ font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
 
 <body>
 
-<!-- SEO fallback content for crawlers -->
+<!-- SEO fallback (safe, won't break UI) -->
 <noscript>
-<h1>Premium Textile Design Marketplace</h1>
-<p>
-RDC is a premium textile design marketplace offering high-quality textile patterns
-for fashion designers, garment manufacturers, and fabric printing companies.
-Explore a curated library of professional textile designs for commercial use.
-</p>
+<div>
+  <h1>Premium Textile Design Marketplace</h1>
+  <p>
+    RDC is a premium textile design marketplace offering high-quality textile patterns
+    for fashion designers, garment manufacturers, and fabric printing companies.
+  </p>
+</div>
 </noscript>
 
+<!-- React Root -->
 <div id="root"></div>
 
+<!-- ⚠️ IMPORTANT: ye path correct hona chahiye -->
 <script type="module" src="/src/main.tsx"></script>
 
 </body>
-
 </html>

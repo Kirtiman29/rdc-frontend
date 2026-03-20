@@ -1,20 +1,17 @@
-# RDC Textile Design Marketplace
-# AI and LLM access policy
-
-User-Agent: GPTBot
+# =========================
+# AI / LLM CRAWL POLICY
+# =========================
+User-agent: GPTBot
 Allow: /
 
-User-Agent: ChatGPT-User
+User-agent: ChatGPT-User
 Allow: /
 
-User-Agent: ClaudeBot
+User-agent: ClaudeBot
 Allow: /
 
-User-Agent: PerplexityBot
+User-agent: PerplexityBot
 Allow: /
 
-User-Agent: Google-Extended
-Allow: /
-
-User-Agent: *
+User-agent: Google-Extended
 Allow: /

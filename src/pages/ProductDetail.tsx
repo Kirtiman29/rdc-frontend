@@ -365,7 +365,7 @@ const ProductDetail = () => {
                     <div className="flex flex-col gap-1.5">
                         <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Image Type</span>
                         <span className="text-xs font-medium text-[#1A1A1A]">
-                            {product.imageType || 'Raster'}
+                            {product.imageType || 'N/A'}
                         </span>
                     </div>
                     <div className="flex flex-col gap-1.5">

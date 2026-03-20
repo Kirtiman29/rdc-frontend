@@ -84,7 +84,7 @@ const ShopByCategory = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
           <div className="text-left">
             <span className="text-xs font-medium uppercase tracking-[0.3em] text-muted-foreground">Explore</span>
-            <h2 className="font-serif text-3xl md:text-4xl font-medium mt-2">Shop by Category</h2>
+            <h2 className="text-3xl md:text-4xl font-semibold mt-2 text-[#2A2623]">Shop by Category</h2>
           </div>
           <Link to="/gallery" className="group flex items-center gap-2 text-xs font-bold uppercase tracking-widest hover:opacity-70 transition-opacity">
             View All Collections

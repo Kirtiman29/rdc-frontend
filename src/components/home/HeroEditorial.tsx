@@ -68,26 +68,34 @@ const HeroEditorial = () => {
     fetchAllCategories();
   }, []);
 
+  // ✅ Stable slide transition logic
   const goToSlide = useCallback((index: number) => {
-    if (isAnimating || index === currentIndex) return;
+    if (isAnimating) return;
     setIsAnimating(true);
     setCurrentIndex(index);
     setTimeout(() => setIsAnimating(false), 800);
-  }, [isAnimating, currentIndex]);
+  }, [isAnimating]);
 
+  // ✅ FIXED: Stable goToNext with functional update
   const goToNext = useCallback(() => {
     if (slides.length <= 1) return;
-    const nextIndex = (currentIndex + 1) % slides.length;
-    goToSlide(nextIndex);
-  }, [currentIndex, slides.length, goToSlide]);
+    setCurrentIndex((prev) => {
+      const nextIndex = (prev + 1) % slides.length;
+      goToSlide(nextIndex);
+      return nextIndex;
+    });
+  }, [slides.length, goToSlide]);
 
   const goToPrev = useCallback(() => {
     if (slides.length <= 1) return;
-    const prevIndex = (currentIndex - 1 + slides.length) % slides.length;
-    goToSlide(prevIndex);
-  }, [currentIndex, slides.length, goToSlide]);
+    setCurrentIndex((prev) => {
+      const prevIndex = (prev - 1 + slides.length) % slides.length;
+      goToSlide(prevIndex);
+      return prevIndex;
+    });
+  }, [slides.length, goToSlide]);
 
-  // ✅ TOUCH HANDLERS for Hand Sliding (Swipe)
+  // ✅ TOUCH HANDLERS
   const onTouchStart = (e: React.TouchEvent) => {
     touchEndX.current = null;
     touchStartX.current = e.targetTouches[0].clientX;
@@ -100,17 +108,22 @@ const HeroEditorial = () => {
   const onTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
     const distance = touchStartX.current - touchEndX.current;
-    const isSwipe = Math.abs(distance) > 50; // Minimum swipe distance
+    const isSwipe = Math.abs(distance) > 50; 
 
     if (isSwipe) {
-      if (distance > 0) goToNext(); // Swipe Left -> Next
-      else goToPrev(); // Swipe Right -> Prev
+      if (distance > 0) goToNext(); 
+      else goToPrev(); 
     }
   };
 
+  // ✅ FINAL FIX: Preserve animations during auto-play
   useEffect(() => {
     if (slides.length <= 1) return;
-    const timer = setInterval(goToNext, 7500);
+
+    const timer = setInterval(() => {
+      goToNext(); 
+    }, 4000);
+
     return () => clearInterval(timer);
   }, [goToNext, slides.length]);
 
@@ -126,17 +139,19 @@ const HeroEditorial = () => {
   const leftDesign = currentSlide.designs[0];
   const rightDesign = currentSlide.designs[1] || currentSlide.designs[0];
 
+  const isEditorsChoice = currentSlide.label.replace(/['’]/g, "'").trim().toUpperCase() === "EDITORS' CHOICE";
+
   return (
     <>
       <section
-        className="relative overflow-hidden select-none py-10 md:py-24 lg:py-28 bg-[#FBFAF9] touch-pan-y"
+        className="relative overflow-hidden select-none py-6 md:py-12 lg:py-16 bg-[#FBFAF9] touch-pan-y"
         onContextMenu={handleContextMenu}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
         <div className="container mx-auto px-2 md:px-8 max-w-[1400px]">
-          <div className="relative flex flex-row items-center justify-between gap-2 sm:gap-6 md:gap-10 lg:gap-16 min-h-[320px] sm:min-h-[480px] lg:min-h-[520px]">
+          <div className="relative flex flex-row items-center justify-between gap-2 sm:gap-6 md:gap-10 lg:gap-16 min-h-[240px] sm:min-h-[360px] lg:min-h-[420px]">
             
             {/* Left Card */}
             <div className={cn(
@@ -158,13 +173,20 @@ const HeroEditorial = () => {
               <p className="text-[7px] sm:text-[10px] md:text-xs uppercase tracking-[0.35em] font-medium text-[#6b7280] mb-2 sm:mb-5">
                 {currentSlide.subtitle}
               </p>
-              <h1 className="font-serif text-lg sm:text-4xl md:text-6xl lg:text-7xl font-normal text-[#1a1a1a] leading-tight tracking-tight mb-4 sm:mb-10">
+
+              <h1
+                className={cn(
+                  "font-serif text-lg sm:text-4xl md:text-6xl lg:text-7xl font-normal leading-tight tracking-tight mb-4 sm:mb-10 transition-colors duration-500",
+                  isEditorsChoice ? "text-[#D0010F]" : "text-[#1a1a1a]"
+                )}
+              >
                 {currentSlide.label}
               </h1>
+
               <Button
                 onClick={() => navigate(currentSlide.link)}
                 variant="outline"
-                className="rounded-full px-4 sm:px-10 py-2 sm:py-5 h-auto border border-[#1a1a1a]/70 text-[#1a1a1a] font-medium hover:bg-[#1a1a1a] hover:text-white transition-all text-[8px] sm:text-[11px] uppercase tracking-widest"
+                className="rounded-full px-4 sm:px-10 py-2 sm:py-5 h-auto font-medium transition-all text-[8px] sm:text-[11px] uppercase tracking-widest border border-[#1a1a1a]/70 text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white"
               >
                 Explore
               </Button>

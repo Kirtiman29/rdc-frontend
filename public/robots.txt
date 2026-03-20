@@ -1,16 +1,18 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
+# =========================
+# GENERAL CRAWL RULES
+# =========================
 User-agent: *
 Allow: /
 
+# =========================
+# BLOCK PRIVATE ROUTES (IMPORTANT)
+# =========================
+Disallow: /cart
+Disallow: /wishlist
+Disallow: /orders
+Disallow: /profile
+
+# =========================
+# SITEMAP
+# =========================
 Sitemap: https://ruchitadesigncompany.in/sitemap.xml
