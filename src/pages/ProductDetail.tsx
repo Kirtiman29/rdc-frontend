@@ -90,11 +90,12 @@ const ProductDetail = () => {
         navigate('/login', { state: { redirectTo: `/design/${product.id}` } });
         return;
       }
-      toast({
-        title: "Error",
-        description: "Unable to add item to cart.",
-        variant: "destructive",
-      });
+      navigate('/login', { state: { redirectTo: `/design/${product.id}` } });
+      // toast({
+      //   title: "Error",
+      //   description: "Unable to add item to cart.",
+      //   variant: "destructive",
+      // });
     } finally {
       setIsAdding(false);
     }

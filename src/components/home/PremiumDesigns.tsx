@@ -8,7 +8,6 @@ import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
 import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
-// ✅ Import the utility
 import { formatPrice } from '@/utils/price';
 
 const PremiumDesigns = () => {
@@ -132,7 +131,10 @@ const PremiumDesigns = () => {
   }
 
   return (
-    <section className="py-24 md:py-32 bg-[#0a0a0a] text-white" onContextMenu={handleContextMenu}>
+    <section
+      className="py-10 md:py-10 bg-[#0a0a0a] text-white h-fit self-start w-contain"
+      onContextMenu={handleContextMenu}
+    >
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex flex-row items-end justify-between mb-16">
           <div className="space-y-2">
@@ -145,15 +147,24 @@ const PremiumDesigns = () => {
           </div>
 
           <div className="flex items-center gap-6">
-            <Link to="/gallery" className="text-neutral-400 hover:text-white transition-colors text-xs font-medium border-b border-neutral-800 pb-1 hidden sm:block">
+            <Link
+              to="/gallery"
+              className="text-neutral-400 hover:text-white transition-colors text-xs font-medium border-b border-neutral-800 pb-1 hidden sm:block"
+            >
               View All
             </Link>
             
             <div className="flex items-center gap-2">
-              <button onClick={() => scroll('left')} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 transition-all">
+              <button
+                onClick={() => scroll('left')}
+                className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 transition-all"
+              >
                 <ChevronLeft className="h-5 w-5 text-white" />
               </button>
-              <button onClick={() => scroll('right')} className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 transition-all">
+              <button
+                onClick={() => scroll('right')}
+                className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center hover:bg-white/5 transition-all"
+              >
                 <ChevronRight className="h-5 w-5 text-white" />
               </button>
             </div>
@@ -162,12 +173,15 @@ const PremiumDesigns = () => {
 
         <div 
           ref={scrollContainerRef}
-          className="flex flex-nowrap gap-6 md:gap-10 overflow-x-auto scroll-smooth pb-4 no-scrollbar"
+          className="flex flex-nowrap gap-6 md:gap-10 overflow-x-auto scroll-smooth pb-4 no-scrollbar items-start"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           {products.map((product) => (
             <div key={product.id} className="flex-none w-[300px] sm:w-[340px] md:w-[380px] group">
-              <Link to={`/product/${product.id}`} className="block relative aspect-[3/4] bg-neutral-900 overflow-hidden mb-6 select-none">
+              <Link
+                to={`/product/${product.id}`}
+                className="block relative aspect-[3/4] bg-neutral-900 overflow-hidden mb-6 select-none"
+              >
                 <div 
                   className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
                   style={{
@@ -194,7 +208,9 @@ const PremiumDesigns = () => {
                 <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
                   <button 
                     className={`w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition-all ${
-                      wishlistState[product.id] ? 'bg-[#c9a962] text-[#1a1a1a]' : 'bg-white/10 text-white hover:bg-white/20'
+                      wishlistState[product.id]
+                        ? 'bg-[#c9a962] text-[#1a1a1a]'
+                        : 'bg-white/10 text-white hover:bg-white/20'
                     }`}
                     onClick={(e) => toggleWishlist(e, product)}
                   >
@@ -227,7 +243,6 @@ const PremiumDesigns = () => {
                   {product.description}
                 </p>
                 <p className="text-lg text-[#c9a962] font-medium tracking-tight">
-                  {/* ✅ Using formatPrice for luxury pattern display */}
                   {formatPrice(product.finalPriceCents)}
                 </p>
               </div>

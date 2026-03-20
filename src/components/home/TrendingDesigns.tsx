@@ -133,7 +133,7 @@ const TrendingDesigns = () => {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-20 md:py-28 bg-background font-sans" onContextMenu={handleContextMenu}>
+    <section className="py-10 md:py-10 bg-background font-sans" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex items-end justify-between mb-12">
           <div>

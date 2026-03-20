@@ -79,7 +79,7 @@ const ShopByCategory = () => {
   const displayedCategories = dbCategories.slice(0, 9);
 
   return (
-    <section className="py-20 md:py-28 bg-secondary/30" onContextMenu={handleContextMenu}>
+    <section className="py-10 md:py-10 bg-secondary/30" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-4">
           <div className="text-left">

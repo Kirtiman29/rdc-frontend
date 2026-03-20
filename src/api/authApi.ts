@@ -4,7 +4,7 @@ import { clearTokens, applyIndustrialInterceptors } from './apiClient';
 /** * ✅ PRODUCTION URL: Fetched from .env 
  * Standardized to hit the /auth context path of the Auth Service
  */
-const AUTH_BASE_URL = `${import.meta.env.VITE_AUTH_SERVICE_URL}/auth`.replace(/([^:]\/)\/+/g, "$1");
+const AUTH_BASE_URL = `${import.meta.env.VITE_AUTH_SERVICE_URL}/api/auth`.replace(/([^:]\/)\/+/g, "$1");
 
 /**
  * ✅ Public Instance: Used for Login, Signup, and Password recovery.

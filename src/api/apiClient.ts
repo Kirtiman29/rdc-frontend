@@ -1,24 +1,24 @@
-// apiClient.ts
-import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
 
 /* =========================================
-   INDIAN STATES CONSTANT
+   INDIAN STATES
 ========================================= */
 export const INDIAN_STATES = [
-  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", 
-  "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", 
-  "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", 
-  "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", 
-  "Uttar Pradesh", "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", 
-  "Chandigarh", "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", 
-  "Ladakh", "Lakshadweep", "Puducherry"
+  "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa",
+  "Gujarat","Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala",
+  "Madhya Pradesh","Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland",
+  "Odisha","Punjab","Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura",
+  "Uttar Pradesh","Uttarakhand","West Bengal","Andaman and Nicobar Islands",
+  "Chandigarh","Dadra and Nagar Haveli and Daman and Diu","Delhi",
+  "Jammu and Kashmir","Ladakh","Lakshadweep","Puducherry"
 ];
 
 /* =========================================
    TOKEN STORAGE
 ========================================= */
-const TOKEN_KEY = 'accessToken';
-const REFRESH_KEY = 'refreshToken';
+const TOKEN_KEY = "accessToken";
+const REFRESH_KEY = "refreshToken";
+
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const getRefreshToken = () => localStorage.getItem(REFRESH_KEY);
@@ -34,113 +34,160 @@ export const clearTokens = () => {
 };
 
 /* =========================================
-   PRODUCTION SERVICE URLS
+   SERVICE URLS
 ========================================= */
-const BASE_DOMAIN = 'https://ruchitadesigncompany.in';
-const AUTH_URL     = import.meta.env.VITE_AUTH_SERVICE_URL     || BASE_DOMAIN;
-const ASSET_URL    = import.meta.env.VITE_ASSET_SERVICE_URL    || BASE_DOMAIN;
-const CART_URL     = import.meta.env.VITE_CART_SERVICE_URL     || BASE_DOMAIN;
-const ORDER_URL    = import.meta.env.VITE_ORDER_SERVICE_URL    || BASE_DOMAIN;
-const WISHLIST_URL = import.meta.env.VITE_WISHLIST_SERVICE_URL || BASE_DOMAIN;
-const PAYMENT_URL  = import.meta.env.VITE_PAYMENT_SERVICE_URL  || BASE_DOMAIN;
-const ADMIN_URL    = import.meta.env.VITE_ADMIN_SERVICE_URL    || BASE_DOMAIN;
+const BASE_DOMAIN = import.meta.env.VITE_BASE_URL || "https://ruchitadesigncompany.in";
+
+const AUTH_URL =
+  import.meta.env.VITE_AUTH_SERVICE_URL || BASE_DOMAIN;
+
+const ASSET_URL =
+  import.meta.env.VITE_ASSET_SERVICE_URL || BASE_DOMAIN;
+
+const CART_URL =
+  import.meta.env.VITE_CART_SERVICE_URL || BASE_DOMAIN;
+
+const ORDER_URL =
+  import.meta.env.VITE_ORDER_SERVICE_URL || BASE_DOMAIN;
+
+const WISHLIST_URL =
+  import.meta.env.VITE_WISHLIST_SERVICE_URL || BASE_DOMAIN;
+
+const PAYMENT_URL =
+  import.meta.env.VITE_PAYMENT_SERVICE_URL || BASE_DOMAIN;
+
+const ADMIN_URL =
+  import.meta.env.VITE_ADMIN_SERVICE_URL || BASE_DOMAIN;
 
 /* =========================================
-   REFRESH STATE MANAGEMENT
+   URL BUILDER
+========================================= */
+const createUrl = (baseUrl: string, path = "") => {
+  const cleanBase = baseUrl.replace(/\/$/, "");
+  const cleanPath = path ? (path.startsWith("/") ? path : `/${path}`) : "/";
+  return `${cleanBase}/api${cleanPath}`;
+};
+
+/* =========================================
+   REFRESH TOKEN STATE
 ========================================= */
 let isRefreshing = false;
+
 let refreshQueue: ((token: string | null) => void)[] = [];
 
 const processQueue = (token: string | null) => {
-  refreshQueue.forEach((callback) => callback(token));
+  refreshQueue.forEach(cb => cb(token));
   refreshQueue = [];
 };
 
 /* =========================================
-   INTERCEPTOR LOGIC (Reactive Pattern)
+   INTERCEPTORS
 ========================================= */
 export const applyIndustrialInterceptors = (instance: AxiosInstance) => {
-  
-  // 1. Request Interceptor: Simply attach the current token
+
+  /* REQUEST INTERCEPTOR */
   instance.interceptors.request.use(
     (config: InternalAxiosRequestConfig) => {
+
       const token = getToken();
-      if (token) {
+
+      if (token && config.headers) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+
       return config;
     },
-    (error) => Promise.reject(error)
+    error => Promise.reject(error)
   );
 
-  // 2. Response Interceptor: Handle Unwrapping and Reactive Refresh
+  /* RESPONSE INTERCEPTOR */
   instance.interceptors.response.use(
     (response: AxiosResponse) => {
-      // ✅ FIX 6: Robust unwrap logic
-      return response.data?.data ?? response.data;
+      return response.data;
     },
-    async (error) => {
-      const originalRequest = error.config;
 
-      // ✅ FIX 1 & 4: Trigger Refresh on 401 and protect with _retry guard
+    async error => {
+
+      const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
       if (error.response?.status === 401 && !originalRequest._retry) {
-        
+
         if (isRefreshing) {
-          // If a refresh is already in progress, queue this request
+
           return new Promise((resolve, reject) => {
+
             refreshQueue.push((token: string | null) => {
-              if (token) {
+
+              if (token && originalRequest.headers) {
+
                 originalRequest.headers.Authorization = `Bearer ${token}`;
+
                 resolve(instance(originalRequest));
+
               } else {
+
                 reject(error);
+
               }
+
             });
+
           });
+
         }
 
         originalRequest._retry = true;
         isRefreshing = true;
 
         try {
+
           const refreshToken = getRefreshToken();
 
-          // ✅ FIX 2: Null check for refresh token
           if (!refreshToken) {
-            throw new Error("No refresh token available");
+            throw new Error("No refresh token");
           }
 
-          const refreshUrl = `${AUTH_URL}/auth/refresh`.replace(/([^:]\/)\/+/g, "$1");
-          
-          // Use a clean axios instance for refresh to avoid interceptor loops
-          const res = await axios.post(refreshUrl, { refreshToken }, {
-            headers: { "Content-Type": "application/json" }
-          });
+          /* 🔑 IMPORTANT: use plain axios (no interceptor) */
+          const refreshResponse = await axios.post(
+            `${AUTH_URL}/api/auth/refresh`,
+            { refreshToken }
+          );
 
-          const data = res.data?.data || res.data;
+          const data = refreshResponse.data?.data || refreshResponse.data;
+
           const { accessToken, refreshToken: newRefresh } = data;
 
-          if (accessToken && newRefresh) {
-            saveTokens(accessToken, newRefresh);
-            processQueue(accessToken);
-            
-            // Retry the original request with the new token
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-            return instance(originalRequest);
-          } else {
-            throw new Error("Invalid token response");
+          if (!accessToken || !newRefresh) {
+            throw new Error("Invalid refresh response");
           }
-        } catch (refreshError) {
-          // ✅ FIX 3: Clear queue on failure to prevent memory leaks
+
+          saveTokens(accessToken, newRefresh);
+
+          processQueue(accessToken);
+
+          if (originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          }
+
+          return instance(originalRequest);
+
+        } catch (err) {
+
           processQueue(null);
           clearTokens();
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login';
+
+          if (window.location.pathname !== "/login") {
+            window.location.href = "/login";
           }
-          return Promise.reject(refreshError);
+
+          return Promise.reject(err);
+
         } finally {
+
           isRefreshing = false;
+
         }
+
       }
 
       return Promise.reject(error);
@@ -151,33 +198,59 @@ export const applyIndustrialInterceptors = (instance: AxiosInstance) => {
 /* =========================================
    API INSTANCES
 ========================================= */
-const createUrl = (baseUrl: string, path: string) => 
-  `${baseUrl.replace(/\/$/, '')}/api${path}`.replace(/\/+/g, "/").replace("https:/", "https://").replace("http:/", "http://");
 
-export const publicApi   = axios.create({ baseURL: createUrl(ADMIN_URL, '') });
-export const userApi     = axios.create({ baseURL: createUrl(ADMIN_URL, '') });
-export const cartApi     = axios.create({ baseURL: createUrl(CART_URL, '/cart') });
-export const orderApi    = axios.create({ baseURL: createUrl(ORDER_URL, '/orders') });
-export const wishlistApi = axios.create({ baseURL: createUrl(WISHLIST_URL, '/wishlist') });
-export const paymentApi  = axios.create({ baseURL: createUrl(PAYMENT_URL, '/payments') });
+/* PUBLIC API (NO TOKEN) */
+export const publicApi = axios.create({
+  baseURL: createUrl(ADMIN_URL)
+});
 
-const allInstances = [publicApi, userApi, cartApi, orderApi, wishlistApi, paymentApi];
-allInstances.forEach(applyIndustrialInterceptors);
+/* AUTH REQUIRED APIS */
+export const userApi = axios.create({
+  baseURL: createUrl(ADMIN_URL)
+});
+
+export const cartApi = axios.create({
+  baseURL: createUrl(CART_URL, "/cart")
+});
+
+export const orderApi = axios.create({
+  baseURL: createUrl(ORDER_URL, "/orders")
+});
+
+export const wishlistApi = axios.create({
+  baseURL: createUrl(WISHLIST_URL, "/wishlist")
+});
+
+export const paymentApi = axios.create({
+  baseURL: createUrl(PAYMENT_URL, "/payments")
+});
+
+/* APPLY INTERCEPTORS ONLY TO SECURE APIS */
+[userApi, cartApi, orderApi, wishlistApi, paymentApi]
+  .forEach(applyIndustrialInterceptors);
 
 /* =========================================
-   ASSET UTILS
+   ASSET URL HELPER
 ========================================= */
 export const getAssetUrl = (urlOrUuid?: string | null) => {
-  if (!urlOrUuid || urlOrUuid === 'null' || urlOrUuid === '') {
-    return 'https://placehold.co/600x800?text=Design+Pending';
+
+  if (!urlOrUuid || urlOrUuid === "null") {
+    return "https://placehold.co/600x800?text=Design+Pending";
   }
-  const baseDownloadUrl = `${ASSET_URL}/api/assets/download/`.replace(/([^:]\/)\/+/g, "$1");
-  if (urlOrUuid.includes('localhost') || urlOrUuid.includes('http')) {
-    const parts = urlOrUuid.split('/');
+
+  const baseDownload = createUrl(ASSET_URL, "/assets/download/");
+
+  if (urlOrUuid.includes("http")) {
+
+    const parts = urlOrUuid.split("/");
     const uuid = parts.filter(Boolean).pop();
-    return `${baseDownloadUrl}${uuid}`;
+
+    return `${baseDownload}${uuid}`;
+
   }
-  return `${baseDownloadUrl}${urlOrUuid}`;
+
+  return `${baseDownload}${urlOrUuid}`;
 };
 
+/* DEFAULT EXPORT */
 export default userApi;

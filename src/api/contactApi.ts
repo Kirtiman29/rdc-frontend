@@ -1,4 +1,4 @@
-import apiClient from './apiClient';
+import { publicApi } from './apiClient'
 
 /**
  * ==========================================
@@ -14,13 +14,13 @@ export interface ContactRequest {
 /**
  * 🌍 PUBLIC: Submit a contact inquiry to the RDC Admin Service.
  * * Target Service: VITE_ADMIN_SERVICE_URL
- * Backend Route: POST /api/contact
+ * Backend Route: POST /api/public/contact
  * * Note: Uses the centralized apiClient which handles production base URLs
  * and automatic data unwrapping.
  */
 export const submitContactInquiry = async (data: ContactRequest): Promise<any> => {
   // ✅ Interceptor in apiClient.ts already returns response.data
-  return await apiClient.post('/contact', data);
+  return await publicApi.post('/public/contact', data);
 };
 
 export default {

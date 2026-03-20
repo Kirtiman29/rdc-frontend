@@ -24,13 +24,17 @@ const Gallery = () => {
     e.preventDefault();
   };
 
-  const [filters, setFilters] = useState<ProductFilter>({
-    segment: searchParams.get('segment') || undefined,
-    luxury: searchParams.get('luxury') === 'true',
-    trending: searchParams.get('trending') === 'true',
-    specialOffer: searchParams.get('specialOffer') === 'true',
-    sortBy: searchParams.get('sortBy') || 'createdAt,desc',
-  });
+const [filters, setFilters] = useState<ProductFilter>({
+  categoryId: searchParams.get('category')
+    ? Number(searchParams.get('category'))
+    : undefined,
+
+  segment: searchParams.get('segment') || undefined,
+  luxury: searchParams.get('luxury') === 'true',
+  trending: searchParams.get('trending') === 'true',
+  specialOffer: searchParams.get('specialOffer') === 'true',
+  sortBy: searchParams.get('sortBy') || 'createdAt,desc',
+});
 
   const fetchFilteredDesigns = useCallback(async () => {
     setLoading(true);
@@ -72,10 +76,16 @@ const Gallery = () => {
 
     const newParams: Record<string, string> = {};
     Object.entries(filters).forEach(([key, value]) => {
-      if (value !== undefined && value !== false && value !== '') {
-        newParams[key] = String(value);
-      }
-    });
+  if (value !== undefined && value !== false && value !== '') {
+
+    if (key === "categoryId") {
+      newParams["category"] = String(value);
+    } else {
+      newParams[key] = String(value);
+    }
+
+  }
+});
     // Sync page with URL
     if (page > 0) newParams.page = String(page);
     

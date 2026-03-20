@@ -34,8 +34,11 @@ export interface CreateOrderRequest {
  * ✅ Creates a new order with full billing/GST details
  */
 export const createOrder = async (orderPayload: CreateOrderRequest): Promise<any> => {
-    // Note: orderApi (apiClient) handles the base /api/orders path
-    return await orderApi.post('', orderPayload);
+    const res = await orderApi.post('/', orderPayload);
+
+    console.log("🔥 CREATE ORDER RAW:", res);
+
+    return JSON.parse(JSON.stringify(res));
 };
 
 export const getOrderDetails = async (orderId: string | number): Promise<OrderResponse> => {
