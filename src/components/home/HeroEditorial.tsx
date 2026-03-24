@@ -13,6 +13,7 @@ interface CategorySlide {
   subtitle: string;
   designs: Design[];
   link: string;
+  type?: 'design' | 'branding';
 }
 
 const HeroEditorial = () => {
@@ -22,7 +23,6 @@ const HeroEditorial = () => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Touch Swipe Refs
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
 
@@ -31,33 +31,61 @@ const HeroEditorial = () => {
   useEffect(() => {
     const fetchAllCategories = async () => {
       try {
-        const response: any = await getDesigns({ size: 50 }); 
+        const response: any = await getDesigns({ size: 50 });
         const allFetched = response?.content || (Array.isArray(response) ? response : []);
-
-        if (allFetched.length === 0) {
-          setLoading(false);
-          return;
-        }
 
         const categoryConfigs = [
           { label: 'TRENDING DESIGNS', subtitle: 'COLOURFUL, GEOMETRICAL AND SOPHISTICATED', filter: (d: Design) => d.trending === true, link: '/trends' },
           { label: 'LUXURY PATTERNS', subtitle: 'EXCLUSIVE, REFINED AND PREMIUM', filter: (d: Design) => d.luxury === true, link: '/luxury' },
           { label: 'NEW ARRIVALS', subtitle: 'MODERN, INNOVATIVE AND FRESH', filter: (d: Design) => d.newArrival === true, link: '/gallery?newArrival=true' },
-          { label: "EDITORS' CHOICE", subtitle: 'CURATED, AUTHENTIC AND UNIQUE', filter: (d: Design) => d.editorsPick === true, link: '/gallery?editorsPick=true' },
+          { label: "EDITOR'S CHOICE", subtitle: 'CURATED, AUTHENTIC AND UNIQUE', filter: (d: Design) => d.editorsPick === true, link: '/gallery?editorsPick=true' },
           { label: 'SPECIAL OFFERS', subtitle: 'LIMITED, ACCESSIBLE AND ELITE', filter: (d: Design) => d.specialOffer === true, link: '/special-offers' },
         ];
 
         const slideData: CategorySlide[] = [];
-        categoryConfigs.forEach((config) => {
-          let filtered = allFetched.filter(config.filter).sort((a: Design, b: Design) => b.id - a.id).slice(0, 2);
-          if (filtered.length < 2) {
-            const fallback = [...allFetched].sort((a: Design, b: Design) => b.id - a.id).filter((d: Design) => !filtered.some(f => f.id === d.id)).slice(0, 2 - filtered.length);
-            filtered = [...filtered, ...fallback];
-          }
-          if (filtered.length > 0) {
-            slideData.push({ label: config.label, subtitle: config.subtitle, link: config.link, designs: filtered });
-          }
+
+        slideData.push({
+          label: "INDIA'S LARGEST TEXTILE STUDIO",
+          subtitle: "POWERING NEXT-GEN TEXTILE DESIGN INFRASTRUCTURE",
+          link: "/gallery",
+          designs: [],
+          type: 'branding'
         });
+
+        const usedDesignIds = new Set<number>();
+
+categoryConfigs.forEach((config) => {
+  let filtered = allFetched
+    .filter(config.filter)
+    .sort((a: Design, b: Design) => b.id - a.id)
+    .filter((d: Design) => !usedDesignIds.has(d.id)) // 🔥 KEY FIX
+    .slice(0, 2);
+
+  // mark as used
+  filtered.forEach(d => usedDesignIds.add(d.id));
+
+  if (filtered.length < 2 && allFetched.length > 0) {
+    const fallback = [...allFetched]
+      .sort((a: Design, b: Design) => b.id - a.id)
+      .filter((d: Design) => !usedDesignIds.has(d.id))
+      .slice(0, 2 - filtered.length);
+
+    fallback.forEach(d => usedDesignIds.add(d.id));
+
+    filtered = [...filtered, ...fallback];
+  }
+
+  if (filtered.length > 0) {
+    slideData.push({
+      label: config.label,
+      subtitle: config.subtitle,
+      link: config.link,
+      designs: filtered,
+      type: 'design'
+    });
+  }
+});
+
         setSlides(slideData);
       } catch (error) {
         console.error('Hero system failure:', error);
@@ -68,7 +96,6 @@ const HeroEditorial = () => {
     fetchAllCategories();
   }, []);
 
-  // ✅ Stable slide transition logic
   const goToSlide = useCallback((index: number) => {
     if (isAnimating) return;
     setIsAnimating(true);
@@ -76,54 +103,39 @@ const HeroEditorial = () => {
     setTimeout(() => setIsAnimating(false), 800);
   }, [isAnimating]);
 
-  // ✅ FIXED: Stable goToNext with functional update
   const goToNext = useCallback(() => {
-    if (slides.length <= 1) return;
-    setCurrentIndex((prev) => {
-      const nextIndex = (prev + 1) % slides.length;
-      goToSlide(nextIndex);
-      return nextIndex;
-    });
-  }, [slides.length, goToSlide]);
+    if (slides.length <= 1 || isAnimating) return;
+    setIsAnimating(true);
+    setCurrentIndex((prev) => (prev + 1) % slides.length);
+    setTimeout(() => setIsAnimating(false), 800);
+  }, [slides.length, isAnimating]);
 
   const goToPrev = useCallback(() => {
-    if (slides.length <= 1) return;
-    setCurrentIndex((prev) => {
-      const prevIndex = (prev - 1 + slides.length) % slides.length;
-      goToSlide(prevIndex);
-      return prevIndex;
-    });
-  }, [slides.length, goToSlide]);
+    if (slides.length <= 1 || isAnimating) return;
+    setIsAnimating(true);
+    setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length);
+    setTimeout(() => setIsAnimating(false), 800);
+  }, [slides.length, isAnimating]);
 
-  // ✅ TOUCH HANDLERS
   const onTouchStart = (e: React.TouchEvent) => {
     touchEndX.current = null;
     touchStartX.current = e.targetTouches[0].clientX;
   };
-
   const onTouchMove = (e: React.TouchEvent) => {
     touchEndX.current = e.targetTouches[0].clientX;
   };
-
   const onTouchEnd = () => {
     if (!touchStartX.current || !touchEndX.current) return;
     const distance = touchStartX.current - touchEndX.current;
-    const isSwipe = Math.abs(distance) > 50; 
-
-    if (isSwipe) {
-      if (distance > 0) goToNext(); 
-      else goToPrev(); 
+    if (Math.abs(distance) > 50) {
+      if (distance > 0) goToNext();
+      else goToPrev();
     }
   };
 
-  // ✅ FINAL FIX: Preserve animations during auto-play
   useEffect(() => {
     if (slides.length <= 1) return;
-
-    const timer = setInterval(() => {
-      goToNext(); 
-    }, 4000);
-
+    const timer = setInterval(goToNext, 5000);
     return () => clearInterval(timer);
   }, [goToNext, slides.length]);
 
@@ -136,29 +148,41 @@ const HeroEditorial = () => {
   if (slides.length === 0) return null;
 
   const currentSlide = slides[currentIndex];
+  const isBrandingSlide = currentSlide.type === 'branding';
   const leftDesign = currentSlide.designs[0];
   const rightDesign = currentSlide.designs[1] || currentSlide.designs[0];
 
-  const isEditorsChoice = currentSlide.label.replace(/['’]/g, "'").trim().toUpperCase() === "EDITORS' CHOICE";
+  const normalizedLabel = currentSlide.label
+    .replace(/['’]/g, "")
+    .replace(/\s+/g, "")
+    .toUpperCase();
+  const isEditorsChoice = normalizedLabel === "EDITORSCHOICE";
 
   return (
     <>
       <section
-        className="relative overflow-hidden select-none py-6 md:py-12 lg:py-16 bg-[#FBFAF9] touch-pan-y"
+        className="relative overflow-hidden select-none py-6 md:py-12 lg:py-16 bg-[#FBFAF9] touch-pan-y transition-all duration-700 ease-in-out"
         onContextMenu={handleContextMenu}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <div className="container mx-auto px-2 md:px-8 max-w-[1400px]">
-          <div className="relative flex flex-row items-center justify-between gap-2 sm:gap-6 md:gap-10 lg:gap-16 min-h-[240px] sm:min-h-[360px] lg:min-h-[420px]">
+        {isBrandingSlide && (
+          <div className="absolute inset-0 flex justify-center items-center -z-0 pointer-events-none">
+            <div className="w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-[#BA1B1C]/5 blur-[100px] sm:blur-[120px] rounded-full animate-pulse" />
+          </div>
+        )}
+
+        <div className="container mx-auto px-2 md:px-8 max-w-[1400px] relative z-10">
+          {/* STEP 3: Height Fix */}
+          <div className="relative flex flex-row items-center justify-between gap-2 sm:gap-6 md:gap-10 lg:gap-16 min-h-[280px] sm:min-h-[380px] lg:min-h-[420px]">
             
-            {/* Left Card */}
+            {/* STEP 1: Left Card Fix */}
             <div className={cn(
               'w-[28%] flex justify-center transition-all duration-700 ease-out',
               isAnimating ? 'opacity-0 -translate-x-4 scale-[0.95]' : 'opacity-100 translate-x-0 scale-100'
             )}>
-              {leftDesign && (
+              {!isBrandingSlide && leftDesign && (
                 <Link to={`/product/${leftDesign.id}`} className="group relative block w-full max-w-[120px] sm:max-w-[220px] lg:max-w-[280px] aspect-[3/4] rounded-[6px] sm:rounded-[10px] overflow-hidden shadow-lg transition-all duration-500 -rotate-[2deg] sm:-rotate-[3deg]">
                   <img src={getAssetUrl(leftDesign.assetUuid)} className="w-full h-full object-cover" alt={leftDesign.title} draggable={false} />
                 </Link>
@@ -167,7 +191,8 @@ const HeroEditorial = () => {
 
             {/* Center Content */}
             <div className={cn(
-              'w-[44%] flex flex-col items-center justify-center text-center z-10 transition-all duration-700 ease-out',
+              'flex flex-col items-center justify-center text-center z-10 transition-all duration-700 ease-out',
+              'w-[44%] min-h-[180px] sm:min-h-[240px]',
               isAnimating ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'
             )}>
               <p className="text-[7px] sm:text-[10px] md:text-xs uppercase tracking-[0.35em] font-medium text-[#6b7280] mb-2 sm:mb-5">
@@ -176,28 +201,48 @@ const HeroEditorial = () => {
 
               <h1
                 className={cn(
-                  "font-serif text-lg sm:text-4xl md:text-6xl lg:text-7xl font-normal leading-tight tracking-tight mb-4 sm:mb-10 transition-colors duration-500",
-                  isEditorsChoice ? "text-[#D0010F]" : "text-[#1a1a1a]"
+                  "font-serif font-normal leading-tight tracking-tight transition-all duration-500",
+                  "mb-3 sm:mb-6", // STEP 6: Spacing Fix
+                  isBrandingSlide
+                    ? "text-2xl sm:text-5xl md:text-7xl lg:text-7xl text-[#1a1a1a] animate-[fadeInUp_0.8s_ease]" // STEP 5: Animation
+                    : isEditorsChoice
+                    ? "text-[#D0010F] text-lg sm:text-4xl md:text-6xl lg:text-7xl"
+                    : "text-[#1a1a1a] text-lg sm:text-4xl md:text-6xl lg:text-7xl"
                 )}
               >
-                {currentSlide.label}
+                {isBrandingSlide ? (
+                  <>
+                    INDIA'S LARGEST <br />
+                    <span className="text-[#BA1B1C] italic">TEXTILE STUDIO</span>
+                  </>
+                ) : (
+                  currentSlide.label
+                )}
               </h1>
 
               <Button
-                onClick={() => navigate(currentSlide.link)}
-                variant="outline"
-                className="rounded-full px-4 sm:px-10 py-2 sm:py-5 h-auto font-medium transition-all text-[8px] sm:text-[11px] uppercase tracking-widest border border-[#1a1a1a]/70 text-[#1a1a1a] hover:bg-[#1a1a1a] hover:text-white"
-              >
-                Explore
-              </Button>
+  onClick={() => navigate(currentSlide.link)}
+  className={cn(
+    "rounded-full px-4 sm:px-10 py-2 sm:py-5 h-auto font-medium transition-all duration-300 text-[8px] sm:text-[11px] uppercase tracking-widest",
+
+    isBrandingSlide
+      // 🔴 Branding Slide (Hero Red Button)
+      ? "bg-[#BA1B1C] text-white border border-[#BA1B1C] hover:bg-[#8E1415] hover:scale-[1.03] active:scale-[0.98] shadow-[0_10px_30px_rgba(186,27,28,0.25)]"
+
+      // ⚪ Normal Slides (Elegant Minimal Button)
+      : "border border-[#1a1a1a]/40 text-[#1a1a1a] bg-transparent hover:border-[#1a1a1a] hover:scale-[1.03] active:scale-[0.98]"
+  )}
+>
+  Explore {isBrandingSlide && "Platform"}
+</Button>
             </div>
 
-            {/* Right Card */}
+            {/* STEP 2: Right Card Fix */}
             <div className={cn(
               'w-[28%] flex justify-center transition-all duration-700 ease-out',
               isAnimating ? 'opacity-0 translate-x-4 scale-[0.95]' : 'opacity-100 translate-x-0 scale-100'
             )}>
-              {rightDesign && (
+              {!isBrandingSlide && rightDesign && (
                 <Link to={`/product/${rightDesign.id}`} className="group relative block w-full max-w-[120px] sm:max-w-[220px] lg:max-w-[280px] aspect-[3/4] rounded-[6px] sm:rounded-[10px] overflow-hidden shadow-lg transition-all duration-500 rotate-[2deg] sm:rotate-[3deg]">
                   <img src={getAssetUrl(rightDesign.assetUuid)} className="w-full h-full object-cover" alt={rightDesign.title} draggable={false} />
                 </Link>
@@ -205,7 +250,6 @@ const HeroEditorial = () => {
             </div>
           </div>
 
-          {/* Navigation Dots */}
           <div className="flex justify-center gap-2 mt-8 sm:mt-16 mb-2">
             {slides.map((_, i) => (
               <button

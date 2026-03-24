@@ -1,3 +1,4 @@
+// src/components/layout/Header.tsx
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, User, Heart, ShoppingBag, Package, Menu, X, LogOut } from 'lucide-react';
@@ -15,6 +16,7 @@ const navItems = [
   { label: 'Luxury', href: '/luxury' },
   { label: 'Trends', href: '/trends' },
   { label: 'Special Offers', href: '/special-offers' },
+  { label: 'Fabrics', href: '/fabrics' },
 ];
 
 const Header = () => {

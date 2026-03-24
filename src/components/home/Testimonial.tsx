@@ -1,49 +1,81 @@
 import { Quote } from 'lucide-react';
 
 const Testimonial = () => {
-  // ✅ Security: Restrict Right-Click to protect editorial brand content
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
 
   return (
     <section 
-      className="bg-secondary/40 py-16 md:py-24 border-y border-border/50" 
+      className="relative bg-secondary/40 py-16 md:py-24 border-y border-border/50" 
       onContextMenu={handleContextMenu}
     >
       <div className="container px-4 mx-auto">
-        <div className="mx-auto max-w-3xl text-center">
-          {/* ✅ Sync: Using primary brand color for consistency */}
-          <Quote className="mx-auto mb-8 h-12 w-12 text-[#2A2623] opacity-20" />
+
+        {/* ================= TESTIMONIAL ================= */}
+        <div className="mx-auto max-w-3xl text-center mb-16">
           
-          <blockquote className="mb-10 font-serif text-2xl font-light leading-relaxed text-[#2A2623] md:text-3xl lg:text-4xl italic">
-            "The quality of these textiles transformed our entire project. The attention to detail 
-            and the unique patterns from the Home Interior segment are simply unmatched. 
-            The high-resolution industrial files made our production workflow seamless."
+          <Quote className="mx-auto mb-6 h-10 w-10 text-[#2A2623] opacity-20" />
+          
+          <blockquote className="mb-6 font-serif text-xl md:text-2xl lg:text-3xl font-light leading-relaxed text-[#2A2623] italic">
+            "Empowering clients with creative excellence, inspired leadership, and a thriving atmosphere. We listen deeply, deliver on time, and prioritize your vision—India’s premier textile prints, client-first. "
           </blockquote>
 
-          <div className="flex flex-col items-center">
-            <div className="mb-4 h-16 w-16 overflow-hidden rounded-full bg-muted shadow-lg border-2 border-white select-none">
-              <img
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&q=80"
-                alt="Sarah Mitchell"
-                draggable={false}
-                className="h-full w-full object-cover"
-              />
-            </div>
-            <cite className="not-italic">
-              <span className="block font-serif text-lg font-medium text-[#2A2623] uppercase tracking-wide">
-                Sarah Mitchell
-              </span>
-              <span className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1 block">
-                Lead Designer, Home Interior Group
-              </span>
-            </cite>
-          </div>
         </div>
+
+ {/* ================= ABOUT OVERVIEW ================= */}
+<div className="grid md:grid-cols-2 gap-10 md:gap-16 items-center max-w-5xl mx-auto text-center md:text-center">
+
+  {/* LEFT: TEXT */}
+  <div className="flex flex-col items-center">
+
+    <span className="mb-2 inline-block font-serif text-sm uppercase tracking-[0.3em] text-muted-foreground">
+      About RDC
+    </span>
+
+    <h2 className="font-serif text-2xl md:text-3xl font-medium text-[#2A2623] mb-4">
+      Built for Modern Textile Production
+    </h2>
+
+    <p className="text-muted-foreground leading-relaxed mb-4 max-w-md">
+      RDC Studio is a contemporary textile studio shaped for today's fast-evolving design and landscape. We bridge the gap between creative vision and technical execution-optimizing how textile designs are sourced, translated, and brought to life.
+    </p>
+
+    <p className="text-muted-foreground leading-relaxed max-w-md">
+      Our studio delivers a curated collection of surface patterns, aligned with global trends and built for seamless integration. We empower brands to move from concept to final product with clarity, efficiency, and confidence
+
+    </p>
+  </div>
+
+  {/* RIGHT: FOUNDER */}
+  <div className="flex flex-col items-center">
+
+    {/* Founder Image */}
+    <div className="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden bg-muted border border-border shadow-md mb-5">
+      <img
+        src="/founder.jpeg"
+        alt="Founder"
+        className="w-full h-full object-cover"
+      />
+    </div>
+
+    {/* Founder Name */}
+    <h3 className="font-serif text-lg font-medium text-[#2A2623] uppercase tracking-wide">
+      Ruchita Gudhka
+    </h3>
+
+    {/* Founder Role */}
+    <span className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mt-1">
+      Founder, Ruchita Design Pvt. Ltd.
+    </span>
+
+  </div>
+
+</div>
+
       </div>
 
-      {/* ✅ High-Visibility Industrial Watermark */}
+      {/* WATERMARK */}
       <div 
         className="absolute inset-0 z-0 pointer-events-none opacity-[0.03]"
         style={{

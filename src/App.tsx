@@ -33,6 +33,7 @@ import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Fabrics from "./pages/Fabrics";
 
 const queryClient = new QueryClient();
 
@@ -125,7 +126,8 @@ const App = () => (
               <Route path="/faq" element={<FAQ />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
-
+              
+              <Route path="/fabrics" element={<Fabrics />} />
               {/* Fallback */}
               <Route path="*" element={<NotFound />} />
             </Routes>

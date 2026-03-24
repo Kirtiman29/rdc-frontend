@@ -212,7 +212,7 @@ const ProductDetail = () => {
                     <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-black mb-6">
                       Product Description
                     </h3>
-                    <div className="grid md:grid-cols-2 gap-12 text-[14px] text-zinc-600 leading-relaxed">
+                    <div className="max-w-2xl text-[15px] text-zinc-700 leading-relaxed">
                       <div className="space-y-4 font-light">
                         <ul className="space-y-2">
                             {typeof product.description === "string" &&
