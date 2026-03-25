@@ -35,6 +35,16 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Fabrics from "./pages/Fabrics";
 
+// AI Studio Imports
+import Home from "./ai/pages/Home";
+import DashboardLayout from "@/ai/components/layout/DashboardLayout";
+import Generate from "@/ai/pages/Generate";
+import MyDesigns from "@/ai/pages/MyDesigns";
+import AiNotFound from "@/ai/pages/NotFound";
+import Upscale from "@/ai/pages/Upscale";
+import PatternFinder from "@/ai/pages/Patternfinder";
+import Favorites from "@/ai/pages/favorites";
+
 const queryClient = new QueryClient();
 
 /**
@@ -127,9 +137,25 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               
+                {/* AI ROUTES */}
+              <Route path="/ai-studio" element={<DashboardLayout />}>
+                <Route index element={<Navigate to="home" />} />
+                <Route path="home" element={<Home />} />
+                <Route path="gallery" element={<MyDesigns />} />
+                <Route path="generate" element={<Generate />} />
+                <Route path="*" element={<AiNotFound />} />
+                <Route path="upscale" element={<Upscale />} />
+                <Route path="finder" element={<PatternFinder />} />
+                <Route path="favorites" element={<Favorites />} />
+              </Route>
+
+{/* GLOBAL */}
+<Route path="*" element={<NotFound />} />
+
               <Route path="/fabrics" element={<Fabrics />} />
               {/* Fallback */}
               <Route path="*" element={<NotFound />} />
+
             </Routes>
           </BrowserRouter>
         </TooltipProvider>

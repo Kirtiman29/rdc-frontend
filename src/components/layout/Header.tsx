@@ -7,8 +7,7 @@ import MegaMenu from './MegaMenu';
 import SearchOverlay from './SearchOverlay';
 import { getCart } from '@/api/cartApi';
 import { getToken, clearTokens } from '@/api/apiClient';
-// Assuming you have a getWishlist API or similar
-// import { getWishlist } from '@/api/wishlistApi'; 
+import AIStudioLoader from "@/components/layout/AIStudioLoader";
 
 const navItems = [
   { label: 'Home', href: '/' },
@@ -17,11 +16,13 @@ const navItems = [
   { label: 'Trends', href: '/trends' },
   { label: 'Special Offers', href: '/special-offers' },
   { label: 'Fabrics', href: '/fabrics' },
+  { label: 'AI Studio', href: '/ai-studio' },
 ];
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [showLoader, setShowLoader] = useState(false);
   const [showMegaMenu, setShowMegaMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -83,6 +84,7 @@ const Header = () => {
 
   return (
     <>
+      {showLoader && <AIStudioLoader onFinish={() => setShowLoader(false)} />}
       <header className={cn(
         "sticky top-0 z-50 w-full bg-background transition-all duration-300 border-b border-border/50",
         scrolled && "shadow-sm border-transparent"
@@ -117,19 +119,30 @@ const Header = () => {
                   onMouseEnter={() => item.hasMegaMenu && setShowMegaMenu(true)}
                   onMouseLeave={() => item.hasMegaMenu && setShowMegaMenu(false)}
                 >
-                  <Link
-                    to={item.href}
-                    className={cn(
-                      'text-sm font-medium tracking-wide transition-colors py-2 relative',
-                      'after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-foreground after:scale-x-0 after:origin-right after:transition-transform hover:after:scale-x-100 hover:after:origin-left',
-                      location.pathname === item.href || 
-                      (item.href !== '/' && location.pathname.startsWith(item.href.split('?')[0]))
-                        ? 'text-foreground after:scale-x-100'
-                        : 'text-muted-foreground hover:text-foreground'
-                    )}
-                  >
-                    {item.label}
-                  </Link>
+                  {item.label === "AI Studio" ? (
+                    <button
+                      onClick={() => {
+                        setShowLoader(true);
+                      }}
+                      className="text-sm font-medium tracking-wide"
+                    >
+                      {item.label}
+                    </button>
+                  ) : (
+                    <Link
+                      to={item.href}
+                      className={cn(
+                        'text-sm font-medium tracking-wide transition-colors py-2 relative',
+                        'after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-foreground after:scale-x-0 after:origin-right after:transition-transform hover:after:scale-x-100 hover:after:origin-left',
+                        location.pathname === item.href || 
+                        (item.href !== '/' && location.pathname.startsWith(item.href.split('?')[0]))
+                          ? 'text-foreground after:scale-x-100'
+                          : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {item.label}
+                    </Link>
+                  )}
                   {item.hasMegaMenu && showMegaMenu && <MegaMenu />}
                 </div>
               ))}
