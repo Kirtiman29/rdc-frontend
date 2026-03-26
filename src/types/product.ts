@@ -18,8 +18,8 @@ export interface DesignMedia {
 }
 
 /**
- * ✅ UPDATED: Industrial Design Entity with Specifications
- * This matches your backend schema for Textile/Graphic Design Marketplace
+ * ✅ INDUSTRIAL DESIGN ENTITY
+ * Updated to support both Textile Designs and Physical Fabric Attributes
  */
 export interface Design {
   id: number;
@@ -42,15 +42,14 @@ export interface Design {
   draft: boolean;
   
   // Classification
-  // Classification
-segment?: 'MENSWEAR' | 'WOMENSWEAR' | 'KIDSWEAR' | 'HOME_INTERIOR' | 'ACCESSORIES';
-segments?: (
-  | 'MENSWEAR'
-  | 'WOMENSWEAR'
-  | 'KIDSWEAR'
-  | 'HOME_INTERIOR'
-  | 'ACCESSORIES'
-)[];
+  segment?: 'MENSWEAR' | 'WOMENSWEAR' | 'KIDSWEAR' | 'HOME_INTERIOR' | 'ACCESSORIES';
+  segments?: (
+    | 'MENSWEAR'
+    | 'WOMENSWEAR'
+    | 'KIDSWEAR'
+    | 'HOME_INTERIOR'
+    | 'ACCESSORIES'
+  )[];
   
   // Industrial Specifications
   imageFormat?: string;   // e.g. TIFF, PSD, PNG
@@ -98,17 +97,22 @@ export interface OrderItemResponse {
 }
 
 /**
- * Standardized Filters for Spring Boot Pageable
- * Used for catalog searching and gallery filtering
+ * ✅ STANDARDIZED FILTERS
+ * Updated with 'color' and 'style' to support FabricsFilters component
  */
 export interface DesignFilters {
   // Spring Boot Pagination Parameters
   page?: number;  // The zero-based page index
-  size?: number;  // The size of the page (Replaces 'limit')
+  size?: number;  // The size of the page
   
   // Business Logic Filters
   categoryId?: number;
   segment?: string | string[];
+  
+  // 🔥 New Marketplace Filters
+  color?: string;
+  style?: string;
+
   minPrice?: number;
   maxPrice?: number;
   luxury?: boolean;
@@ -122,7 +126,6 @@ export interface DesignFilters {
 
 /**
  * Full Spring Data Page Wrapper
- * Use this when fetching designs from the API
  */
 export interface DesignsResponse {
   content: Design[];
@@ -135,6 +138,6 @@ export interface DesignsResponse {
   empty: boolean;
 }
 
-// Aliases for legacy UI components
+// Aliases for UI components
 export type Product = Design;
 export type ProductFilter = DesignFilters;

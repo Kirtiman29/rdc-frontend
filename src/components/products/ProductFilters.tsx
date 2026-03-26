@@ -1,3 +1,4 @@
+//src/components/products/ProductFilters.tsx
 import { useEffect, useState } from 'react';
 import { ProductFilter, Category } from '@/types/product';
 import { X, Filter } from 'lucide-react';

@@ -33,7 +33,7 @@ import Signup from "./pages/Signup";
 import NotFound from "./pages/NotFound";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-import Fabrics from "./pages/Fabrics";
+import Fabrics from "./pages/fabrics/Fabrics";
 
 // AI Studio Imports
 import Home from "./ai/pages/Home";
@@ -44,6 +44,8 @@ import AiNotFound from "@/ai/pages/NotFound";
 import Upscale from "@/ai/pages/Upscale";
 import PatternFinder from "@/ai/pages/Patternfinder";
 import Favorites from "@/ai/pages/favorites";
+import ExploreFabrics from "@/pages/fabrics/ExploreFabrics";
+
 
 const queryClient = new QueryClient();
 
@@ -152,7 +154,9 @@ const App = () => (
 {/* GLOBAL */}
 <Route path="*" element={<NotFound />} />
 
-              <Route path="/fabrics" element={<Fabrics />} />
+              <Route path="/fabrics/shop" element={<Fabrics />} />
+              <Route path="/fabrics/explore" element={<ExploreFabrics />} />
+
               {/* Fallback */}
               <Route path="*" element={<NotFound />} />
 

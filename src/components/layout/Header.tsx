@@ -8,14 +8,15 @@ import SearchOverlay from './SearchOverlay';
 import { getCart } from '@/api/cartApi';
 import { getToken, clearTokens } from '@/api/apiClient';
 import AIStudioLoader from "@/components/layout/AIStudioLoader";
+import NavDropdown from "./NavDropdown";
 
 const navItems = [
   { label: 'Home', href: '/' },
   { label: 'Designs', href: '/gallery', hasMegaMenu: true },
-  { label: 'Luxury', href: '/luxury' },
+  { label: 'Luxury', href: '/luxury' , hasDropdown: true },
   { label: 'Trends', href: '/trends' },
   { label: 'Special Offers', href: '/special-offers' },
-  { label: 'Fabrics', href: '/fabrics' },
+  { label: 'Fabrics', href: '/fabrics/explore' , hasDropdown: true},
   { label: 'AI Studio', href: '/ai-studio' },
 ];
 
@@ -32,7 +33,7 @@ const Header = () => {
   const [cartCount, setCartCount] = useState(0);
   const [hasWishlistItems, setHasWishlistItems] = useState(false);
   const isLoggedIn = !!getToken();
-
+const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   // 1️⃣ Header Sync Logic (Cart & Wishlist)
   useEffect(() => {
     const syncHeaderData = async () => {
@@ -116,15 +117,26 @@ const Header = () => {
                 <div
                   key={item.label}
                   className="relative"
-                  onMouseEnter={() => item.hasMegaMenu && setShowMegaMenu(true)}
-                  onMouseLeave={() => item.hasMegaMenu && setShowMegaMenu(false)}
+                    onMouseEnter={() => {
+                    if (item.hasMegaMenu) setShowMegaMenu(true);
+                    if (item.hasDropdown) setActiveDropdown(item.label);
+                      }}
+                    onMouseLeave={() => {
+                    if (item.hasMegaMenu) setShowMegaMenu(false);
+                    if (item.hasDropdown) setActiveDropdown(null);
+}}
                 >
+                  
                   {item.label === "AI Studio" ? (
                     <button
                       onClick={() => {
                         setShowLoader(true);
                       }}
-                      className="text-sm font-medium tracking-wide"
+                      className={cn(
+                      'text-sm font-medium tracking-wide transition-colors py-2 relative',
+                      'after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-foreground after:scale-x-0 after:origin-right after:transition-transform hover:after:scale-x-100 hover:after:origin-left',
+                      'text-muted-foreground hover:text-foreground'
+                    )}
                     >
                       {item.label}
                     </button>
@@ -143,6 +155,9 @@ const Header = () => {
                       {item.label}
                     </Link>
                   )}
+                  {item.hasDropdown && activeDropdown === item.label && (
+                  <NavDropdown type={item.label.toLowerCase() as "fabrics" | "luxury"} />
+        )}
                   {item.hasMegaMenu && showMegaMenu && <MegaMenu />}
                 </div>
               ))}
