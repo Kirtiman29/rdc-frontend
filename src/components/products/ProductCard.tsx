@@ -13,9 +13,10 @@ import { formatPrice } from '@/utils/price';
 
 interface ProductCardProps {
   product: Design;
+  redirectPath?: string;
 }
 
-const ProductCard = ({ product }: ProductCardProps) => {
+const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
   const { toast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const [isWished, setIsWished] = useState(false);
@@ -78,7 +79,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
 
   return (
     <div className="group animate-fade-in relative font-sans" onContextMenu={handleContextMenu}>
-      <Link to={`/product/${product.id}`}>
+      <Link to={`${redirectPath || "/product"}/${product.id}`}>
         <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-sm bg-secondary select-none shadow-sm">
           
           {/* RDC WATERMARK OVERLAY */}
@@ -154,7 +155,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         <span className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           {categoryLabel}
         </span>
-        <Link to={`/product/${product.id}`}>
+        <Link to={`${redirectPath || "/product"}/${product.id}`}>
           <h3 className="mb-1 font-serif text-lg font-medium transition-colors hover:text-muted-foreground line-clamp-1 text-[#2A2623]">
             {product.title}
           </h3>

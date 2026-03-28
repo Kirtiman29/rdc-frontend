@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GoogleLogin, type CredentialResponse } from "@react-oauth/google";
-import { loginUser, loginWithGoogle } from '../api/authApi'; 
+import { loginUser, loginWithGoogle } from '../../api/authApi'; 
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

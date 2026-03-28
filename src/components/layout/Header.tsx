@@ -1,30 +1,89 @@
-// src/components/layout/Header.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, User, Heart, ShoppingBag, Package, Menu, X, LogOut } from 'lucide-react';
+import { 
+  Search, User, Heart, ShoppingBag, Package, 
+  Menu, X, LogOut, ChevronRight, ChevronDown 
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MegaMenu from './MegaMenu';
 import SearchOverlay from './SearchOverlay';
 import { getCart } from '@/api/cartApi';
 import { getToken, clearTokens } from '@/api/apiClient';
 import AIStudioLoader from "@/components/layout/AIStudioLoader";
-import NavDropdown from "./NavDropdown";
 
-const navItems = [
+// --- Types & Data ---
+
+interface SubItem {
+  label: string;
+  href: string;
+}
+
+interface NavItem {
+  label: string;
+  href: string;
+  hasMegaMenu?: boolean;
+  hasDropdown?: boolean;
+  submenu?: {
+    main: Array<{ label: string; href: string }>;
+    nested: Array<{ label: string; items: SubItem[] }>;
+  };
+}
+
+const navItems: NavItem[] = [
   { label: 'Home', href: '/' },
   { label: 'Designs', href: '/gallery', hasMegaMenu: true },
-  { label: 'Luxury', href: '/luxury' , hasDropdown: true },
+  { 
+    label: 'Luxury', 
+    href: '/luxury/explore', 
+    hasDropdown: true,
+    submenu: {
+      main: [
+        { label: 'Explore Luxury', href: '/luxury/explore' },
+        { label: 'Shop All Luxury Designs', href: '/luxury/shop' },
+      ],
+      nested: []
+    }
+  },
   { label: 'Trends', href: '/trends' },
   { label: 'Special Offers', href: '/special-offers' },
-  { label: 'Fabrics', href: '/fabrics/explore' , hasDropdown: true},
+  { 
+    label: 'Fabrics', 
+    href: '/fabrics/explore', 
+    hasDropdown: true,
+    submenu: {
+      main: [
+        { label: 'Explore Fabric', href: '/fabrics/explore' },
+        { label: 'Shop All Fabric Designs', href: '/fabrics/shop' },
+      ],
+      nested: [
+        { 
+          label: 'By Color', 
+          items: [
+            { label: 'Blue', href: '/fabrics/color/blue' },
+            { label: 'Red', href: '/fabrics/color/red' },
+            { label: 'Neutral', href: '/fabrics/color/neutral' },
+          ] 
+        },
+        { 
+          label: 'By Project', 
+          items: [
+            { label: 'Upholstery', href: '/fabrics/project/upholstery' },
+            { label: 'Apparel', href: '/fabrics/project/apparel' },
+            { label: 'Quilting', href: '/fabrics/project/quilting' },
+          ] 
+        },
+      ]
+    }
+  },
   { label: 'AI Studio', href: '/ai-studio' },
 ];
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  
   const [showLoader, setShowLoader] = useState(false);
-  const [showMegaMenu, setShowMegaMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -33,8 +92,30 @@ const Header = () => {
   const [cartCount, setCartCount] = useState(0);
   const [hasWishlistItems, setHasWishlistItems] = useState(false);
   const isLoggedIn = !!getToken();
-const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  // 1️⃣ Header Sync Logic (Cart & Wishlist)
+
+  // Unified State for all Click-based Dropdowns
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null);
+        setActiveSubmenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Close menus when route changes
+  useEffect(() => {
+    setActiveDropdown(null);
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Sync Cart Data
   useEffect(() => {
     const syncHeaderData = async () => {
       if (!isLoggedIn) {
@@ -42,34 +123,21 @@ const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
         setHasWishlistItems(false);
         return;
       }
-
       try {
-        // Parallel fetching for better performance
         const cart = await getCart();
         setCartCount(cart.totalItems || 0);
-
-        // Optional: Add Wishlist check logic here if API exists
-        // const wishlist = await getWishlist();
-        // setHasWishlistItems(wishlist.items?.length > 0);
       } catch (error) {
         console.error('Header sync failed:', error);
       }
     };
-
     syncHeaderData();
-
-    // Event Listener for real-time updates from other components
-    const handleCartUpdate = () => syncHeaderData();
-    window.addEventListener("cart-updated", handleCartUpdate);
-
-    return () => window.removeEventListener("cart-updated", handleCartUpdate);
+    window.addEventListener("cart-updated", syncHeaderData);
+    return () => window.removeEventListener("cart-updated", syncHeaderData);
   }, [isLoggedIn]);
 
-  // Handle Scroll Shadow
+  // Scroll Shadow
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
+    const handleScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -83,6 +151,13 @@ const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
     navigate('/login');
   };
 
+  const toggleDropdown = (e: React.MouseEvent, label: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setActiveDropdown(prev => prev === label ? null : label);
+    setActiveSubmenu(null);
+  };
+
   return (
     <>
       {showLoader && <AIStudioLoader onFinish={() => setShowLoader(false)} />}
@@ -93,145 +168,152 @@ const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
         <div className="container mx-auto px-4 md:px-8">
           <div className="flex h-14 md:h-20 items-center justify-between">
             
-            {/* Mobile Left: Hamburger + Logo Group */}
+            {/* Logo Group */}
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="lg:hidden p-2 -ml-2 text-foreground"
-                aria-label="Open menu"
-              >
+              <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 text-foreground">
                 <Menu className="h-5 w-5" />
               </button>
-
               <Link to="/" className="flex items-center gap-2 shrink-0 select-none">
                 <img src="/rdc-logo.png" alt="RDC" className="h-6 sm:h-8 md:h-10 w-auto" />
-                <span className="hidden sm:block font-serif text-xl md:text-2xl font-medium tracking-wide">
-                  RDC
-                </span>
+                <span className="hidden sm:block font-serif text-xl md:text-2xl font-medium tracking-wide">RDC</span>
               </Link>
             </div>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-8">
+            <nav className="hidden lg:flex items-center gap-8" ref={dropdownRef}>
               {navItems.map((item) => (
-                <div
-                  key={item.label}
-                  className="relative"
-                    onMouseEnter={() => {
-                    if (item.hasMegaMenu) setShowMegaMenu(true);
-                    if (item.hasDropdown) setActiveDropdown(item.label);
-                      }}
-                    onMouseLeave={() => {
-                    if (item.hasMegaMenu) setShowMegaMenu(false);
-                    if (item.hasDropdown) setActiveDropdown(null);
-}}
-                >
-                  
+                <div key={item.label} className="relative">
                   {item.label === "AI Studio" ? (
                     <button
-                      onClick={() => {
-                        setShowLoader(true);
-                      }}
-                      className={cn(
-                      'text-sm font-medium tracking-wide transition-colors py-2 relative',
-                      'after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-foreground after:scale-x-0 after:origin-right after:transition-transform hover:after:scale-x-100 hover:after:origin-left',
-                      'text-muted-foreground hover:text-foreground'
-                    )}
+                      onClick={() => setShowLoader(true)}
+                      className="text-sm font-medium tracking-wide transition-colors py-2 text-muted-foreground hover:text-foreground"
                     >
                       {item.label}
+                    </button>
+                  ) : (item.hasDropdown || item.hasMegaMenu) ? (
+                    <button
+                      onClick={(e) => toggleDropdown(e, item.label)}
+                      className={cn(
+                        'text-sm font-medium tracking-wide transition-colors py-2 flex items-center gap-1',
+                        activeDropdown === item.label ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      {item.label}
+                      <ChevronDown className={cn(
+                        "h-3 w-3 transition-transform duration-200", 
+                        activeDropdown === item.label ? "rotate-180" : "rotate-0"
+                      )} />
                     </button>
                   ) : (
                     <Link
                       to={item.href}
                       className={cn(
-                        'text-sm font-medium tracking-wide transition-colors py-2 relative',
-                        'after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-foreground after:scale-x-0 after:origin-right after:transition-transform hover:after:scale-x-100 hover:after:origin-left',
-                        location.pathname === item.href || 
-                        (item.href !== '/' && location.pathname.startsWith(item.href.split('?')[0]))
-                          ? 'text-foreground after:scale-x-100'
-                          : 'text-muted-foreground hover:text-foreground'
+                        'text-sm font-medium tracking-wide transition-colors py-2 relative after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-foreground after:scale-x-0 after:origin-right after:transition-transform hover:after:scale-x-100 hover:after:origin-left',
+                        location.pathname === item.href ? 'text-foreground after:scale-x-100' : 'text-muted-foreground hover:text-foreground'
                       )}
                     >
                       {item.label}
                     </Link>
                   )}
-                  {item.hasDropdown && activeDropdown === item.label && (
-                  <NavDropdown type={item.label.toLowerCase() as "fabrics" | "luxury"} />
-        )}
-                  {item.hasMegaMenu && showMegaMenu && <MegaMenu />}
+
+                  {/* MEGAMENU (Click-triggered) */}
+                  {item.hasMegaMenu && activeDropdown === item.label && (
+                    <MegaMenu />
+                  )}
+
+                  {/* STANDARD DROPDOWN */}
+                  {item.hasDropdown && activeDropdown === item.label && item.submenu && (
+                    <div className="absolute top-full left-0 w-64 bg-white border border-border shadow-lg rounded-md py-2 mt-1 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
+                      {item.submenu.main.map((sub) => (
+                        <Link
+                          key={sub.label}
+                          to={sub.href}
+                          onClick={() => setActiveDropdown(null)}
+                          className="block px-4 py-2 text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                        >
+                          {sub.label}
+                        </Link>
+                      ))}
+
+                      {item.submenu.nested.length > 0 && (
+                        <>
+                          <div className="border-t border-border my-1" />
+                          {item.submenu.nested.map((nestedGroup) => (
+                            <div 
+                              key={nestedGroup.label}
+                              className="relative group/nested"
+                              onMouseEnter={() => setActiveSubmenu(nestedGroup.label)}
+                              onMouseLeave={() => setActiveSubmenu(null)}
+                            >
+                              <div className="flex items-center justify-between px-4 py-2 text-sm text-foreground hover:bg-secondary/50 cursor-pointer">
+                                {nestedGroup.label}
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                              
+                              {activeSubmenu === nestedGroup.label && (
+                                <div className="absolute left-full top-0 ml-[-1px] w-56 bg-white border border-border shadow-lg rounded-md py-2 animate-in fade-in slide-in-from-left-2 duration-200">
+                                  {nestedGroup.items.map((subItem) => (
+                                    <Link
+                                      key={subItem.label}
+                                      to={subItem.href}
+                                      onClick={() => setActiveDropdown(null)}
+                                      className="block px-4 py-2 text-sm text-foreground hover:bg-secondary/50 transition-colors"
+                                    >
+                                      {subItem.label}
+                                    </Link>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </nav>
 
             {/* Right Icons */}
             <div className="flex items-center gap-2 sm:gap-3">
-              <button
-                onClick={() => setShowSearch(true)}
-                className="p-2 text-muted-foreground hover:text-foreground transition-colors"
-                title="Search"
-              >
+              <button onClick={() => setShowSearch(true)} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
                 <Search className="h-5 w-5" />
               </button>
 
               {isLoggedIn && (
-                <Link 
-                  to="/orders" 
-                  className="hidden md:flex p-2 text-muted-foreground hover:text-foreground transition-colors"
-                  title="My Orders"
-                >
+                <Link to="/orders" className="hidden md:flex p-2 text-muted-foreground hover:text-foreground transition-colors">
                   <Package className="h-5 w-5" />
                 </Link>
               )}
 
-              {/* Wishlist with Premium Indicator */}
-              <Link 
-                to="/wishlist" 
-                className="relative p-2 text-muted-foreground hover:text-foreground transition-colors" 
-                title="Wishlist"
-              >
+              <Link to="/wishlist" className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
                 <Heart className="h-5 w-5" />
-                {hasWishlistItems && (
-                  <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-red-500 rounded-full animate-in fade-in zoom-in duration-300"></span>
-                )}
+                {hasWishlistItems && <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-red-500 rounded-full animate-pulse" />}
               </Link>
 
-              {/* Cart with Professional Bubble */}
-              <Link to="/cart" className="relative p-2 text-muted-foreground hover:text-foreground transition-colors" title="Cart">
+              <Link to="/cart" className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
                 <ShoppingBag className="h-5 w-5" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-black text-white text-[10px] font-semibold rounded-full flex items-center justify-center animate-in zoom-in duration-300">
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-black text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
                     {cartCount}
                   </span>
                 )}
               </Link>
 
-              {/* Profile/Auth Toggle */}
               {!isLoggedIn ? (
                 <div className="hidden sm:flex items-center gap-4 ml-2">
-                  <Link to="/login" className="text-xs font-bold uppercase tracking-widest hover:text-foreground transition-colors">
-                    Login
-                  </Link>
-                  <Link to="/signup" className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest rounded-sm hover:opacity-90 transition-all">
-                    Register
-                  </Link>
+                  <Link to="/login" className="text-xs font-bold uppercase tracking-widest hover:text-foreground">Login</Link>
+                  <Link to="/signup" className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest rounded-sm">Register</Link>
                 </div>
               ) : (
-                <div 
-                  className="relative ml-1" 
-                  onMouseEnter={() => setShowProfileMenu(true)} 
-                  onMouseLeave={() => setShowProfileMenu(false)}
-                >
-                  <button className="p-2 text-muted-foreground hover:text-foreground transition-colors">
+                <div className="relative ml-1" onMouseEnter={() => setShowProfileMenu(true)} onMouseLeave={() => setShowProfileMenu(false)}>
+                  <button className="p-2 text-muted-foreground hover:text-foreground">
                     <User className="h-5 w-5" />
                   </button>
                   {showProfileMenu && (
-                    <div className="absolute right-0 top-full w-48 bg-white border border-border shadow-xl py-2 animate-in fade-in zoom-in-95 duration-200">
-                      <Link to="/profile" className="block px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-secondary/50 hover:text-foreground">
-                        My Account
-                      </Link>
-                      <Link to="/orders" className="block px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-secondary/50 hover:text-foreground">
-                        My Orders
-                      </Link>
+                    <div className="absolute right-0 top-full w-48 bg-white border border-border shadow-xl py-2 z-50">
+                      <Link to="/profile" className="block px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-secondary/50">My Account</Link>
+                      <Link to="/orders" className="block px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-secondary/50">My Orders</Link>
                       <div className="border-t border-border my-1" />
                       <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-50 flex items-center gap-2">
                         <LogOut className="h-3 w-3" /> Logout
@@ -244,84 +326,27 @@ const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
           </div>
         </div>
 
-        {/* MOBILE DRAWER SYSTEM */}
+        {/* MOBILE DRAWER */}
         <>
-          <div 
-            className={cn(
-              "fixed inset-0 bg-black/30 backdrop-blur-sm z-[60] transition-opacity lg:hidden",
-              isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-            )}
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-          
-          <div className={cn(
-            'fixed top-0 left-0 bottom-0 w-[85%] max-w-[340px] bg-background z-[70] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] lg:hidden shadow-2xl', 
-            isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-          )}>
+          <div className={cn("fixed inset-0 bg-black/30 backdrop-blur-sm z-[60] lg:hidden transition-opacity", isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none")} onClick={() => setIsMobileMenuOpen(false)} />
+          <div className={cn('fixed top-0 left-0 bottom-0 w-[85%] max-w-[340px] bg-background z-[70] transition-transform duration-300 lg:hidden shadow-2xl', isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full')}>
             <div className="flex flex-col h-full">
               <div className="flex items-center justify-between p-5 border-b border-border/50">
-                <div className="flex items-center gap-2">
-                  <img src="/rdc-logo.png" className="h-6 w-auto" alt="Logo" />
-                  <span className="font-serif text-lg tracking-wide">RDC</span>
-                </div>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 -mr-2">
-                  <X className="h-5 w-5" />
-                </button>
+                <span className="font-serif text-lg tracking-wide">RDC</span>
+                <button onClick={() => setIsMobileMenuOpen(false)}><X className="h-5 w-5" /></button>
               </div>
-              
               <nav className="flex flex-col p-6 overflow-y-auto">
                 {navItems.map((item) => (
-                  <Link 
-                    key={item.label} 
-                    to={item.href} 
-                    className={cn(
-                      "text-base font-light tracking-wide transition-all py-4 border-b border-border/20",
-                      location.pathname === item.href 
-                        ? "text-foreground font-medium" 
-                        : "text-foreground/70"
-                    )}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {item.label}
-                  </Link>
+                  <Link key={item.label} to={item.href} className="text-base font-light py-4 border-b border-border/20" onClick={() => setIsMobileMenuOpen(false)}>{item.label}</Link>
                 ))}
-                
                 {isLoggedIn && (
-                  <>
-                    <Link to="/orders" className="text-base font-light tracking-wide text-foreground/70 py-4 border-b border-border/20" onClick={() => setIsMobileMenuOpen(false)}>
-                      My Orders
-                    </Link>
-                    <Link to="/profile" className="text-base font-light tracking-wide text-foreground/70 py-4 border-b border-border/20" onClick={() => setIsMobileMenuOpen(false)}>
-                      My Profile
-                    </Link>
-                  </>
+                  <Link to="/profile" className="text-base font-light py-4 border-b border-border/20" onClick={() => setIsMobileMenuOpen(false)}>My Profile</Link>
                 )}
-                
                 <div className="mt-auto pt-10 pb-6 flex flex-col gap-4">
                   {!isLoggedIn ? (
-                    <>
-                      <Link 
-                        to="/login" 
-                        className="w-full py-3 border border-foreground/30 text-center text-sm tracking-widest hover:bg-foreground hover:text-white transition-all duration-300" 
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        LOGIN
-                      </Link>
-                      <Link 
-                        to="/signup" 
-                        className="w-full py-3 bg-foreground text-background text-center text-sm tracking-widest hover:opacity-90 transition-all duration-300" 
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        CREATE ACCOUNT
-                      </Link>
-                    </>
+                    <Link to="/login" className="w-full py-3 border border-foreground/30 text-center text-sm tracking-widest">LOGIN</Link>
                   ) : (
-                    <button 
-                      onClick={handleLogout}
-                      className="w-full py-3 border border-rose-200 text-rose-600 text-sm tracking-widest flex items-center justify-center gap-2 hover:bg-rose-50 transition-all"
-                    >
-                      <LogOut className="h-4 w-4" /> LOGOUT
-                    </button>
+                    <button onClick={handleLogout} className="w-full py-3 border border-rose-200 text-rose-600 text-sm tracking-widest flex items-center justify-center gap-2">LOGOUT</button>
                   )}
                 </div>
               </nav>
@@ -329,7 +354,6 @@ const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
           </div>
         </>
       </header>
-
       <SearchOverlay isOpen={showSearch} onClose={() => setShowSearch(false)} />
     </>
   );

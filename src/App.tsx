@@ -14,25 +14,27 @@ import Gallery from "./pages/Gallery";
 import ProductDetail from "./pages/ProductDetail";
 import Orders from "./pages/Orders";
 import Profile from "./pages/Profile"; 
-import Login from "./pages/Login"; 
+import Login from "./pages/auth/Login"; 
 import Wishlist from "./pages/Wishlist";
 import Cart from "./pages/Cart";
-import Checkout from "./pages/Checkout"; 
-import PaymentSuccess from "./pages/PaymentSuccess"; 
-import PaymentFailure from "./pages/PaymentFailure";
-import Premium from "./pages/Premium";
+import Checkout from "./pages/payment/Checkout"; 
+import PaymentSuccess from "./pages/payment/PaymentSuccess"; 
+import PaymentFailure from "./pages/payment/PaymentFailure";
+import Premium from "./pages/luxury/Premium";
+import ExploreLuxury from "./pages/luxury/ExploreLuxury";
+import InDetailedLuxury from "./pages/luxury/InDetailedLuxury";
 import Trends from "./pages/Trends";
 import SpecialOffers from "./pages/SpecialOffers";
-import About from "./pages/About";
-import Careers from "./pages/Careers";
-import Contact from "./pages/Contact";
-import FAQ from "./pages/FAQ";
-import Terms from "./pages/Terms";
-import Privacy from "./pages/Privacy";
-import Signup from "./pages/Signup";
+import About from "./pages/footer/About";
+import Careers from "./pages/footer/Careers";
+import Contact from "./pages/footer/Contact";
+import FAQ from "./pages/footer/FAQ";
+import Terms from "./pages/footer/Terms";
+import Privacy from "./pages/footer/Privacy";
+import Signup from "./pages/auth/Signup";
 import NotFound from "./pages/NotFound";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 import Fabrics from "./pages/fabrics/Fabrics";
 
 // AI Studio Imports
@@ -45,6 +47,7 @@ import Upscale from "@/ai/pages/Upscale";
 import PatternFinder from "@/ai/pages/Patternfinder";
 import Favorites from "@/ai/pages/favorites";
 import ExploreFabrics from "@/pages/fabrics/ExploreFabrics";
+import IndetailFabrics from "./pages/fabrics/IndetailFabrics";
 
 
 const queryClient = new QueryClient();
@@ -85,7 +88,12 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/product/:id" element={<ProductDetail />} />
-              <Route path="/luxury" element={<Premium />} />
+
+              {/* LUXURY ROUTES */}
+              <Route path="/luxury/shop" element={<Premium />} />
+              <Route path="/luxury/explore" element={<ExploreLuxury />} />
+              <Route path="/luxury/design/:id" element={<InDetailedLuxury />} />
+
               <Route path="/trends" element={<Trends />} />
               <Route path="/special-offers" element={<SpecialOffers />} />
               
@@ -151,11 +159,13 @@ const App = () => (
                 <Route path="favorites" element={<Favorites />} />
               </Route>
 
-{/* GLOBAL */}
-<Route path="*" element={<NotFound />} />
+              {/* GLOBAL */}
+              <Route path="*" element={<NotFound />} />
 
               <Route path="/fabrics/shop" element={<Fabrics />} />
               <Route path="/fabrics/explore" element={<ExploreFabrics />} />
+              <Route path="/fabrics/design/:id" element={<IndetailFabrics />} />
+
 
               {/* Fallback */}
               <Route path="*" element={<NotFound />} />

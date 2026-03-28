@@ -1,3 +1,4 @@
+// src/pages/fabrics/Fabrics.tsx
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { ChevronRight, ChevronLeft, Loader2, SlidersHorizontal } from "lucide-react";
@@ -136,7 +137,7 @@ const Fabrics = () => {
                 ) : designs.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-10">
                     {designs.map((d) => (
-                      <ProductCard key={d.id} product={d} />
+                      <ProductCard key={d.id} product={d} redirectPath="/fabrics/design" />
                     ))}
                   </div>
                 ) : (
