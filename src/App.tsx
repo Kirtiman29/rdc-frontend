@@ -23,8 +23,10 @@ import PaymentFailure from "./pages/payment/PaymentFailure";
 import Premium from "./pages/luxury/Premium";
 import ExploreLuxury from "./pages/luxury/ExploreLuxury";
 import InDetailedLuxury from "./pages/luxury/InDetailedLuxury";
-import Trends from "./pages/Trends";
-import SpecialOffers from "./pages/SpecialOffers";
+import Trends from "./pages/trends/Trends";
+import ExploreTrends from "./pages/trends/ExploreTrends";
+import SpecialOffers from "./pages/special-offers/SpecialOffers";
+import ExploreOffers from "./pages/special-offers/ExploreOffers";
 import About from "./pages/footer/About";
 import Careers from "./pages/footer/Careers";
 import Contact from "./pages/footer/Contact";
@@ -94,8 +96,11 @@ const App = () => (
               <Route path="/luxury/explore" element={<ExploreLuxury />} />
               <Route path="/luxury/design/:id" element={<InDetailedLuxury />} />
 
-              <Route path="/trends" element={<Trends />} />
-              <Route path="/special-offers" element={<SpecialOffers />} />
+              <Route path="/trends/shop" element={<Trends />} />
+              <Route path="/trends/explore" element={<ExploreTrends />} />
+
+              <Route path="/special-offers/shop" element={<SpecialOffers />} />
+              <Route path="/special-offers/explore" element={<ExploreOffers />} />
               
               {/* Auth Routes */}
               <Route path="/signup" element={<Signup />} />

@@ -1,3 +1,4 @@
+//src/components/layout/Header.tsx
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -44,8 +45,8 @@ const navItems: NavItem[] = [
       nested: []
     }
   },
-  { label: 'Trends', href: '/trends' },
-  { label: 'Special Offers', href: '/special-offers' },
+  { label: 'Trends', href: '/trends/explore' },
+  { label: 'Special Offers', href: '/special-offers/explore' },
   { 
     label: 'Fabrics', 
     href: '/fabrics/explore', 

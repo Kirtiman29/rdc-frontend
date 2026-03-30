@@ -143,7 +143,7 @@ const SpecialOffers = () => {
             </h2>
           </div>
           <Link 
-            to="/gallery" 
+            to="/special-offers/explore" 
             className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors border-b border-muted-foreground/30 pb-1 hidden md:block"
           >
             View All Offers

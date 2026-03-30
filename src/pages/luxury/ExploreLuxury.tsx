@@ -2,9 +2,10 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Link } from "react-router-dom";
 import { Star, ShieldCheck, Gem, Globe, ArrowRight } from "lucide-react";
+import luxuryBanner from "@/assets/luxury-banner.png";
 
 // Updated Sample Images for Luxury Context
-const luxuryBanner = "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&q=80&w=2000"; 
+// const luxuryBanner = "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&q=80&w=2000";
 const luxuryPattern1 = "https://images.unsplash.com/photo-1584184854125-51633002e3b6?auto=format&fit=crop&q=80&w=800";
 const luxuryPattern2 = "https://images.unsplash.com/photo-1615529328322-924d405330ec?auto=format&fit=crop&q=80&w=800";
 const luxuryPattern3 = "https://images.unsplash.com/photo-1579541814924-49fef17c5be5?auto=format&fit=crop&q=80&w=800";

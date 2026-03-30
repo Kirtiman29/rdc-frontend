@@ -148,7 +148,7 @@ const PremiumDesigns = () => {
 
           <div className="flex items-center gap-6">
             <Link
-              to="/gallery"
+              to="/luxury/explore"
               className="text-neutral-400 hover:text-white transition-colors text-xs font-medium border-b border-neutral-800 pb-1 hidden sm:block"
             >
               View All

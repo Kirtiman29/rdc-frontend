@@ -146,7 +146,7 @@ const TrendingDesigns = () => {
           </div>
           <div className="hidden md:block">
             <Link 
-              to="/gallery" 
+              to="/trends/explore" 
               className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors border-b border-muted-foreground/30 pb-1"
             >
               Explore Collection
