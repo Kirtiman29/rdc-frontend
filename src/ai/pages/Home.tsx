@@ -52,15 +52,14 @@ export default function Home() {
                 <span className="text-[#ff1a1a]">FUTURE</span> OF WEAVE
               </h1>
               <p className="text-gray-400 text-lg mb-8 leading-relaxed max-w-md">
-                Create seamless, high-fidelity textile patterns using specialized 
-                generative AI trained on global heritage fabrics.
+                Every great collection starts with a pattern no one has made yet. Textile gives designers, brands, and makers the power to generate original, culturally rich, studio-ready fabric designs at the speed of imagination.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link
                   to="/ai-studio/generate"
                   className="px-8 py-4 rounded-2xl bg-[#ff1a1a] text-white font-bold hover:bg-red-700 transition-all flex items-center gap-2 shadow-[0_0_30px_rgba(255,26,26,0.2)]"
                 >
-                  <Play className="w-4 h-4 fill-current" /> Start Workspace
+                  <Play className="w-4 h-4 fill-current" /> Start Creating
                 </Link>
                 <Link
                   to="/ai-studio/gallery"

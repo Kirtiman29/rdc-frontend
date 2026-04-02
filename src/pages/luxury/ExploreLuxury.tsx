@@ -46,7 +46,7 @@ const ExploreLuxury = () => {
                     to="/luxury/shop"
                     className="px-10 py-4 bg-[#C5A059] text-white rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-[#A6864A] transition-all"
                   >
-                    Shop Luxury Line
+                    SHOP THE COLLECTION
                   </Link>
                   <Link
                     to="/luxury/curated-sets"
@@ -65,28 +65,25 @@ const ExploreLuxury = () => {
           <div className="container mx-auto px-4 md:px-8 grid grid-cols-1 md:grid-cols-3 gap-16">
             <div className="flex flex-col items-center text-center">
               <Gem className="w-10 h-10 text-[#C5A059] mb-6 font-light" />
-              <h3 className="text-xl font-serif text-[#1A1A1A] mb-3">Exquisite Fibers</h3>
+              <h3 className="text-xl font-serif text-[#1A1A1A] mb-3">Only the Finest Fibers</h3>
               <p className="text-neutral-500 font-light leading-relaxed">
-                From Grade-A Mulberry Silk to sustainable Belgian Linen, we source 
-                only the finest raw materials for our base fabrics.
+                From Grade-A mulberry silk to sustainable Belgian linen—we never cut corners on the foundation. Because great fabric starts with great raw material.
               </p>
             </div>
 
             <div className="flex flex-col items-center text-center">
               <ShieldCheck className="w-10 h-10 text-[#C5A059] mb-6" />
-              <h3 className="text-xl font-serif text-[#1A1A1A] mb-3">Master Craftsmanship</h3>
+              <h3 className="text-xl font-serif text-[#1A1A1A] mb-3">Made Once. Worn Forever</h3>
               <p className="text-neutral-500 font-light leading-relaxed">
-                Each design is digitally mastered to ensure pixel-perfect clarity 
-                and color depth that remains vibrant for decades.
+                Every design is digitally mastered for pixel-perfect clarity and color that stays vivid wash after wash, year after year.
               </p>
             </div>
 
             <div className="flex flex-col items-center text-center">
               <Globe className="w-10 h-10 text-[#C5A059] mb-6" />
-              <h3 className="text-xl font-serif text-[#1A1A1A] mb-3">Global Designer Network</h3>
+              <h3 className="text-xl font-serif text-[#1A1A1A] mb-3">Patterns Nobody Else Has</h3>
               <p className="text-neutral-500 font-light leading-relaxed">
-                We partner with world-renowned textile artists to bring you 
-                exclusive patterns you won't find anywhere else.
+                We work with world-renowned textile artists to bring you exclusive designs you simply cannot find anywhere else. Rare by design
               </p>
             </div>
           </div>
@@ -139,15 +136,13 @@ const ExploreLuxury = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
               <div>
                 <h2 className="font-serif text-4xl md:text-5xl mb-8 leading-tight">
-                  Bespoke Textiles for <br /> Professional Designers
+                  Your Vision Deserves <br /> the Right Foundation
                 </h2>
                 <p className="text-neutral-400 text-lg font-light mb-10 leading-relaxed">
-                  Join our trade program for exclusive access to high-resolution 
-                  TIFF files, custom color matching services, and bulk pricing 
-                  on our premium luxury material bases.
+                  Great design doesn't happen by accident — it starts with materials that match your standard. Join the RDC Trade Program and get access to the tools professionals actually need: high-resolution TIFF files, personalized color matching, and bulk pricing built around how you work, not how a catalog does.
                 </p>
                 <button className="flex items-center gap-4 text-[#C5A059] font-bold uppercase tracking-widest text-sm group">
-                  Learn about RDC Trade <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                  See What Trade Members Get → <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
                 </button>
               </div>
               <div className="relative">

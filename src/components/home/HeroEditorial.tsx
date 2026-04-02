@@ -35,11 +35,11 @@ const HeroEditorial = () => {
         const allFetched = response?.content || (Array.isArray(response) ? response : []);
 
         const categoryConfigs = [
-          { label: 'TRENDING DESIGNS', subtitle: 'COLOURFUL, GEOMETRICAL AND SOPHISTICATED', filter: (d: Design) => d.trending === true, link: '/trends' },
-          { label: 'LUXURY PATTERNS', subtitle: 'EXCLUSIVE, REFINED AND PREMIUM', filter: (d: Design) => d.luxury === true, link: '/luxury' },
+          { label: 'TRENDING DESIGNS', subtitle: 'COLOURFUL, GEOMETRICAL AND SOPHISTICATED', filter: (d: Design) => d.trending === true, link: '/trends/explore' },
+          { label: 'LUXURY PATTERNS', subtitle: 'EXCLUSIVE, REFINED AND PREMIUM', filter: (d: Design) => d.luxury === true, link: '/luxury/explore' },
           { label: 'NEW ARRIVALS', subtitle: 'MODERN, INNOVATIVE AND FRESH', filter: (d: Design) => d.newArrival === true, link: '/gallery?newArrival=true' },
           { label: "EDITOR'S CHOICE", subtitle: 'CURATED, AUTHENTIC AND UNIQUE', filter: (d: Design) => d.editorsPick === true, link: '/gallery?editorsPick=true' },
-          { label: 'SPECIAL OFFERS', subtitle: 'LIMITED, ACCESSIBLE AND ELITE', filter: (d: Design) => d.specialOffer === true, link: '/special-offers' },
+          { label: 'SPECIAL OFFERS', subtitle: 'LIMITED, ACCESSIBLE AND ELITE', filter: (d: Design) => d.specialOffer === true, link: '/special-offers/explore' },
         ];
 
         const slideData: CategorySlide[] = [];

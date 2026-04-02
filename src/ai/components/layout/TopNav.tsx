@@ -1,6 +1,6 @@
-import { Search, Bell, User, LogOut, Settings, CreditCard } from "lucide-react";
+import { Search, Bell, User, LogOut, Settings } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion"; // Added Framer Motion
+import { motion } from "framer-motion";
 const logo = "/rdc-logo.png";
 
 import {
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const navItems = [
-  { label: "Home", path: "/ai-studio/home" },
+  { label: "Dashboard", path: "/ai-studio/dashboard" },
   { label: "Generate", path: "/ai-studio/generate" },
   { label: "My Designs", path: "/ai-studio/gallery" },
 ];
@@ -40,6 +40,8 @@ export function TopNav() {
         </span>
       </Link>
 
+      
+
       {/* 2. Interactive Navigation */}
       <nav className="flex items-center gap-1">
         {navItems.map((item) => {
@@ -49,26 +51,16 @@ export function TopNav() {
             <Link
               key={item.label}
               to={item.path}
-              className={`relative px-4 py-1.5 text-sm font-medium tracking-wide transition-colors rounded-full ${
+              className={`relative px-4 py-1.5 text-sm font-medium tracking-wide transition-all rounded-full ${
                 isActive ? "text-white" : "text-gray-400 hover:text-white"
               }`}
             >
               <span className="relative z-10">{item.label}</span>
 
-              {/* SHARED LAYOUT ANIMATION: The "Pill" that slides between links */}
               {isActive && (
                 <motion.span
                   layoutId="nav-pill"
-                  transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
-                  className="absolute inset-0 bg-white/5 border border-white/10 rounded-full z-0"
-                />
-              )}
-              
-              {/* Subtle underline for Active state */}
-              {isActive && (
-                <motion.span 
-                  layoutId="nav-underline"
-                  className="absolute bottom-0 left-4 right-4 h-0.5 bg-[#ff1a1a] shadow-[0_0_8px_#ff1a1a]"
+                  className="absolute inset-0 bg-white/5 border border-white/10 rounded-full"
                 />
               )}
             </Link>
@@ -90,6 +82,18 @@ export function TopNav() {
 
       {/* 4. Action Icons */}
       <div className="flex items-center gap-2 ml-auto">
+        <Link
+          to="/"
+          className="relative px-4 py-1.5 text-sm font-medium tracking-wide transition-all rounded-full text-gray-500 hover:text-white group hidden md:flex"
+        >
+          <span className="relative z-10 flex items-center gap-2">
+            <span className="text-[#ff1a1a] text-base leading-none transition-transform group-hover:-translate-x-1">
+              ←
+            </span>
+            Back to Store
+          </span>
+        </Link>
+
         <button className="relative p-2 rounded-full text-gray-400 hover:text-white hover:bg-white/5 transition-all">
           <Bell className="h-4 w-4" />
           <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-[#ff1a1a] rounded-full border border-[#0f0f0f]" />

@@ -139,14 +139,14 @@ const LuxuryDetail = () => {
               <div className="flex flex-col gap-4 mb-10">
                 <Button
                   onClick={handleAddToCart}
-                  className="bg-[#c9a96e] text-black hover:bg-[#b8955c]"
+                  className="w-full h-12 bg-[#c9a96e] text-black hover:bg-[#b8955c]"
                 >
                   Add to Bag
                 </Button>
 
                 <button
                   onClick={handleWishlist}
-                  className="border border-white/20 py-3 flex items-center justify-center gap-2"
+                  className="w-full h-12 rounded-md border border-[#c9a96e] text-white transition-colors hover:bg-[#c9a96e] hover:text-black flex items-center justify-center gap-2"
                 >
                   <Heart className={isWished ? "fill-red-500" : ""} />
                   {isWished ? "Saved" : "Add to Wishlist"}
@@ -212,17 +212,17 @@ const LuxuryDetail = () => {
 
       {/* 🔥 RELATED SECTION (WHITE) */}
       {relatedProducts.length > 0 && (
-        <section className="bg-white py-20 border-t border-gray-100">
+        <section className="bg-[#0a0a0a] py-20 border-t border-[#c9a96e]/30">
           <div className="max-w-[1200px] mx-auto px-6">
 
-            <h2 className="text-2xl font-semibold mb-10 text-[#1A1A1A]">
+            <h2 className="text-2xl font-semibold mb-10 text-[#ffffff]">
               Related Designs
             </h2>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {relatedProducts.map((item) => (
                 <Link key={item.id} to={`/luxury/design/${item.id}`}>
-                  <div className="border border-gray-200 hover:shadow-md transition">
+                  <div className="border border-[#c9a96e]/40 hover:border-[#c9a96e] hover:shadow-md transition">
 
                     <img
                       src={getAssetUrl(item.assetUuid)}
@@ -230,11 +230,11 @@ const LuxuryDetail = () => {
                     />
 
                     <div className="p-3">
-                      <p className="text-sm font-medium line-clamp-1">
+                      <p className="text-sm font-medium line-clamp-1 text-white">
                         {item.title}
                       </p>
 
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-200 mt-1">
                         ₹{Math.round(item.basePriceCents / 100)}
                       </p>
                     </div>

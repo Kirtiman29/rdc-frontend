@@ -1,15 +1,32 @@
 import React, { useState, useEffect } from "react";
 import { 
   Image, Sparkles, Wand2, Loader2, LayoutGrid, 
-  Info, Maximize2, Zap, Palette 
+  Zap, Palette, Download, X, Eye
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { generateDesign, getAIImageUrl, enhancePrompt } from "@/api/aiApi"; // Assuming your api folder is in src
 
 // --- SUB-COMPONENT: GENERATOR PANEL ---
-function GeneratorPanel({ onGenerate, isGenerating }: { onGenerate: () => void; isGenerating: boolean }) {
-  const [strength, setStrength] = useState(0.75);
-  const [activeStyle, setActiveStyle] = useState("floral");
+// Refactored to receive props from parent (Step 2)
+function GeneratorPanel({ 
+  onGenerate, 
+  isGenerating, 
+  setFile, 
+  setPrompt, 
+  strength, 
+  setStrength, 
+  activeStyle, 
+  setActiveStyle,
+  error,
+  previewUrl,
+  numImages,
+  setNumImages,
+  userPrompt,
+  setUserPrompt,
+  manualPrompt,
+  onEnhance,
+  isEnhancing
+}: any) {
 
   const styles = [
     { id: "floral", label: "Floral" },
@@ -19,7 +36,7 @@ function GeneratorPanel({ onGenerate, isGenerating }: { onGenerate: () => void; 
 
   return (
     <div className="p-6 space-y-8">
-      {/* 1. MODEL SECTION (Hardcoded as requested) */}
+      {/* 1. MODEL SECTION */}
       <div className="space-y-3">
         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">AI Engine</label>
         <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center gap-4 group">
@@ -34,43 +51,62 @@ function GeneratorPanel({ onGenerate, isGenerating }: { onGenerate: () => void; 
       </div>
 
       {/* --- IMAGE DROP BOX SECTION --- */}
-<div className="space-y-4">
-  <div className="flex items-center justify-between">
-    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
-      Reference Image
-    </label>
-    <span className="text-[9px] text-gray-600 font-medium">OPTIONAL</span>
-  </div>
-  
-  <motion.div
-    whileHover={{ borderColor: "rgba(255, 26, 26, 0.4)", backgroundColor: "rgba(255, 26, 26, 0.02)" }}
-    className="relative group cursor-pointer border-2 border-dashed border-white/5 rounded-2xl p-8 transition-all duration-300 flex flex-col items-center justify-center gap-3 overflow-hidden"
-  >
-    {/* Animated Background Pulse */}
-    <div className="absolute inset-0 bg-[#ff1a1a]/0 group-hover:bg-[#ff1a1a]/5 transition-colors duration-500" />
-    
-    <div className="relative z-10 w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:scale-110 group-hover:border-[#ff1a1a]/30 transition-all duration-500">
-      <Image className="w-5 h-5 text-gray-500 group-hover:text-[#ff1a1a]" />
-    </div>
-    
-    <div className="relative z-10 text-center">
-      <p className="text-xs font-bold text-gray-400 group-hover:text-white transition-colors">
-        Drop reference here
-      </p>
-      <p className="text-[10px] text-gray-600 mt-1">PNG, JPG up to 10MB</p>
-    </div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Reference Image</label>
+          <span className="text-[9px] text-gray-600 font-medium">OPTIONAL</span>
+        </div>
+        
+        <motion.div
+          whileHover={{ borderColor: "rgba(255, 26, 26, 0.4)", backgroundColor: "rgba(255, 26, 26, 0.02)" }}
+          className="relative group cursor-pointer border-2 border-dashed border-white/5 rounded-2xl p-8 transition-all duration-300 flex flex-col items-center justify-center gap-3 overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-[#ff1a1a]/0 group-hover:bg-[#ff1a1a]/5 transition-colors duration-500" />
+          
+          {previewUrl ? (
+            // Preview Mode
+            <div className="relative z-10 flex flex-col items-center gap-3">
+              <div className="relative w-20 h-20 rounded-xl overflow-hidden border-2 border-white/20">
+                <img
+                  src={previewUrl}
+                  alt="Preview"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-white/10 backdrop-blur-sm rounded-full p-2">
+                    <Image className="w-4 h-4 text-white" />
+                  </div>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-bold text-white">Image selected</p>
+                <p className="text-[10px] text-gray-400 mt-1">Click to change</p>
+              </div>
+            </div>
+          ) : (
+            // Default Drop Area
+            <>
+              <div className="relative z-10 w-12 h-12 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:scale-110 group-hover:border-[#ff1a1a]/30 transition-all duration-500">
+                <Image className="w-5 h-5 text-gray-500 group-hover:text-[#ff1a1a]" />
+              </div>
+              <div className="relative z-10 text-center">
+                <p className="text-xs font-bold text-gray-400 group-hover:text-white transition-colors">Drop reference here</p>
+                <p className="text-[10px] text-gray-600 mt-1">PNG, JPG up to 10MB</p>
+              </div>
+            </>
+          )}
 
-    {/* Hidden Input for Functionality */}
-    <input 
-      type="file" 
-      className="absolute inset-0 opacity-0 cursor-pointer" 
-      accept="image/*"
-      onChange={(e) => console.log("Image uploaded:", e.target.files?.[0])}
-    />
-  </motion.div>
-</div>
+          {/* Step 3: Fix File Upload */}
+          <input 
+            type="file" 
+            className="absolute inset-0 opacity-0 cursor-pointer" 
+            accept="image/*"
+            onChange={(e) => setFile(e.target.files?.[0] || null)}
+          />
+        </motion.div>
+      </div>
 
-      {/* 2. STYLE SECTION (3 Options Only) */}
+      {/* 2. STYLE SECTION */}
       <div className="space-y-4">
         <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Pattern Style</label>
         <div className="grid grid-cols-3 gap-2">
@@ -90,83 +126,80 @@ function GeneratorPanel({ onGenerate, isGenerating }: { onGenerate: () => void; 
         </div>
       </div>
 
-      {/* 3. PROMPT SECTION (With Enhance Hover Effect) */}
+      {/* NUMBER OF OUTPUTS SECTION */}
+      <div className="space-y-4">
+        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Number of Outputs</label>
+        <select
+          value={numImages}
+          onChange={(e) => setNumImages(Number(e.target.value))}
+          className="w-full p-3 rounded-xl bg-black border border-white/10 text-white focus:outline-none focus:border-[#ff1a1a]/40"
+        >
+          <option value={1}>1 Image</option>
+          <option value={2}>2 Images</option>
+          <option value={4}>4 Images</option>
+          <option value={6}>6 Images</option>
+        </select>
+      </div>
+
+      {/* 3. PROMPT SECTION */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
             <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Prompt</label>
             <motion.button 
+              onClick={onEnhance}
+              disabled={isEnhancing}
               whileHover={{ scale: 1.05, backgroundColor: "#ff1a1a", color: "#fff" }}
               whileTap={{ scale: 0.95 }}
-              className="text-[10px] font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ff1a1a]/10 text-[#ff1a1a] border border-[#ff1a1a]/20 transition-all"
+              className="text-[10px] font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ff1a1a]/10 text-[#ff1a1a] border border-[#ff1a1a]/20 transition-all disabled:opacity-50"
             >
-              <Wand2 className="w-3 h-3" />
-              Enhance
+              <Wand2 className="w-3 h-3" /> {isEnhancing ? "Enhancing..." : "Enhance"}
             </motion.button>
         </div>
+        {/* Step 4: Fix Prompt Input */}
         <textarea 
+          value={userPrompt}
+          onChange={(e) => setUserPrompt(e.target.value)}
           placeholder="Describe the fabric texture, colors, and pattern details..."
           className="w-full h-32 p-4 rounded-2xl bg-white/[0.02] border border-white/5 text-sm text-white placeholder:text-gray-700 focus:outline-none focus:border-[#ff1a1a]/40 focus:bg-white/[0.04] transition-all resize-none"
         />
+        {manualPrompt && (
+          <div className="text-xs text-green-400 bg-black/40 p-3 rounded-xl">
+            {manualPrompt}
+          </div>
+        )}
       </div>
 
-{/* 4. STRENGTH SLIDER (0-1) */}
-<div className="space-y-4">
-  <div className="flex items-center justify-between">
-    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
-      Creative Strength
-    </label>
-    <span className="text-xs font-mono font-bold text-[#ff1a1a] bg-[#ff1a1a]/10 px-2 py-0.5 rounded border border-[#ff1a1a]/20">
-      {strength.toFixed(2)}
-    </span>
-  </div>
+      {/* 4. STRENGTH SLIDER */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Creative Strength</label>
+          <span className="text-xs font-mono font-bold text-[#ff1a1a] bg-[#ff1a1a]/10 px-2 py-0.5 rounded border border-[#ff1a1a]/20">
+            {strength.toFixed(2)}
+          </span>
+        </div>
 
-  <div className="relative flex items-center group">
-    <input
-      type="range"
-      min="0"
-      max="1"
-      step="0.01"
-      value={strength}
-      onChange={(e) => setStrength(parseFloat(e.target.value))}
-      className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-white transition-all"
-      style={{
-        // This creates the "Fill" effect dynamically
-        background: `linear-gradient(to right, #ff1a1a 0%, #ff1a1a ${strength * 100}%, rgba(255,255,255,0.1) ${strength * 100}%, rgba(255,255,255,0.1) 100%)`,
-      }}
-    />
-    
-    {/* CSS for the Thumb (The circle) to make it look pro */}
-    <style dangerouslySetInnerHTML={{ __html: `
-      input[type=range]::-webkit-slider-thumb {
-        appearance: none;
-        height: 14px;
-        width: 14px;
-        border-radius: 50%;
-        background: #ffffff;
-        cursor: pointer;
-        border: 2px solid #ff1a1a;
-        box-shadow: 0 0 10px rgba(255, 26, 26, 0.5);
-        transition: all 0.2s ease;
-      }
-      input[type=range]::-webkit-slider-thumb:hover {
-        transform: scale(1.2);
-        box-shadow: 0 0 15px rgba(255, 26, 26, 0.8);
-      }
-    `}} />
-  </div>
-</div>
-
-      {/* 5. DISABLED SETTINGS (Ratio & Quality)
-      <div className="pt-2 space-y-4 opacity-30 cursor-not-allowed select-none">
-          <div className="flex items-center justify-between text-[10px] font-bold text-gray-600 uppercase tracking-widest">
-            <span>Aspect Ratio</span>
-            <span className="text-[9px] bg-white/5 px-2 rounded">Locked</span>
-          </div>
-          <div className="flex items-center justify-between text-[10px] font-bold text-gray-600 uppercase tracking-widest">
-            <span>Output Quality</span>
-            <span className="text-[9px] bg-white/5 px-2 rounded">Locked</span>
-          </div>
-      </div> */}
+        <div className="relative flex items-center group">
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={strength}
+            onChange={(e) => setStrength(parseFloat(e.target.value))}
+            className="w-full h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-white transition-all"
+            style={{
+              background: `linear-gradient(to right, #ff1a1a 0%, #ff1a1a ${strength * 100}%, rgba(255,255,255,0.1) ${strength * 100}%, rgba(255,255,255,0.1) 100%)`,
+            }}
+          />
+          <style dangerouslySetInnerHTML={{ __html: `
+            input[type=range]::-webkit-slider-thumb {
+              appearance: none; height: 14px; width: 14px; border-radius: 50%;
+              background: #ffffff; cursor: pointer; border: 2px solid #ff1a1a;
+              box-shadow: 0 0 10px rgba(255, 26, 26, 0.5); transition: all 0.2s ease;
+            }
+          `}} />
+        </div>
+      </div>
 
       {/* 6. GENERATE BUTTON */}
       <button 
@@ -179,29 +212,134 @@ function GeneratorPanel({ onGenerate, isGenerating }: { onGenerate: () => void; 
           {isGenerating ? "PROCESSING..." : "GENERATE DESIGN"}
         </div>
       </button>
+      {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
     </div>
   );
 }
 
 // --- MAIN PAGE COMPONENT ---
 export default function Generate() {
+  // Step 1: Add Required States
+  const [file, setFile] = useState<File | null>(null);
+  const [userPrompt, setUserPrompt] = useState("");
+  const [manualPrompt, setManualPrompt] = useState("");
+  const [generatedImages, setGeneratedImages] = useState<any[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [error, setError] = useState("");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [numImages, setNumImages] = useState(4);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
-  const handleGenerate = () => {
-    setIsGenerating(true);
-    setProgress(0);
-    // Simulation logic
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => setIsGenerating(false), 1000);
-          return 100;
-        }
-        return prev + 1;
-      });
-    }, 40);
+  // Step 5: Move strength and style here
+  const [strength, setStrength] = useState(0.75);
+  const [activeStyle, setActiveStyle] = useState("floral");
+
+  // Cleanup preview URL on unmount or when file changes
+  useEffect(() => {
+    if (file) {
+      const url = URL.createObjectURL(file);
+      setPreviewUrl(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setPreviewUrl(null);
+    }
+  }, [file]);
+
+  // Handle image download
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+    }
+  };
+
+  // Handle image preview
+  const openPreview = (url: string) => {
+    setPreviewImage(url);
+  };
+
+  const closePreview = () => {
+    setPreviewImage(null);
+  };
+
+  // Handle prompt enhancement
+  const handleEnhance = async () => {
+    if (!userPrompt) {
+      alert("Enter prompt first");
+      return;
+    }
+
+    try {
+      setIsEnhancing(true);
+
+      const res = await enhancePrompt(userPrompt, file || undefined);
+
+      console.log("Enhanced:", res);
+
+      setManualPrompt(res.enhanced_prompt);
+
+    } catch (err) {
+      console.error("Enhance failed", err);
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
+  // Step 6: REAL API CALL
+  const handleGenerate = async () => {
+    if (isGenerating) return;
+
+    if (!file) {
+      alert("Please upload a reference image");
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      setError("");
+
+      const formData = new FormData();
+      formData.append("strength", strength.toString());
+      formData.append("style", activeStyle);
+      formData.append("num_images", numImages.toString());
+      formData.append("guidance_scale", "10");
+      formData.append("user_prompt", userPrompt);
+      formData.append("manual_prompt", manualPrompt || userPrompt);
+      formData.append("file", file);
+
+      console.log("🚀 Sending request...");
+      console.log("File:", file);
+      console.log("User Prompt:", userPrompt);
+      console.log("Manual Prompt:", manualPrompt);
+      console.log("Strength:", strength);
+      console.log("Style:", activeStyle);
+      console.log("Num Images:", numImages);
+
+      const res = await generateDesign(formData);
+
+      console.log("✅ Response received:", res);
+
+      setGeneratedImages(res.images);
+
+    } catch (err: any) {
+      console.error("❌ ERROR:", err);
+      console.error("❌ ERROR RESPONSE:", err?.response);
+
+      setError(err?.response?.data?.message || "Generation failed");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -217,7 +355,41 @@ export default function Generate() {
         </div>
         
         <div className="flex-1 overflow-y-auto no-scrollbar">
-          <GeneratorPanel onGenerate={handleGenerate} isGenerating={isGenerating} />
+          <style dangerouslySetInnerHTML={{ __html: `
+            .no-scrollbar::-webkit-scrollbar {
+              width: 6px;
+            }
+            .no-scrollbar::-webkit-scrollbar-track {
+              background: transparent;
+            }
+            .no-scrollbar::-webkit-scrollbar-thumb {
+              background: rgba(255, 26, 26, 0.3);
+              border-radius: 3px;
+            }
+            .no-scrollbar::-webkit-scrollbar-thumb:hover {
+              background: rgba(255, 26, 26, 0.5);
+            }
+          `}} />
+          {/* Step 7: Pass Props to GeneratorPanel */}
+          <GeneratorPanel 
+            onGenerate={handleGenerate}
+            isGenerating={isGenerating}
+            setFile={setFile}
+            setPrompt={setUserPrompt}
+            strength={strength}
+            setStrength={setStrength}
+            activeStyle={activeStyle}
+            setActiveStyle={setActiveStyle}
+            error={error}
+            previewUrl={previewUrl}
+            numImages={numImages}
+            setNumImages={setNumImages}
+            userPrompt={userPrompt}
+            setUserPrompt={setUserPrompt}
+            manualPrompt={manualPrompt}
+            onEnhance={handleEnhance}
+            isEnhancing={isEnhancing}
+          />
         </div>
       </div>
 
@@ -225,65 +397,119 @@ export default function Generate() {
       <div className="flex-1 relative flex flex-col bg-[#050505]">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(255,26,26,0.03)_0%,_transparent_100%)] pointer-events-none" />
         
-        <div className="flex-1 flex items-center justify-center p-12">
+        <div className="flex-1 overflow-y-auto p-12">
           <AnimatePresence mode="wait">
             {isGenerating ? (
-              /* PROFESSIONAL BUFFERING STATE */
               <motion.div 
                 key="loader"
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 1.05 }}
-                className="relative flex flex-col items-center"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="h-full flex flex-col items-center justify-center space-y-8"
               >
-                {/* Visual Ring */}
-                <div className="relative w-48 h-48 flex items-center justify-center">
-                  <svg className="w-full h-full rotate-[-90deg]">
-                    <circle cx="96" cy="96" r="88" stroke="currentColor" strokeWidth="2" fill="transparent" className="text-white/5" />
-                    <motion.circle 
-                      cx="96" cy="96" r="88" stroke="#ff1a1a" strokeWidth="3" fill="transparent"
-                      strokeDasharray="552.92"
-                      animate={{ strokeDashoffset: 552.92 - (552.92 * progress) / 100 }}
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute flex flex-col items-center">
-                    <span className="text-5xl font-black font-mono tracking-tighter">{progress}%</span>
-                    <span className="text-[10px] font-bold text-gray-500 tracking-[0.4em] uppercase mt-2">Neural Link</span>
-                  </div>
-                </div>
-                
-                {/* Status Subtitle */}
-                <motion.div 
-                  animate={{ opacity: [0.4, 1, 0.4] }} 
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="mt-12 text-center space-y-1"
-                >
-                  <p className="text-sm font-bold tracking-widest text-white uppercase">Synthesizing Pixels</p>
-                  <p className="text-[10px] text-gray-600 font-medium">Textile SDXL is weaving your pattern...</p>
-                </motion.div>
+                <Loader2 className="w-12 h-12 text-[#ff1a1a] animate-spin" />
+                <p className="text-sm font-bold tracking-widest text-white uppercase animate-pulse">Generating...</p>
               </motion.div>
             ) : (
-              /* EMPTY STATE */
-              <motion.div 
-                key="empty"
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col items-center text-center space-y-6"
-              >
-                <div className="w-24 h-24 rounded-[40px] bg-white/[0.02] border border-white/5 flex items-center justify-center group hover:border-[#ff1a1a]/30 transition-all duration-700">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}>
+              /* Step 8: Show Generated Images */
+              generatedImages.length > 0 ? (
+                <motion.div 
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto"
+                >
+                  {generatedImages.map((img) => (
+                    <div key={img.id} className="group relative rounded-2xl overflow-hidden border border-white/10 cursor-pointer">
+                      <img
+                        src={getAIImageUrl(img.url)}
+                        alt="AI Generation"
+                        className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-105"
+                        onClick={() => openPreview(getAIImageUrl(img.url))}
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openPreview(getAIImageUrl(img.url));
+                          }}
+                          className="bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownload(getAIImageUrl(img.url), img.filename || `generated-${img.id}.png`);
+                          }}
+                          className="bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </motion.div>
+              ) : (
+                /* EMPTY STATE */
+                <motion.div 
+                  key="empty"
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                  className="h-full flex flex-col items-center justify-center text-center space-y-6"
+                >
+                  <div className="w-24 h-24 rounded-[40px] bg-white/[0.02] border border-white/5 flex items-center justify-center group">
                     <LayoutGrid className="w-10 h-10 text-gray-700 group-hover:text-[#ff1a1a] transition-colors" />
-                  </motion.div>
-                </div>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold tracking-tight">System Idle</h2>
-                  <p className="text-sm text-gray-500 max-w-[280px] leading-relaxed">
-                    Ready to transform your prompts into high-fidelity textile designs.
-                  </p>
-                </div>
-              </motion.div>
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-bold tracking-tight">System Idle</h2>
+                    <p className="text-sm text-gray-500 max-w-[280px]">
+                      Ready to transform your prompts into high-fidelity textile designs.
+                    </p>
+                  </div>
+                </motion.div>
+              )
             )}
           </AnimatePresence>
         </div>
       </div>
+
+      {/* PREVIEW MODAL */}
+      <AnimatePresence>
+        {previewImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={closePreview}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="relative max-w-4xl max-h-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={closePreview}
+                className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+              >
+                <X className="w-8 h-8" />
+              </button>
+              <img
+                src={previewImage}
+                alt="Preview"
+                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+              />
+              <div className="absolute bottom-4 right-4 flex gap-2">
+                <button
+                  onClick={() => handleDownload(previewImage, `generated-${Date.now()}.png`)}
+                  className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -19,7 +19,7 @@ export default function AIStudioLoader({ onFinish }: { onFinish: () => void }) {
   // ✅ FINAL NAVIGATION (restore this)
 useEffect(() => {
   if (isExiting) {
-    navigate("/ai-studio/home"); // 🔥 FIRST navigate
+    navigate("/ai-studio/dashboard"); // 🔥 FIRST navigate
 
     const timer = setTimeout(() => {
       onFinish(); // 🔥 THEN remove loader

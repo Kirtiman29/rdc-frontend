@@ -119,7 +119,7 @@ const SpecialOffers = () => {
   const totalPages = Math.ceil(totalElements / PAGE_SIZE);
 
   return (
-    <div className="flex min-h-screen flex-col bg-[#FBFAF9] selection:bg-rose-100">
+    <div className="flex min-h-screen flex-col bg-[#FBFAF9] selection:bg-[#D22C2C]/10">
       <Header />
       
       <main className="flex-1">
@@ -131,12 +131,12 @@ const SpecialOffers = () => {
                 <nav className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                   <Link to="/" className="hover:text-[#2A2623] transition-colors">Studio</Link>
                   <ChevronRight size={12} />
-                  <span className="text-rose-600">Special Offers</span>
+                  <span className="text-[#D22C2C]">Special Offers</span>
                 </nav>
-                <div className="flex items-center gap-3 text-rose-600">
+                <div className="flex items-center gap-3 text-[#D22C2C]">
                   <Tag size={24} strokeWidth={1.5} />
                   <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl leading-none">
-                    Privileged Access
+                    Special Offers
                   </h1>
                 </div>
                 <p className="text-neutral-500 text-sm max-w-lg font-light leading-relaxed">
@@ -201,7 +201,7 @@ const SpecialOffers = () => {
                   <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-16">
                       {designs.map((product) => (
-                        <div key={product.id} className="group relative bg-white border border-neutral-100 hover:border-rose-200 transition-all duration-500 shadow-sm hover:shadow-2xl">
+                        <div key={product.id} className="group relative bg-white border border-neutral-100 hover:border-[#D22C2C]/30 transition-all duration-500 shadow-sm hover:shadow-2xl">
                           
                           {/* Image Block */}
                           <div className="relative aspect-[3/4] overflow-hidden bg-neutral-50">
@@ -219,7 +219,7 @@ const SpecialOffers = () => {
                             
                             {/* Tags & Actions */}
                             <div className="absolute top-4 left-4 z-20">
-                              <span className="bg-rose-600 text-white text-[8px] font-bold uppercase tracking-widest px-3 py-1.5 shadow-sm">
+                              <span className="bg-[#D22C2C] text-white text-[8px] font-bold uppercase tracking-widest px-3 py-1.5 shadow-sm">
                                 {product.discountPercent}% Savings
                               </span>
                             </div>
@@ -228,7 +228,7 @@ const SpecialOffers = () => {
                               <button
                                 onClick={(e) => toggleWishlist(e, product.id)}
                                 className={`w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-md ${
-                                  wishlistState[product.id] ? 'bg-rose-600 text-white' : 'bg-white/90 text-[#2A2623] hover:bg-white'
+                                  wishlistState[product.id] ? 'bg-[#D22C2C] text-white' : 'bg-white/90 text-[#2A2623] hover:bg-white'
                                 }`}
                               >
                                 <Heart size={16} className={wishlistState[product.id] ? 'fill-current' : ''} />
@@ -246,12 +246,12 @@ const SpecialOffers = () => {
                                 <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-neutral-400">
                                   {product.segment?.replace('_', ' ')}
                                 </span>
-                                <h3 className="font-serif text-lg text-[#2A2623] italic leading-tight line-clamp-1 group-hover:text-rose-700 transition-colors">
+                                <h3 className="font-serif text-lg text-[#2A2623] italic leading-tight line-clamp-1 group-hover:text-[#D22C2C] transition-colors">
                                   {product.title}
                                 </h3>
                               </div>
                               <div className="text-right shrink-0">
-                                <p className="text-lg font-bold text-rose-600">
+                                <p className="text-lg font-bold text-[#D22C2C]">
                                   {formatPrice(product.finalPriceCents)}
                                 </p>
                                 <p className="text-[10px] text-neutral-400 line-through tabular-nums">
@@ -262,7 +262,7 @@ const SpecialOffers = () => {
 
                             <button 
                               onClick={(e) => handleAddToCart(e, product)}
-                              className="w-full h-12 bg-[#2A2623] text-white text-[10px] font-bold uppercase tracking-[0.25em] flex items-center justify-center gap-3 hover:bg-rose-700 transition-all active:scale-[0.98] shadow-sm"
+                              className="w-full h-12 bg-[#2A2623] text-white text-[10px] font-bold uppercase tracking-[0.25em] flex items-center justify-center gap-3 hover:bg-[#D22C2C] transition-all active:scale-[0.98] shadow-sm"
                             >
                               <ShoppingBag size={14} />
                               Acquire Design
@@ -280,7 +280,7 @@ const SpecialOffers = () => {
                           size="icon"
                           onClick={() => { setPage(p => Math.max(0, p - 1)); window.scrollTo(0, 0); }}
                           disabled={page === 0}
-                          className="rounded-none hover:bg-transparent text-neutral-400 hover:text-rose-600"
+                          className="rounded-none hover:bg-transparent text-neutral-400 hover:text-[#D22C2C]"
                         >
                           <ChevronLeft size={20} />
                         </Button>
@@ -292,7 +292,7 @@ const SpecialOffers = () => {
                               onClick={() => { setPage(i); window.scrollTo(0, 0); }}
                               className={`w-8 h-8 text-[11px] font-bold transition-all border-b-2 tabular-nums ${
                                 page === i 
-                                ? 'border-rose-600 text-rose-600' 
+                                ? 'border-[#D22C2C] text-[#D22C2C]' 
                                 : 'border-transparent text-neutral-300 hover:text-neutral-600'
                               }`}
                             >
@@ -304,7 +304,7 @@ const SpecialOffers = () => {
                         <button
                           onClick={() => { setPage(p => Math.min(totalPages - 1, p + 1)); window.scrollTo(0, 0); }}
                           disabled={page === totalPages - 1}
-                          className="p-2 text-neutral-400 hover:text-rose-600 disabled:opacity-10"
+                          className="p-2 text-neutral-400 hover:text-[#D22C2C] disabled:opacity-10"
                         >
                           <ChevronRight size={20} />
                         </button>

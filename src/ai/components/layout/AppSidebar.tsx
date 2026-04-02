@@ -8,7 +8,7 @@ import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
 const navSection = [
-  { label: "Dashboard", path: "/ai-studio/home", icon: LayoutDashboard },
+  { label: "Dashboard", path: "/ai-studio/dashboard", icon: LayoutDashboard },
   { label: "Generate Design", path: "/ai-studio/generate", icon: Wand2 },
   { label: "Upscale", path: "/ai-studio/upscale", icon: Maximize },
   { label: "Pattern Finder", path: "/ai-studio/finder", icon: Search },

@@ -154,8 +154,8 @@ const App = () => (
               
                 {/* AI ROUTES */}
               <Route path="/ai-studio" element={<DashboardLayout />}>
-                <Route index element={<Navigate to="home" />} />
-                <Route path="home" element={<Home />} />
+                <Route index element={<Navigate to="dashboard" />} />
+                <Route path="dashboard" element={<Home />} />
                 <Route path="gallery" element={<MyDesigns />} />
                 <Route path="generate" element={<Generate />} />
                 <Route path="*" element={<AiNotFound />} />

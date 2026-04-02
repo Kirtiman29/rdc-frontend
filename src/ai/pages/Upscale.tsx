@@ -1,24 +1,30 @@
-// path: src/ai/pages/Upscale.tsx
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Maximize, Sparkles, Zap, ShieldCheck, 
-  Upload, Image as ImageIcon, CheckCircle2, 
-  ChevronRight, RefreshCcw, Layers 
+import { upscaleImage, getAIImageUrl } from "@/api/aiApi";
+import {
+  Maximize,
+  Zap,
+  Upload,
+  CheckCircle2,
+  ChevronRight,
+  RefreshCcw,
+  Layers,
+  Download,
 } from "lucide-react";
 
 export default function Upscale() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [sliderPosition, setSliderPosition] = useState(50);
   const [scaleFactor, setScaleFactor] = useState("4x");
   const [upscaleType, setUpscaleType] = useState("textile");
 
-  // Comparison Slider Logic
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!resultUrl) return; // Only slide if there is a result
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+    const x = 'touches' in e ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
     const position = ((x - rect.left) / rect.width) * 100;
     setSliderPosition(Math.max(0, Math.min(100, position)));
   };
@@ -28,22 +34,67 @@ export default function Upscale() {
     if (selected) {
       setFile(selected);
       setPreview(URL.createObjectURL(selected));
+      setResultUrl(null); 
     }
   };
 
-  const handleGenerate = () => {
-    setIsProcessing(true);
-    // Simulate API call
-    setTimeout(() => setIsProcessing(false), 5000);
+  const handleGenerate = async () => {
+    if (!file) return;
+    
+    try {
+      setIsProcessing(true);
+      const userId = 1; 
+
+      // Note: Because of the interceptor, 'res' is already the data object { status, image, generation_id }
+      const res = await upscaleImage(file, upscaleType as any, userId);
+
+      if (res && res.image) {
+        setResultUrl(res.image);
+        setSliderPosition(50); 
+      } else {
+        console.error("Response received but image key is missing", res);
+      }
+
+    } catch (err) {
+      console.error("Upscale failed:", err);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!resultUrl) return;
+
+    try {
+      const imageUrl = getAIImageUrl(resultUrl);
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `upscaled-${file?.name || 'design.png'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Download failed:", error);
+      // Fallback: try opening in new tab if fetch fails
+      const link = document.createElement("a");
+      link.href = getAIImageUrl(resultUrl);
+      link.target = "_blank";
+      link.download = `upscaled-${file?.name || 'design.png'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#050505] text-white p-4 md:p-10 font-sans selection:bg-[#ff1a1a]/30">
-      {/* Background Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] bg-[#ff1a1a]/5 blur-[120px] pointer-events-none" />
 
       <div className="max-w-6xl mx-auto relative z-10">
-        {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-end mb-10 gap-4">
           <div>
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ff1a1a]/10 border border-[#ff1a1a]/20 text-[#ff1a1a] text-[10px] font-black tracking-[0.2em] uppercase mb-4">
@@ -59,7 +110,6 @@ export default function Upscale() {
         </div>
 
         <div className="grid lg:grid-cols-12 gap-10">
-          {/* LEFT: INTERACTIVE COMPARISON / UPLOAD AREA */}
           <div className="lg:col-span-7">
             {!preview ? (
               <label className="group relative flex flex-col items-center justify-center w-full aspect-[4/3] border-2 border-dashed border-white/10 rounded-[32px] bg-white/[0.02] hover:bg-white/[0.04] hover:border-[#ff1a1a]/50 transition-all cursor-pointer overflow-hidden">
@@ -76,36 +126,42 @@ export default function Upscale() {
               </label>
             ) : (
               <div 
-                className="relative w-full aspect-[4/3] rounded-[32px] overflow-hidden border border-white/10 cursor-col-resize group"
+                className={`relative w-full aspect-[4/3] rounded-[32px] overflow-hidden border border-white/10 ${resultUrl ? 'cursor-col-resize' : 'cursor-default'} group`}
                 onMouseMove={handleMouseMove}
                 onTouchMove={handleMouseMove}
               >
-                {/* After Image (Upscaled) */}
+                {/* Image Display Logic */}
                 <div className="absolute inset-0 bg-[#0a0a0a]">
-                  <img src={preview} className="w-full h-full object-cover grayscale-0" alt="After" />
-                  <div className="absolute top-6 right-6 px-3 py-1 bg-[#ff1a1a] text-white text-[10px] font-black uppercase rounded-md shadow-xl">Enhanced (8K)</div>
+                  <img src={resultUrl ? getAIImageUrl(resultUrl) : preview} className="w-full h-full object-cover" alt="Display" />
+                  {resultUrl && (
+                     <div className="absolute top-6 right-6 px-3 py-1 bg-[#ff1a1a] text-white text-[10px] font-black uppercase rounded-md shadow-xl">Upscaled</div>
+                  )}
                 </div>
 
-                {/* Before Image (Original) */}
-                <div 
-                  className="absolute inset-0 border-r-2 border-[#ff1a1a] shadow-[10px_0_30px_rgba(255,26,26,0.3)] overflow-hidden"
-                  style={{ width: `${sliderPosition}%` }}
-                >
-                  <img src={preview} className="w-[142.8%] max-w-none h-full object-cover blur-[2px] opacity-70 grayscale" alt="Before" 
-                    style={{ width: `${100 * (100 / sliderPosition)}%` }}
-                  />
-                  <div className="absolute top-6 left-6 px-3 py-1 bg-black/80 text-white text-[10px] font-black uppercase rounded-md border border-white/20">Original (Low-Res)</div>
-                </div>
+                {/* Slider Handle & Split View (Only if result exists) */}
+                {resultUrl && (
+                  <>
+                    <div 
+                      className="absolute inset-0 border-r-2 border-[#ff1a1a] shadow-[10px_0_30px_rgba(255,26,26,0.3)] overflow-hidden"
+                      style={{ width: `${sliderPosition}%` }}
+                    >
+                      <img src={preview} className="w-full h-full object-cover blur-[1px] opacity-80 grayscale" alt="Original" 
+                        style={{ width: `${100 * (100 / sliderPosition)}%`, maxWidth: 'none' }}
+                      />
+                      <div className="absolute top-6 left-6 px-3 py-1 bg-black/80 text-white text-[10px] font-black uppercase rounded-md border border-white/20 whitespace-nowrap">Original (Low-Res)</div>
+                    </div>
 
-                {/* Slider Handle */}
-                <div 
-                  className="absolute inset-y-0 pointer-events-none"
-                  style={{ left: `${sliderPosition}%` }}
-                >
-                  <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,26,26,0.5)] border-2 border-[#ff1a1a]">
-                    <RefreshCcw className="w-5 h-5 text-black animate-spin-slow" />
-                  </div>
-                </div>
+                    <div className="absolute inset-y-0 pointer-events-none" style={{ left: `${sliderPosition}%` }}>
+                      <div className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,26,26,0.5)] border-2 border-[#ff1a1a]">
+                        <RefreshCcw className="w-5 h-5 text-black" />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {!resultUrl && !isProcessing && (
+                   <div className="absolute top-6 left-6 px-3 py-1 bg-black/80 text-white text-[10px] font-black uppercase rounded-md border border-white/20">Preview Mode</div>
+                )}
 
                 {/* Processing Overlay */}
                 <AnimatePresence>
@@ -125,7 +181,7 @@ export default function Upscale() {
                           />
                         </div>
                       </div>
-                      <p className="text-[#ff1a1a] font-mono text-sm font-bold tracking-[0.3em] animate-pulse">RECONSTRUCTING PIXELS...</p>
+                      <p className="text-[#ff1a1a] font-mono text-sm font-bold tracking-[0.3em] animate-pulse uppercase">Reconstructing Pixels...</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -133,10 +189,7 @@ export default function Upscale() {
             )}
           </div>
 
-          {/* RIGHT: CONTROLS PANEL */}
           <div className="lg:col-span-5 flex flex-col gap-6">
-            
-            {/* Scale Options */}
             <div className="p-6 rounded-[24px] bg-white/[0.03] border border-white/10">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 block">Upscale Ratio</label>
               <div className="grid grid-cols-3 gap-3">
@@ -156,7 +209,6 @@ export default function Upscale() {
               </div>
             </div>
 
-            {/* Model Type */}
             <div className="p-6 rounded-[24px] bg-white/[0.03] border border-white/10">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 block">Optimization Model</label>
               <div className="flex flex-col gap-3">
@@ -189,7 +241,6 @@ export default function Upscale() {
               </div>
             </div>
 
-            {/* Action Button */}
             <button
               disabled={!preview || isProcessing}
               onClick={handleGenerate}
@@ -197,19 +248,23 @@ export default function Upscale() {
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
               <div className="flex items-center justify-center gap-3 font-black uppercase tracking-widest text-sm">
-                {isProcessing ? (
-                  <>Processing Design...</>
-                ) : (
-                  <>
-                    Enhance Quality <ChevronRight className="w-5 h-5" />
-                  </>
-                )}
+                {isProcessing ? "Processing Design..." : <>Enhance Quality <ChevronRight className="w-5 h-5" /></>}
               </div>
             </button>
 
-            {/* Hint */}
+            <button
+              disabled={!resultUrl || isProcessing}
+              onClick={handleDownload}
+              className="group w-full h-14 rounded-[18px] border border-[#ff1a1a]/30 bg-white/[0.03] text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all hover:bg-[#ff1a1a]/10 hover:border-[#ff1a1a]/60"
+            >
+              <div className="flex items-center justify-center gap-3 font-bold uppercase tracking-[0.2em] text-xs">
+                <Download className="w-4 h-4 text-[#ff1a1a] transition-transform group-hover:-translate-y-0.5" />
+                Download Result
+              </div>
+            </button>
+
             <p className="text-[9px] text-gray-600 text-center font-bold uppercase tracking-widest leading-relaxed">
-               AI processing uses cloud GPU resources. <br/>Large files may take up to 30 seconds.
+                AI processing uses cloud GPU resources. <br/>Large files may take up to 30 seconds.
             </p>
           </div>
         </div>
@@ -217,7 +272,6 @@ export default function Upscale() {
     </div>
   );
 }
-
 
 
 

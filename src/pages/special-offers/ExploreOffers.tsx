@@ -77,7 +77,7 @@ const ExploreOffers = () => {
           <div className="absolute inset-0 bg-black/40 flex items-center">
             <div className="container mx-auto px-6 md:px-12">
               <div className="max-w-2xl text-white">
-                <span className="text-[10px] uppercase tracking-[0.5em] font-bold mb-6 block text-rose-300">Exclusive Opportunity</span>
+                <span className="text-[10px] uppercase tracking-[0.5em] font-bold mb-6 block text-[#D22C2C]">Exclusive Opportunity</span>
                 <h1 className="font-serif text-5xl md:text-8xl font-light mb-8 leading-tight">Privileged <br />Pricing</h1>
                 <p className="text-lg md:text-xl text-white/80 font-light leading-relaxed max-w-md mb-12">
                   Exceptional archival designs and seasonal repeats, now available with exclusive studio savings.
@@ -138,7 +138,7 @@ const ExploreOffers = () => {
         <section className="py-32">
           <div className="container px-6 mx-auto">
             <div className="max-w-xl mb-20">
-              <span className="text-[9px] uppercase tracking-[0.4em] text-rose-500 font-bold mb-4 block">Limited Collection</span>
+              <span className="text-[9px] uppercase tracking-[0.4em] text-[#D22C2C] font-bold mb-4 block">Limited Collection</span>
               <h2 className="font-serif text-4xl md:text-5xl font-light leading-tight text-[#2A2623]">Significant patterns, <br />thoughtfully priced.</h2>
             </div>
 
@@ -152,7 +152,7 @@ const ExploreOffers = () => {
                       alt={product.title} 
                     />
                     <div className="absolute top-4 left-4 flex flex-col gap-2">
-                      <span className="bg-rose-600 text-white text-[7px] font-bold uppercase tracking-widest px-2 py-1 w-fit">
+                      <span className="bg-[#D22C2C] text-white text-[7px] font-bold uppercase tracking-widest px-2 py-1 w-fit">
                         {product.discountPercent}% Savings
                       </span>
                     </div>
@@ -161,7 +161,7 @@ const ExploreOffers = () => {
                     <div>
                       <h3 className="font-serif text-xl mb-1">{product.title}</h3>
                       <div className="flex items-center gap-3">
-                        <span className="text-xs font-medium text-rose-600">{formatPrice(product.finalPriceCents)}</span>
+                        <span className="text-xs font-medium text-[#D22C2C]">{formatPrice(product.finalPriceCents)}</span>
                         <span className="text-[10px] text-neutral-400 line-through font-light">{formatPrice(product.basePriceCents)}</span>
                       </div>
                     </div>
@@ -179,7 +179,7 @@ const ExploreOffers = () => {
         <section className="relative h-[50vh] min-h-[400px] flex items-center justify-center text-center overflow-hidden">
           <div className="absolute inset-0 bg-[#2A2623] opacity-5" />
           <div className="container px-6 relative z-10">
-            <Tag size={32} className="mx-auto mb-8 text-rose-500 opacity-50" strokeWidth={1} />
+            <Tag size={32} className="mx-auto mb-8 text-[#D22C2C] opacity-50" strokeWidth={1} />
             <h2 className="font-serif text-4xl md:text-6xl font-light italic text-[#2A2623] mb-8">Quality Uncompromised.</h2>
             <p className="max-w-md mx-auto text-neutral-500 font-light mb-10">All special offer designs include the same high-resolution 4K source files and full commercial licensing as our main collection.</p>
             <Link to="/special-offers/shop" className="inline-block px-12 py-5 bg-[#2A2623] text-[#FBFAF9] text-[10px] font-bold uppercase tracking-[0.4em] hover:bg-black transition-all">
@@ -221,7 +221,7 @@ const OfferCard = ({ product, toggleWishlist, wishlistState }: { product: Design
       
       {/* Absolute Overlays */}
       <div className="absolute top-3 left-3">
-        <span className="bg-rose-600 text-white text-[7px] font-bold uppercase tracking-widest px-2 py-1">
+        <span className="bg-[#D22C2C] text-white text-[7px] font-bold uppercase tracking-widest px-2 py-1">
           -{product.discountPercent}%
         </span>
       </div>
@@ -240,11 +240,11 @@ const OfferCard = ({ product, toggleWishlist, wishlistState }: { product: Design
       <div className="space-y-1">
         <h3 className="font-serif text-base text-[#2A2623] leading-tight">{product.title}</h3>
         <div className="flex gap-2 items-center">
-          <span className="text-[11px] font-bold text-rose-600">{formatPrice(product.finalPriceCents)}</span>
+          <span className="text-[11px] font-bold text-[#D22C2C]">{formatPrice(product.finalPriceCents)}</span>
           <span className="text-[9px] text-neutral-300 line-through">{formatPrice(product.basePriceCents)}</span>
         </div>
       </div>
-      <Link to={`/product/${product.id}`} className="p-1 hover:text-rose-600 transition-colors">
+      <Link to={`/product/${product.id}`} className="p-1 hover:text-[#D22C2C] transition-colors">
         <Eye size={14} strokeWidth={1.5} />
       </Link>
     </div>

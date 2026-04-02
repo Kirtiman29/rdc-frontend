@@ -1,8 +1,8 @@
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Link } from "react-router-dom";
-import fabricsBanner from "@/assets/fabrics-banner.jpg"; // Path to your banner image
-import pattern1 from "@/assets/sample-pattern-1.jpg"; // Placeholder images for patterns
+import fabricsBanner from "@/assets/fabrics-banner.jpg"; 
+import pattern1 from "@/assets/sample-pattern-1.jpg"; 
 import pattern2 from "@/assets/sample-pattern-2.jpg";
 import pattern3 from "@/assets/sample-pattern-3.jpg";
 import pattern4 from "@/assets/sample-pattern-4.jpg";
@@ -126,11 +126,10 @@ const ExploreFabrics = () => {
           <div className="absolute inset-0 bg-black/40 flex items-center">
             <div className="container mx-auto px-4 md:px-8 text-center text-white">
               <h1 className="font-serif text-5xl md:text-6xl font-medium tracking-tight">
-                Fabric
+                FABRIC THAT FITS EXACTLY WHAT YOU NEED
               </h1>
               <p className="mt-6 max-w-2xl mx-auto text-xl text-neutral-100 font-medium">
-                Shop thousands of unique artist prints, all available
-                made-to-order on the right fabric type for your project.
+                Thousands of original artist prints, made to order on the fabric that fits your project perfectly. Your vision, your material, your rules.
               </p>
 
               {/* Action Buttons */}
@@ -139,13 +138,13 @@ const ExploreFabrics = () => {
                   to="/fabrics/shop"
                   className="px-10 py-4 bg-[#212328] text-white rounded-md text-sm font-semibold tracking-wide hover:bg-black transition-colors"
                 >
-                  Shop Fabric Now
+                  Shop Now
                 </Link>
                 <Link
                   to="/fabrics/material-types"
                   className="px-10 py-4 bg-transparent border-2 border-white text-white rounded-md text-sm font-semibold tracking-wide hover:bg-white/10 transition-colors"
                 >
-                  Discover Material Types
+                  VIEW ALL FABRICS
                 </Link>
               </div>
             </div>
@@ -161,11 +160,10 @@ const ExploreFabrics = () => {
                 <UniquePrintsIcon />
               </div>
               <p className="text-lg font-semibold text-[#2A2623]">
-                Unique Prints for Every Project
+                1,000,000 Prints. Zero Compromises.
               </p>
               <p className="text-neutral-600 mt-2 max-w-xs">
-                With over 1 million designs, finding the perfect one for your
-                home or apparel is easy.
+                Every project deserves the perfect print. With over a million original designs, yours is already waiting for apparel, home, and everything in between.
               </p>
             </div>
 
@@ -175,11 +173,10 @@ const ExploreFabrics = () => {
                 <SupportingArtistsIcon />
               </div>
               <p className="text-lg font-semibold text-[#2A2623]">
-                Supporting Independent Artists
+                Artists Don't Get Paid Enough. We Fixed That.
               </p>
               <p className="text-neutral-600 mt-2 max-w-xs">
-                Feel good knowing that every purchase you make directly supports
-                artists around the world.
+                 Every single order goes directly to the creator behind the print. No middlemen. No cuts. Just real money in real hands.
               </p>
             </div>
 
@@ -189,11 +186,10 @@ const ExploreFabrics = () => {
                 <PrintedInUSAIcon />
               </div>
               <p className="text-lg font-semibold text-[#2A2623]">
-                Thoughtfully Printed in the USA
+                Printed on Demand. Wasted on Nothing.
               </p>
               <p className="text-neutral-600 mt-2 max-w-xs">
-                We're committed to printing on-demand to reduce our waste for a
-                healthier, happier planet.
+                Every order is printed fresh — no overstock, no waste, no guilt. Better for your project and better
               </p>
             </div>
           </div>
