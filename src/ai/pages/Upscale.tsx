@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { upscaleImage, getAIImageUrl } from "@/api/aiApi";
+import { upscaleImage, upscaleBatch, getAIImageUrl } from "@/api/aiApi";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 import {
   Maximize,
   Zap,
@@ -10,49 +12,113 @@ import {
   RefreshCcw,
   Layers,
   Download,
+  X,
 } from "lucide-react";
 
 export default function Upscale() {
   const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]); // Batch state
+  const [mode, setMode] = useState<"single" | "batch">("single");
   const [preview, setPreview] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [sliderPosition, setSliderPosition] = useState(50);
-  const [scaleFactor, setScaleFactor] = useState("4x");
   const [upscaleType, setUpscaleType] = useState("textile");
+  const [showPreview, setShowPreview] = useState(false); // Modal state
+
 
   const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!resultUrl) return; // Only slide if there is a result
+    if (!resultUrl) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const x = 'touches' in e ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
     const position = ((x - rect.left) / rect.width) * 100;
     setSliderPosition(Math.max(0, Math.min(100, position)));
   };
 
-  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (selected) {
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles) return;
+
+    if (mode === "batch") {
+      let extractedFiles: File[] = [];
+
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        
+        if (file.name.endsWith(".zip") || file.type.includes("zip")) {
+          try {
+            const zip = new JSZip();
+            const loadedZip = await zip.loadAsync(file);
+            
+            for (const [relativePath, zipEntry] of Object.entries(loadedZip.files)) {
+              if (!zipEntry.dir && relativePath.match(/\.(jpg|jpeg|png|webp|avif)$/i)) {
+                const blob = await zipEntry.async("blob");
+                extractedFiles.push(new File([blob], zipEntry.name, { type: blob.type || "image/png" }));
+              }
+            }
+          } catch (err) {
+            console.error("Failed to extract zip", err);
+          }
+        } else {
+          extractedFiles.push(file);
+        }
+      }
+
+      setFiles(extractedFiles);
+      if (extractedFiles.length > 0) {
+        setPreview(URL.createObjectURL(extractedFiles[0]));
+      }
+    } else {
+      const selected = selectedFiles[0];
       setFile(selected);
       setPreview(URL.createObjectURL(selected));
-      setResultUrl(null); 
+      setResultUrl(null);
     }
   };
 
+  const resetUpload = () => {
+    setFile(null);
+    setFiles([]);
+    setPreview(null);
+    setResultUrl(null);
+  };
+
   const handleGenerate = async () => {
-    if (!file) return;
-    
+    if (mode === "single" && !file) return;
+    if (mode === "batch" && files.length === 0) return;
+
     try {
       setIsProcessing(true);
-      const userId = 1; 
+      const userId = 1;
 
-      // Note: Because of the interceptor, 'res' is already the data object { status, image, generation_id }
-      const res = await upscaleImage(file, upscaleType as any, userId);
+      if (mode === "single") {
+        const res = await upscaleImage(file!, upscaleType as any, userId);
+        if (res && res.image) {
+          setResultUrl(res.image);
+          setSliderPosition(50);
+        }
 
-      if (res && res.image) {
-        setResultUrl(res.image);
-        setSliderPosition(50); 
       } else {
-        console.error("Response received but image key is missing", res);
+        // 🔥 BATCH → ALWAYS ZIP
+        // Create a ZIP from the current files array to send to the backend's zip_file field
+        const uploadZip = new JSZip();
+        for (let i = 0; i < files.length; i++) {
+          uploadZip.file(files[i].name, files[i]);
+        }
+        const zipBlob = await uploadZip.generateAsync({ type: "blob" });
+        const zipFile = new File([zipBlob], "upload.zip", { type: "application/zip" });
+
+        const blob = await upscaleBatch(zipFile, upscaleType, userId);
+
+        // 🔥 direct download
+        const url = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "upscaled_images.zip";
+        a.click();
+
+        window.URL.revokeObjectURL(url);
       }
 
     } catch (err) {
@@ -64,7 +130,6 @@ export default function Upscale() {
 
   const handleDownload = async () => {
     if (!resultUrl) return;
-
     try {
       const imageUrl = getAIImageUrl(resultUrl);
       const response = await fetch(imageUrl);
@@ -78,15 +143,7 @@ export default function Upscale() {
       document.body.removeChild(link);
       URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-      console.error("Download failed:", error);
-      // Fallback: try opening in new tab if fetch fails
-      const link = document.createElement("a");
-      link.href = getAIImageUrl(resultUrl);
-      link.target = "_blank";
-      link.download = `upscaled-${file?.name || 'design.png'}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      window.open(getAIImageUrl(resultUrl), "_blank");
     }
   };
 
@@ -110,6 +167,7 @@ export default function Upscale() {
         </div>
 
         <div className="grid lg:grid-cols-12 gap-10">
+          {/* LEFT COLUMN: PREVIEW AREA */}
           <div className="lg:col-span-7">
             {!preview ? (
               <label className="group relative flex flex-col items-center justify-center w-full aspect-[4/3] border-2 border-dashed border-white/10 rounded-[32px] bg-white/[0.02] hover:bg-white/[0.04] hover:border-[#ff1a1a]/50 transition-all cursor-pointer overflow-hidden">
@@ -118,11 +176,23 @@ export default function Upscale() {
                     <Upload className="w-8 h-8 text-gray-400 group-hover:text-[#ff1a1a]" />
                   </div>
                   <div>
-                    <p className="text-lg font-bold tracking-tight">Drop textile design or click to browse</p>
-                    <p className="text-gray-500 text-xs mt-1 uppercase tracking-widest font-bold">Supports RAW, TIFF, PNG (Max 50MB)</p>
+                    <p className="text-lg font-bold tracking-tight">
+                      {mode === "batch"
+                        ? "Drop folder, images, or .ZIP"
+                        : "Drop textile design"} or browse
+                    </p>
+                    <p className="text-gray-500 text-xs mt-1 uppercase tracking-widest font-bold">
+                      {mode === "batch" ? "Up to 50 files" : "Max 50MB per file"}
+                    </p>
                   </div>
                 </div>
-                <input type="file" className="hidden" onChange={onFileChange} accept="image/*" />
+                <input 
+                  type="file" 
+                  className="hidden"
+                  onChange={onFileChange}
+                  accept={mode === "batch" ? "image/*,.zip,application/zip" : "image/*"}
+                  multiple
+                />
               </label>
             ) : (
               <div 
@@ -130,25 +200,39 @@ export default function Upscale() {
                 onMouseMove={handleMouseMove}
                 onTouchMove={handleMouseMove}
               >
-                {/* Image Display Logic */}
                 <div className="absolute inset-0 bg-[#0a0a0a]">
-                  <img src={resultUrl ? getAIImageUrl(resultUrl) : preview} className="w-full h-full object-cover" alt="Display" />
-                  {resultUrl && (
-                     <div className="absolute top-6 right-6 px-3 py-1 bg-[#ff1a1a] text-white text-[10px] font-black uppercase rounded-md shadow-xl">Upscaled</div>
-                  )}
+                  <img 
+                    src={resultUrl ? getAIImageUrl(resultUrl) : preview} 
+                    className="w-full h-full object-cover" 
+                    alt="Display" 
+                  />
                 </div>
 
-                {/* Slider Handle & Split View (Only if result exists) */}
+                {/* Change Image Button */}
+                <button
+                  onClick={resetUpload}
+                  className="absolute top-6 right-6 z-30 px-3 py-1 bg-black/80 text-white text-[10px] font-black uppercase rounded-md border border-white/20 hover:border-[#ff1a1a] transition-colors"
+                >
+                  Change Image
+                </button>
+
+                {/* Slider Handle & Split View */}
                 {resultUrl && (
                   <>
                     <div 
                       className="absolute inset-0 border-r-2 border-[#ff1a1a] shadow-[10px_0_30px_rgba(255,26,26,0.3)] overflow-hidden"
                       style={{ width: `${sliderPosition}%` }}
                     >
-                      <img src={preview} className="w-full h-full object-cover blur-[1px] opacity-80 grayscale" alt="Original" 
+                      {/* FIX: No more grayscale/blur */}
+                      <img 
+                        src={preview} 
+                        className="w-full h-full object-cover opacity-90" 
+                        alt="Original" 
                         style={{ width: `${100 * (100 / sliderPosition)}%`, maxWidth: 'none' }}
                       />
-                      <div className="absolute top-6 left-6 px-3 py-1 bg-black/80 text-white text-[10px] font-black uppercase rounded-md border border-white/20 whitespace-nowrap">Original (Low-Res)</div>
+                      <div className="absolute top-6 left-6 px-3 py-1 bg-black/80 text-white text-[10px] font-black uppercase rounded-md border border-white/20">
+                        Before
+                      </div>
                     </div>
 
                     <div className="absolute inset-y-0 pointer-events-none" style={{ left: `${sliderPosition}%` }}>
@@ -157,10 +241,6 @@ export default function Upscale() {
                       </div>
                     </div>
                   </>
-                )}
-
-                {!resultUrl && !isProcessing && (
-                   <div className="absolute top-6 left-6 px-3 py-1 bg-black/80 text-white text-[10px] font-black uppercase rounded-md border border-white/20">Preview Mode</div>
                 )}
 
                 {/* Processing Overlay */}
@@ -181,7 +261,7 @@ export default function Upscale() {
                           />
                         </div>
                       </div>
-                      <p className="text-[#ff1a1a] font-mono text-sm font-bold tracking-[0.3em] animate-pulse uppercase">Reconstructing Pixels...</p>
+                      <p className="text-[#ff1a1a] font-mono text-sm font-bold tracking-[0.3em] animate-pulse uppercase">Scaling Pixels...</p>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -189,21 +269,24 @@ export default function Upscale() {
             )}
           </div>
 
+          {/* RIGHT COLUMN: CONTROLS */}
           <div className="lg:col-span-5 flex flex-col gap-6">
+            
+            {/* NEW: Mode Switch */}
             <div className="p-6 rounded-[24px] bg-white/[0.03] border border-white/10">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 block">Upscale Ratio</label>
-              <div className="grid grid-cols-3 gap-3">
-                {["4x", "8x", "16x"].map((val) => (
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 block">Process Mode</label>
+              <div className="flex gap-3">
+                {["single", "batch"].map((m) => (
                   <button
-                    key={val}
-                    onClick={() => setScaleFactor(val)}
-                    className={`py-3 rounded-xl font-bold text-sm transition-all border ${
-                      scaleFactor === val 
-                      ? "bg-[#ff1a1a] border-[#ff1a1a] text-white shadow-[0_0_20px_rgba(255,26,26,0.3)]" 
-                      : "bg-white/5 border-white/5 text-gray-400 hover:border-white/20"
+                    key={m}
+                    onClick={() => { setMode(m as any); resetUpload(); }}
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${
+                      mode === m 
+                      ? "bg-[#ff1a1a] text-white shadow-[0_0_20px_rgba(255,26,26,0.2)]" 
+                      : "bg-white/5 text-gray-400 hover:bg-white/10"
                     }`}
                   >
-                    {val}
+                    {m === "single" ? "Normal" : "Batch"}
                   </button>
                 ))}
               </div>
@@ -242,33 +325,64 @@ export default function Upscale() {
             </div>
 
             <button
-              disabled={!preview || isProcessing}
+              disabled={(!file && files.length === 0) || isProcessing}
               onClick={handleGenerate}
               className="group relative w-full h-16 rounded-[20px] bg-[#ff1a1a] disabled:bg-gray-800 disabled:grayscale transition-all overflow-hidden"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-              <div className="flex items-center justify-center gap-3 font-black uppercase tracking-widest text-sm">
-                {isProcessing ? "Processing Design..." : <>Enhance Quality <ChevronRight className="w-5 h-5" /></>}
+              <div className="flex items-center justify-center gap-3 font-black uppercase tracking-widest text-sm text-white">
+                {isProcessing ? "Processing..." : <>Enhance Quality <ChevronRight className="w-5 h-5" /></>}
               </div>
+            </button>
+
+            {/* NEW: Preview Modal Trigger */}
+            <button
+              disabled={!resultUrl || isProcessing}
+              onClick={() => setShowPreview(true)}
+              className="w-full h-12 rounded-[16px] border border-white/10 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-white/5 transition-all disabled:opacity-20"
+            >
+              Preview Full Image
             </button>
 
             <button
               disabled={!resultUrl || isProcessing}
-              onClick={handleDownload}
-              className="group w-full h-14 rounded-[18px] border border-[#ff1a1a]/30 bg-white/[0.03] text-white disabled:opacity-20 disabled:cursor-not-allowed transition-all hover:bg-[#ff1a1a]/10 hover:border-[#ff1a1a]/60"
+              onClick={mode === "batch" ? handleGenerate : handleDownload}
+              className="group w-full h-14 rounded-[18px] border border-[#ff1a1a]/30 bg-white/[0.03] text-white disabled:opacity-20 transition-all hover:bg-[#ff1a1a]/10"
             >
               <div className="flex items-center justify-center gap-3 font-bold uppercase tracking-[0.2em] text-xs">
-                <Download className="w-4 h-4 text-[#ff1a1a] transition-transform group-hover:-translate-y-0.5" />
+                <Download className="w-4 h-4 text-[#ff1a1a]" />
                 Download Result
               </div>
             </button>
 
             <p className="text-[9px] text-gray-600 text-center font-bold uppercase tracking-widest leading-relaxed">
-                AI processing uses cloud GPU resources. <br/>Large files may take up to 30 seconds.
+                Cloud GPU Processing Active. <br/>Large files may take up to 30 seconds.
             </p>
           </div>
         </div>
       </div>
+
+      {/* NEW: Full Screen Preview Modal */}
+      <AnimatePresence>
+        {showPreview && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4"
+          >
+            <motion.img 
+              initial={{ scale: 0.9 }} animate={{ scale: 1 }}
+              src={getAIImageUrl(resultUrl!)} 
+              className="max-w-full max-h-full rounded-xl shadow-2xl object-contain" 
+            />
+            <button
+              onClick={() => setShowPreview(false)}
+              className="absolute top-8 right-8 p-3 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+            >
+              <X className="w-6 h-6 text-white" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

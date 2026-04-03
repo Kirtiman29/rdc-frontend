@@ -1,9 +1,8 @@
-//src/components/layout/Header.tsx
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Search, User, Heart, ShoppingBag, Package, 
-  Menu, X, LogOut, ChevronRight, ChevronDown 
+import {
+  Search, User, Heart, ShoppingBag,
+  Menu, X, LogOut, ChevronRight, ChevronDown
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MegaMenu from './MegaMenu';
@@ -12,30 +11,14 @@ import { getCart } from '@/api/cartApi';
 import { getToken, clearTokens } from '@/api/apiClient';
 import AIStudioLoader from "@/components/layout/AIStudioLoader";
 
-// --- Types & Data ---
+let hoverTimeout: any;
 
-interface SubItem {
-  label: string;
-  href: string;
-}
-
-interface NavItem {
-  label: string;
-  href: string;
-  hasMegaMenu?: boolean;
-  hasDropdown?: boolean;
-  submenu?: {
-    main: Array<{ label: string; href: string }>;
-    nested: Array<{ label: string; items: SubItem[] }>;
-  };
-}
-
-const navItems: NavItem[] = [
+const navItems = [
   { label: 'Home', href: '/' },
   { label: 'Designs', href: '/gallery', hasMegaMenu: true },
-  { 
-    label: 'Luxury', 
-    href: '/luxury/explore', 
+  {
+    label: 'Luxury',
+    href: '/luxury/explore',
     hasDropdown: true,
     submenu: {
       main: [
@@ -47,9 +30,10 @@ const navItems: NavItem[] = [
   },
   { label: 'Trends', href: '/trends/explore' },
   { label: 'Special Offers', href: '/special-offers/explore' },
-  { 
-    label: 'Fabrics', 
-    href: '/fabrics/explore', 
+  { label: 'Blogs', href: '/blogs' },
+  {
+    label: 'Fabrics',
+    href: '/fabrics/explore',
     hasDropdown: true,
     submenu: {
       main: [
@@ -57,304 +41,237 @@ const navItems: NavItem[] = [
         { label: 'Shop All Fabric Designs', href: '/fabrics/shop' },
       ],
       nested: [
-        { 
-          label: 'By Color', 
+        {
+          label: 'By Color',
           items: [
             { label: 'Blue', href: '/fabrics/color/blue' },
             { label: 'Red', href: '/fabrics/color/red' },
             { label: 'Neutral', href: '/fabrics/color/neutral' },
-          ] 
-        },
-        { 
-          label: 'By Project', 
-          items: [
-            { label: 'Upholstery', href: '/fabrics/project/upholstery' },
-            { label: 'Apparel', href: '/fabrics/project/apparel' },
-            { label: 'Quilting', href: '/fabrics/project/quilting' },
-          ] 
+          ]
         },
       ]
     }
   },
-  { label: 'AI Studio', href: '/ai-studio' },
+  { label: 'AI Studio', href: '/ai-studio', isSpecial: true },
 ];
 
 const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+
   const [showLoader, setShowLoader] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
   const [cartCount, setCartCount] = useState(0);
-  const [hasWishlistItems, setHasWishlistItems] = useState(false);
   const isLoggedIn = !!getToken();
 
-  // Unified State for all Click-based Dropdowns
-  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
-
-  // Close dropdowns on outside click
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setActiveDropdown(null);
-        setActiveSubmenu(null);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Close menus when route changes
-  useEffect(() => {
-    setActiveDropdown(null);
-    setIsMobileMenuOpen(false);
-  }, [location.pathname]);
-
-  // Sync Cart Data
-  useEffect(() => {
-    const syncHeaderData = async () => {
-      if (!isLoggedIn) {
-        setCartCount(0);
-        setHasWishlistItems(false);
-        return;
-      }
-      try {
-        const cart = await getCart();
-        setCartCount(cart.totalItems || 0);
-      } catch (error) {
-        console.error('Header sync failed:', error);
-      }
-    };
-    syncHeaderData();
-    window.addEventListener("cart-updated", syncHeaderData);
-    return () => window.removeEventListener("cart-updated", syncHeaderData);
-  }, [isLoggedIn]);
-
-  // Scroll Shadow
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 10);
+    const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const handleLogout = () => {
     clearTokens();
-    setShowProfileMenu(false);
-    setIsMobileMenuOpen(false);
-    setCartCount(0);
-    setHasWishlistItems(false);
     navigate('/login');
-  };
-
-  const toggleDropdown = (e: React.MouseEvent, label: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setActiveDropdown(prev => prev === label ? null : label);
-    setActiveSubmenu(null);
   };
 
   return (
     <>
       {showLoader && <AIStudioLoader onFinish={() => setShowLoader(false)} />}
-      <header className={cn(
-        "sticky top-0 z-50 w-full bg-background transition-all duration-300 border-b border-border/50",
-        scrolled && "shadow-sm border-transparent"
+
+      {/* Announcement Bar (Optional - Premium Feel) */}
+      <div className={cn(
+        "bg-[#2A2623] text-white text-[10px] tracking-[0.2em] uppercase py-2 text-center transition-all duration-500 overflow-hidden",
+        scrolled ? "h-0 opacity-0" : "h-8 opacity-100"
       )}>
-        <div className="container mx-auto px-4 md:px-8">
-          <div className="flex h-14 md:h-20 items-center justify-between">
-            
-            {/* Logo Group */}
-            <div className="flex items-center gap-2">
-              <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 text-foreground">
-                <Menu className="h-5 w-5" />
+        Special Offers Upto 20% for New User's
+      </div>
+
+      <header className={cn(
+        "sticky top-0 z-50 w-full bg-white/80 transition-all duration-500 ease-in-out border-b border-transparent",
+        scrolled ? "py-2 backdrop-blur-xl border-black/5 shadow-[0_4px_30px_rgba(0,0,0,0.03)]" : "py-6 backdrop-blur-none"
+      )}>
+        <div className="w-full px-16 px-6 lg:px-12">
+          <div className="flex items-center justify-between gap-8">
+
+            {/* LEFT: Logo Section */}
+            <div className="flex items-center gap-4 lg:flex-1">
+              <button
+                onClick={() => setIsMobileMenuOpen(true)}
+                className="lg:hidden p-2 -ml-2 text-[#2A2623] transition-transform active:scale-90"
+              >
+                <Menu className="h-5 w-5 stroke-[1.5px]" />
               </button>
-              <Link to="/" className="flex items-center gap-2 shrink-0 select-none">
-                <img src="/rdc-logo.png" alt="RDC" className="h-6 sm:h-8 md:h-10 w-auto" />
-                <span className="hidden sm:block font-serif text-xl md:text-2xl font-medium tracking-wide">RDC</span>
+              <Link to="/" className="flex items-center gap-3 group select-none">
+                <img
+                  src="/rdc-logo.png"
+                  alt="RDC"
+                  className={cn(
+                    "transition-all duration-500 ease-in-out",
+                    scrolled ? "h-7" : "h-9"
+                  )}
+                />
+                <span className={cn(
+                  "font-serif tracking-[0.1em] font-medium text-[#2A2623] transition-all duration-500",
+                  scrolled ? "text-lg" : "text-2xl"
+                )}>RDC</span>
               </Link>
             </div>
 
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-8" ref={dropdownRef}>
+            {/* CENTER: Navigation Section */}
+            <nav className="hidden lg:flex items-center gap-10" ref={dropdownRef}>
               {navItems.map((item) => (
-                <div key={item.label} className="relative">
-                  {item.label === "AI Studio" ? (
+                <div
+                  key={item.label}
+                  className={cn("py-2", !item.hasMegaMenu && "relative")}
+                  onMouseEnter={() => {
+                    clearTimeout(hoverTimeout);
+                    if (item.hasDropdown || item.hasMegaMenu) {
+                      setActiveDropdown(item.label);
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    hoverTimeout = setTimeout(() => setActiveDropdown(null), 150);
+                  }}
+                >
+                  {item.isSpecial ? (
                     <button
                       onClick={() => setShowLoader(true)}
-                      className="text-sm font-medium tracking-wide transition-colors py-2 text-muted-foreground hover:text-foreground"
+                      className="group relative px-4 py-1.5 overflow-hidden rounded-full transition-all duration-500"
                     >
-                      {item.label}
-                    </button>
-                  ) : (item.hasDropdown || item.hasMegaMenu) ? (
-                    <button
-                      onClick={(e) => toggleDropdown(e, item.label)}
-                      className={cn(
-                        'text-sm font-medium tracking-wide transition-colors py-2 flex items-center gap-1',
-                        activeDropdown === item.label ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
-                      )}
-                    >
-                      {item.label}
-                      <ChevronDown className={cn(
-                        "h-3 w-3 transition-transform duration-200", 
-                        activeDropdown === item.label ? "rotate-180" : "rotate-0"
-                      )} />
+                      <span className="absolute inset-0 bg-gradient-to-r from-red-500 to-rose-600 opacity-90 transition-transform duration-500 group-hover:scale-105" />
+                      <span className="relative text-[11px] font-bold uppercase tracking-widest text-white flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                        </span>
+                        {item.label}
+                      </span>
                     </button>
                   ) : (
                     <Link
                       to={item.href}
                       className={cn(
-                        'text-sm font-medium tracking-wide transition-colors py-2 relative after:absolute after:bottom-0 after:left-0 after:w-full after:h-[1px] after:bg-foreground after:scale-x-0 after:origin-right after:transition-transform hover:after:scale-x-100 hover:after:origin-left',
-                        location.pathname === item.href ? 'text-foreground after:scale-x-100' : 'text-muted-foreground hover:text-foreground'
+                        "text-[11px] font-semibold uppercase tracking-[0.15em] transition-colors duration-300 relative py-1",
+                        location.pathname === item.href ? "text-[#2A2623]" : "text-[#2A2623]/50 hover:text-[#2A2623]"
                       )}
                     >
                       {item.label}
+                      {/* Underline Animation */}
+                      <span className={cn(
+                        "absolute bottom-0 left-0 h-[1.5px] bg-[#2A2623] transition-all duration-500 ease-out",
+                        location.pathname === item.href ? "w-full" : "w-0 group-hover:w-full"
+                      )} />
                     </Link>
                   )}
 
-                  {/* MEGAMENU (Click-triggered) */}
+                  {/* MegaMenu for Designs */}
                   {item.hasMegaMenu && activeDropdown === item.label && (
-                    <MegaMenu />
+                    <div className="absolute left-0 top-full w-full animate-in fade-in slide-in-from-top-2 duration-300 z-50">
+                      <div className="bg-white/95 backdrop-blur-md border border-[#2A2623]/5 shadow-2xl rounded-sm">
+                        <MegaMenu />
+                      </div>
+                    </div>
                   )}
 
-                  {/* STANDARD DROPDOWN */}
+                  {/* Standard Dropdown */}
                   {item.hasDropdown && activeDropdown === item.label && item.submenu && (
-                    <div className="absolute top-full left-0 w-64 bg-white border border-border shadow-lg rounded-md py-2 mt-1 z-[100] animate-in fade-in slide-in-from-top-2 duration-200">
-                      {item.submenu.main.map((sub) => (
-                        <Link
-                          key={sub.label}
-                          to={sub.href}
-                          onClick={() => setActiveDropdown(null)}
-                          className="block px-4 py-2 text-sm text-foreground hover:bg-secondary/50 transition-colors"
-                        >
-                          {sub.label}
-                        </Link>
-                      ))}
-
-                      {item.submenu.nested.length > 0 && (
-                        <>
-                          <div className="border-t border-border my-1" />
-                          {item.submenu.nested.map((nestedGroup) => (
-                            <div 
-                              key={nestedGroup.label}
-                              className="relative group/nested"
-                              onMouseEnter={() => setActiveSubmenu(nestedGroup.label)}
-                              onMouseLeave={() => setActiveSubmenu(null)}
-                            >
-                              <div className="flex items-center justify-between px-4 py-2 text-sm text-foreground hover:bg-secondary/50 cursor-pointer">
-                                {nestedGroup.label}
-                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                              
-                              {activeSubmenu === nestedGroup.label && (
-                                <div className="absolute left-full top-0 ml-[-1px] w-56 bg-white border border-border shadow-lg rounded-md py-2 animate-in fade-in slide-in-from-left-2 duration-200">
-                                  {nestedGroup.items.map((subItem) => (
-                                    <Link
-                                      key={subItem.label}
-                                      to={subItem.href}
-                                      onClick={() => setActiveDropdown(null)}
-                                      className="block px-4 py-2 text-sm text-foreground hover:bg-secondary/50 transition-colors"
-                                    >
-                                      {subItem.label}
-                                    </Link>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
-                        </>
-                      )}
+                    <div className="absolute top-full left-1/2 -translate-x-1/2 w-56 pt-4 animate-in fade-in slide-in-from-top-2 duration-300 z-50">
+                      <div className="bg-white/95 backdrop-blur-md border border-[#2A2623]/5 shadow-2xl rounded-sm p-4">
+                        {item.submenu.main.map((sub) => (
+                          <Link
+                            key={sub.label}
+                            to={sub.href}
+                            className="block py-2 text-[10px] uppercase tracking-widest text-[#2A2623]/60 hover:text-[#2A2623] transition-all hover:translate-x-1"
+                          >
+                            {sub.label}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
               ))}
             </nav>
 
-            {/* Right Icons */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <button onClick={() => setShowSearch(true)} className="p-2 text-muted-foreground hover:text-foreground transition-colors">
-                <Search className="h-5 w-5" />
+            {/* RIGHT: Icons Section */}
+            <div className="flex items-center justify-end gap-2 sm:gap-5 lg:flex-1">
+              <button
+                onClick={() => setShowSearch(true)}
+                className="p-2 text-[#2A2623]/70 hover:text-[#2A2623] transition-all hover:scale-110 active:scale-95"
+              >
+                <Search className="h-[18px] w-[18px] stroke-[1.5px]" />
               </button>
 
-              {isLoggedIn && (
-                <Link to="/orders" className="hidden md:flex p-2 text-muted-foreground hover:text-foreground transition-colors">
-                  <Package className="h-5 w-5" />
-                </Link>
-              )}
-
-              <Link to="/wishlist" className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
-                <Heart className="h-5 w-5" />
-                {hasWishlistItems && <span className="absolute top-2 right-2 h-1.5 w-1.5 bg-red-500 rounded-full animate-pulse" />}
+              <Link to="/wishlist" className="hidden sm:block p-2 text-[#2A2623]/70 hover:text-[#2A2623] transition-all hover:scale-110">
+                <Heart className="h-[18px] w-[18px] stroke-[1.5px]" />
               </Link>
 
-              <Link to="/cart" className="relative p-2 text-muted-foreground hover:text-foreground transition-colors">
-                <ShoppingBag className="h-5 w-5" />
+              <Link to="/cart" className="relative p-2 text-[#2A2623]/70 hover:text-[#2A2623] transition-all hover:scale-110">
+                <ShoppingBag className="h-[18px] w-[18px] stroke-[1.5px]" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-black text-white text-[10px] font-semibold rounded-full flex items-center justify-center">
+                  <span className="absolute top-1.5 right-1.5 flex h-3.5 w-3.5 items-center justify-center bg-[#2A2623] text-[8px] font-bold text-white rounded-full">
                     {cartCount}
                   </span>
                 )}
               </Link>
 
-              {!isLoggedIn ? (
-                <div className="hidden sm:flex items-center gap-4 ml-2">
-                  <Link to="/login" className="text-xs font-bold uppercase tracking-widest hover:text-foreground">Login</Link>
-                  <Link to="/signup" className="px-4 py-2 bg-foreground text-background text-[10px] font-bold uppercase tracking-widest rounded-sm">Register</Link>
+              <div className="relative group ml-2">
+                <button className="flex items-center gap-1 p-2 text-[#2A2623]/70 hover:text-[#2A2623] transition-all">
+                  <User className="h-[18px] w-[18px] stroke-[1.5px]" />
+                </button>
+
+                {/* Profile Hover Menu */}
+                <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-50">
+                  <div className="bg-white border border-[#2A2623]/5 shadow-2xl w-48 p-4 flex flex-col gap-3">
+                    <Link to="/profile" className="text-[10px] uppercase tracking-widest font-bold hover:text-red-500">Account</Link>
+                    <Link to="/orders" className="text-[10px] uppercase tracking-widest font-bold hover:text-red-500">Orders</Link>
+                    <div className="h-[1px] bg-[#2A2623]/5" />
+                    <button onClick={handleLogout} className="text-[10px] uppercase tracking-widest font-bold text-red-500 text-left">Logout</button>
+                  </div>
                 </div>
-              ) : (
-                <div className="relative ml-1" onMouseEnter={() => setShowProfileMenu(true)} onMouseLeave={() => setShowProfileMenu(false)}>
-                  <button className="p-2 text-muted-foreground hover:text-foreground">
-                    <User className="h-5 w-5" />
-                  </button>
-                  {showProfileMenu && (
-                    <div className="absolute right-0 top-full w-48 bg-white border border-border shadow-xl py-2 z-50">
-                      <Link to="/profile" className="block px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-secondary/50">My Account</Link>
-                      <Link to="/orders" className="block px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-secondary/50">My Orders</Link>
-                      <div className="border-t border-border my-1" />
-                      <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-xs font-bold uppercase tracking-wider text-rose-600 hover:bg-rose-50 flex items-center gap-2">
-                        <LogOut className="h-3 w-3" /> Logout
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
-
-        {/* MOBILE DRAWER */}
-        <>
-          <div className={cn("fixed inset-0 bg-black/30 backdrop-blur-sm z-[60] lg:hidden transition-opacity", isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none")} onClick={() => setIsMobileMenuOpen(false)} />
-          <div className={cn('fixed top-0 left-0 bottom-0 w-[85%] max-w-[340px] bg-background z-[70] transition-transform duration-300 lg:hidden shadow-2xl', isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full')}>
-            <div className="flex flex-col h-full">
-              <div className="flex items-center justify-between p-5 border-b border-border/50">
-                <span className="font-serif text-lg tracking-wide">RDC</span>
-                <button onClick={() => setIsMobileMenuOpen(false)}><X className="h-5 w-5" /></button>
-              </div>
-              <nav className="flex flex-col p-6 overflow-y-auto">
-                {navItems.map((item) => (
-                  <Link key={item.label} to={item.href} className="text-base font-light py-4 border-b border-border/20" onClick={() => setIsMobileMenuOpen(false)}>{item.label}</Link>
-                ))}
-                {isLoggedIn && (
-                  <Link to="/profile" className="text-base font-light py-4 border-b border-border/20" onClick={() => setIsMobileMenuOpen(false)}>My Profile</Link>
-                )}
-                <div className="mt-auto pt-10 pb-6 flex flex-col gap-4">
-                  {!isLoggedIn ? (
-                    <Link to="/login" className="w-full py-3 border border-foreground/30 text-center text-sm tracking-widest">LOGIN</Link>
-                  ) : (
-                    <button onClick={handleLogout} className="w-full py-3 border border-rose-200 text-rose-600 text-sm tracking-widest flex items-center justify-center gap-2">LOGOUT</button>
-                  )}
-                </div>
-              </nav>
-            </div>
-          </div>
-        </>
       </header>
+
+      {/* MOBILE NAV: Minimalist Sidebar */}
+      <div className={cn(
+        "fixed inset-0 bg-black/20 backdrop-blur-sm z-[100] transition-opacity duration-500 lg:hidden",
+        isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+      )} onClick={() => setIsMobileMenuOpen(false)} />
+
+      <div className={cn(
+        "fixed top-0 left-0 bottom-0 w-[80%] max-w-[360px] bg-white z-[101] shadow-2xl transition-transform duration-500 ease-expo lg:hidden flex flex-col",
+        isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-8 border-b border-[#2A2623]/5 flex justify-between items-center">
+          <span className="font-serif text-2xl tracking-widest text-[#2A2623]">RDC</span>
+          <button onClick={() => setIsMobileMenuOpen(false)}><X className="h-6 w-6 stroke-[1.5px]" /></button>
+        </div>
+
+        <nav className="flex flex-col p-8 gap-6">
+          {navItems.map((item, index) => (
+            <Link
+              key={item.label}
+              to={item.href}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-xl font-light tracking-tight text-[#2A2623] border-b border-[#2A2623]/5 pb-4 last:border-0"
+              style={{ transitionDelay: `${index * 50}ms` }}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+      </div>
+
       <SearchOverlay isOpen={showSearch} onClose={() => setShowSearch(false)} />
     </>
   );

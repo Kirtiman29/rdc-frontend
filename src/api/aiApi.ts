@@ -1,13 +1,10 @@
 import axios from "axios";
-import { applyIndustrialInterceptors } from "./apiClient";
+import { applyIndustrialInterceptors, getToken } from "./apiClient";
 
 /* =========================================
    BASE URL (AI SERVICE)
 ========================================= */
-const AI_BASE_URL = `${import.meta.env.VITE_AI_SERVICE_URL}`.replace(
-  /([^:]\/)\/+/g,
-  "$1"
-);
+const AI_BASE_URL = `${import.meta.env.VITE_AI_SERVICE_URL}`;
 
 /* =========================================
    AI AXIOS INSTANCE
@@ -101,6 +98,36 @@ export const upscaleImage = async (
   });
   
   return (res as unknown) as UpscaleResponse;
+};
+
+export const upscaleBatch = async (
+  zipFile: File | Blob,
+  mode: string,
+  userId: number,
+  outputFolder: string = `upscaled_batch_${Date.now()}`
+) => {
+  const formData = new FormData();
+
+  formData.append("zip_file", zipFile, "upload.zip");
+  formData.append("mode", mode);
+  formData.append("user_id", userId.toString());
+  formData.append("output_folder", outputFolder);
+
+  const token = getToken();
+
+  // 🔥 IMPORTANT: NO aiApi (no interceptor)
+  const res = await axios.post(
+    `${import.meta.env.VITE_AI_SERVICE_URL}/batch-upscale`,
+    formData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      responseType: "blob", // 🔥 MUST
+    }
+  );
+
+  return res.data; // 🔥 return blob directly
 };
 
 /* =========================================
