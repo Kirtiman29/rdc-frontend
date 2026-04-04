@@ -44,6 +44,12 @@ export interface UpscaleResponse {
   generation_id: number; 
 }
 
+export interface GenerateSeamlessResponse {
+  success: boolean;
+  message: string;
+  output_image: string;
+}
+
 /* =========================================
    GENERATE DESIGN API
 ========================================= */
@@ -131,6 +137,31 @@ export const upscaleBatch = async (
 };
 
 /* =========================================
+   GENERATE SEAMLESS PATTERN API
+========================================= */
+export const generateSeamlessPattern = async (file: File): Promise<GenerateSeamlessResponse> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const res = await aiApi.post<any>("/pattern/generate-seamless", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  
+  return (res as unknown) as GenerateSeamlessResponse;
+};
+
+/* =========================================
+   HISTORY API
+========================================= */
+export const getHistory = async (style?: string) => {
+  const params = style && style !== 'all' ? { style } : {};
+  const res = await aiApi.get<any>("/api/history", { params });
+  return (res as unknown) as any;
+};
+
+/* =========================================
    HEALTH CHECK
 ========================================= */
 export const checkAIHealth = async () => {
@@ -144,7 +175,9 @@ export const getAIImageUrl = (url: string) => {
   if (!url) return "";
   if (url.startsWith("http")) return url;
 
-  const cleanPath = url.startsWith("/") ? url : `/${url}`;
+  // normalize backslashes to forward slashes for URLs
+  const normalizedUrl = url.replace(/\\/g, '/');
+  const cleanPath = normalizedUrl.startsWith("/") ? normalizedUrl : `/${normalizedUrl}`;
   return `${AI_BASE_URL}${cleanPath}`;
 };
 

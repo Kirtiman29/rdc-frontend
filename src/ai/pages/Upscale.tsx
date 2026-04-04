@@ -22,17 +22,57 @@ export default function Upscale() {
   const [preview, setPreview] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const mockEvent = {
+        target: { files: e.dataTransfer.files }
+      } as unknown as React.ChangeEvent<HTMLInputElement>;
+      await onFileChange(mockEvent);
+    }
+  };
   const [sliderPosition, setSliderPosition] = useState(50);
   const [upscaleType, setUpscaleType] = useState("textile");
   const [showPreview, setShowPreview] = useState(false); // Modal state
+  const [isDragging, setIsDragging] = useState(false);
 
-
-  const handleMouseMove = (e: React.MouseEvent | React.TouchEvent) => {
+  const handlePointerDown = (e: React.PointerEvent) => {
     if (!resultUrl) return;
+    setIsDragging(true);
+    if (e.currentTarget && 'setPointerCapture' in e.currentTarget) {
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    }
+
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const x = 'touches' in e ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
-    const position = ((x - rect.left) / rect.width) * 100;
+    const position = ((e.clientX - rect.left) / rect.width) * 100;
     setSliderPosition(Math.max(0, Math.min(100, position)));
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging || !resultUrl) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const position = ((e.clientX - rect.left) / rect.width) * 100;
+    setSliderPosition(Math.max(0, Math.min(100, position)));
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    if (e.currentTarget && 'releasePointerCapture' in e.currentTarget) {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    }
   };
 
   const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,12 +84,12 @@ export default function Upscale() {
 
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
-        
+
         if (file.name.endsWith(".zip") || file.type.includes("zip")) {
           try {
             const zip = new JSZip();
             const loadedZip = await zip.loadAsync(file);
-            
+
             for (const [relativePath, zipEntry] of Object.entries(loadedZip.files)) {
               if (!zipEntry.dir && relativePath.match(/\.(jpg|jpeg|png|webp|avif)$/i)) {
                 const blob = await zipEntry.async("blob");
@@ -170,7 +210,12 @@ export default function Upscale() {
           {/* LEFT COLUMN: PREVIEW AREA */}
           <div className="lg:col-span-7">
             {!preview ? (
-              <label className="group relative flex flex-col items-center justify-center w-full aspect-[4/3] border-2 border-dashed border-white/10 rounded-[32px] bg-white/[0.02] hover:bg-white/[0.04] hover:border-[#ff1a1a]/50 transition-all cursor-pointer overflow-hidden">
+              <label 
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`group relative flex flex-col items-center justify-center w-full aspect-[4/3] border-2 border-dashed ${isDragOver ? "border-[#ff1a1a] bg-white/[0.05]" : "border-white/10 bg-white/[0.02]"} rounded-[32px] hover:bg-white/[0.04] hover:border-[#ff1a1a]/50 transition-all cursor-pointer overflow-hidden`}
+              >
                 <div className="flex flex-col items-center gap-4 text-center p-10">
                   <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center group-hover:scale-110 group-hover:bg-[#ff1a1a]/10 transition-all">
                     <Upload className="w-8 h-8 text-gray-400 group-hover:text-[#ff1a1a]" />
@@ -178,7 +223,7 @@ export default function Upscale() {
                   <div>
                     <p className="text-lg font-bold tracking-tight">
                       {mode === "batch"
-                        ? "Drop folder, images, or .ZIP"
+                        ? "Drop folder or .ZIP"
                         : "Drop textile design"} or browse
                     </p>
                     <p className="text-gray-500 text-xs mt-1 uppercase tracking-widest font-bold">
@@ -186,8 +231,8 @@ export default function Upscale() {
                     </p>
                   </div>
                 </div>
-                <input 
-                  type="file" 
+                <input
+                  type="file"
                   className="hidden"
                   onChange={onFileChange}
                   accept={mode === "batch" ? "image/*,.zip,application/zip" : "image/*"}
@@ -195,39 +240,33 @@ export default function Upscale() {
                 />
               </label>
             ) : (
-              <div 
-                className={`relative w-full aspect-[4/3] rounded-[32px] overflow-hidden border border-white/10 ${resultUrl ? 'cursor-col-resize' : 'cursor-default'} group`}
-                onMouseMove={handleMouseMove}
-                onTouchMove={handleMouseMove}
+              <div
+                className={`relative w-full aspect-[4/3] rounded-[32px] overflow-hidden border border-white/10 ${resultUrl ? 'cursor-col-resize select-none touch-none' : 'cursor-default'} group`}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
               >
                 <div className="absolute inset-0 bg-[#0a0a0a]">
-                  <img 
-                    src={resultUrl ? getAIImageUrl(resultUrl) : preview} 
-                    className="w-full h-full object-cover" 
-                    alt="Display" 
+                  <img
+                    src={resultUrl ? getAIImageUrl(resultUrl) : preview}
+                    className="w-full h-full object-cover"
+                    alt="Display"
                   />
                 </div>
-
-                {/* Change Image Button */}
-                <button
-                  onClick={resetUpload}
-                  className="absolute top-6 right-6 z-30 px-3 py-1 bg-black/80 text-white text-[10px] font-black uppercase rounded-md border border-white/20 hover:border-[#ff1a1a] transition-colors"
-                >
-                  Change Image
-                </button>
 
                 {/* Slider Handle & Split View */}
                 {resultUrl && (
                   <>
-                    <div 
-                      className="absolute inset-0 border-r-2 border-[#ff1a1a] shadow-[10px_0_30px_rgba(255,26,26,0.3)] overflow-hidden"
+                    <div
+                      className="absolute inset-0 border-r-2 border-[#ff1a1a] shadow-[10px_0_30px_rgba(255,26,26,0.3)] overflow-hidden pointer-events-none"
                       style={{ width: `${sliderPosition}%` }}
                     >
                       {/* FIX: No more grayscale/blur */}
-                      <img 
-                        src={preview} 
-                        className="w-full h-full object-cover opacity-90" 
-                        alt="Original" 
+                      <img
+                        src={preview}
+                        className="w-full h-full object-cover opacity-90"
+                        alt="Original"
                         style={{ width: `${100 * (100 / sliderPosition)}%`, maxWidth: 'none' }}
                       />
                       <div className="absolute top-6 left-6 px-3 py-1 bg-black/80 text-white text-[10px] font-black uppercase rounded-md border border-white/20">
@@ -243,10 +282,37 @@ export default function Upscale() {
                   </>
                 )}
 
+                {/* Change Image Button (Cross) */}
+                {!isProcessing && (
+                  <button
+                    onClick={resetUpload}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="absolute top-6 right-6 z-50 w-12 h-12 rounded-full bg-black/50 backdrop-blur-md hover:bg-red-500/20 border border-white/20 flex items-center justify-center transition-all hover:scale-105"
+                    title="Remove Image"
+                  >
+                    <X className="w-5 h-5 text-white" />
+                  </button>
+                )}
+
+                {/* Preview Full Image Overlay Button */}
+                {resultUrl && !isProcessing && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPreview(true);
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="absolute bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all hover:scale-105"
+                    title="Preview Full Image"
+                  >
+                    <Maximize className="w-5 h-5" />
+                  </button>
+                )}
+
                 {/* Processing Overlay */}
                 <AnimatePresence>
                   {isProcessing && (
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                       className="absolute inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center"
                     >
@@ -254,7 +320,7 @@ export default function Upscale() {
                         <div className="absolute inset-0 bg-[#ff1a1a]/20 rounded-2xl blur-xl animate-pulse" />
                         <div className="relative h-full w-full bg-[#0a0a0a] border border-[#ff1a1a]/30 rounded-2xl flex items-center justify-center overflow-hidden">
                           <Maximize className="w-10 h-10 text-[#ff1a1a]" />
-                          <motion.div 
+                          <motion.div
                             animate={{ top: ["-10%", "110%"] }}
                             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
                             className="absolute left-0 right-0 h-1 bg-[#ff1a1a] shadow-[0_0_15px_#ff1a1a] z-20"
@@ -267,11 +333,29 @@ export default function Upscale() {
                 </AnimatePresence>
               </div>
             )}
+
+            {/* GPU processing banner */}
+            <div className="mt-8 flex items-center gap-5 p-6 rounded-[24px] bg-white/[0.02] border border-white/5 backdrop-blur-md">
+              <div className="p-3.5 rounded-2xl bg-[#ff1a1a]/10 shrink-0 border border-[#ff1a1a]/20 shadow-[0_0_20px_rgba(255,26,26,0.15)] flex items-center justify-center">
+                <Zap className="w-5 h-5 text-[#ff1a1a]" />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full bg-[#ff1a1a] animate-pulse shadow-[0_0_10px_#ff1a1a]" />
+                   <p className="text-xs font-black text-white uppercase tracking-[0.2em]">
+                     Cloud GPU Processing Active
+                   </p>
+                </div>
+                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold ml-4">
+                  Large files may take up to <span className="text-white bg-white/10 px-1.5 py-0.5 rounded ml-1">1-2 Minutes</span>.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* RIGHT COLUMN: CONTROLS */}
           <div className="lg:col-span-5 flex flex-col gap-6">
-            
+
             {/* NEW: Mode Switch */}
             <div className="p-6 rounded-[24px] bg-white/[0.03] border border-white/10">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 block">Process Mode</label>
@@ -280,11 +364,10 @@ export default function Upscale() {
                   <button
                     key={m}
                     onClick={() => { setMode(m as any); resetUpload(); }}
-                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${
-                      mode === m 
-                      ? "bg-[#ff1a1a] text-white shadow-[0_0_20px_rgba(255,26,26,0.2)]" 
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${mode === m
+                      ? "bg-[#ff1a1a] text-white shadow-[0_0_20px_rgba(255,26,26,0.2)]"
                       : "bg-white/5 text-gray-400 hover:bg-white/10"
-                    }`}
+                      }`}
                   >
                     {m === "single" ? "Normal" : "Batch"}
                   </button>
@@ -303,11 +386,10 @@ export default function Upscale() {
                   <button
                     key={type.id}
                     onClick={() => setUpscaleType(type.id)}
-                    className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all ${
-                      upscaleType === type.id 
-                      ? "bg-white/10 border-[#ff1a1a]/50" 
+                    className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all ${upscaleType === type.id
+                      ? "bg-white/10 border-[#ff1a1a]/50"
                       : "bg-white/5 border-transparent opacity-60 hover:opacity-100"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${upscaleType === type.id ? "bg-[#ff1a1a] text-white" : "bg-white/10"}`}>
@@ -335,15 +417,6 @@ export default function Upscale() {
               </div>
             </button>
 
-            {/* NEW: Preview Modal Trigger */}
-            <button
-              disabled={!resultUrl || isProcessing}
-              onClick={() => setShowPreview(true)}
-              className="w-full h-12 rounded-[16px] border border-white/10 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-white/5 transition-all disabled:opacity-20"
-            >
-              Preview Full Image
-            </button>
-
             <button
               disabled={!resultUrl || isProcessing}
               onClick={mode === "batch" ? handleGenerate : handleDownload}
@@ -355,9 +428,7 @@ export default function Upscale() {
               </div>
             </button>
 
-            <p className="text-[9px] text-gray-600 text-center font-bold uppercase tracking-widest leading-relaxed">
-                Cloud GPU Processing Active. <br/>Large files may take up to 30 seconds.
-            </p>
+
           </div>
         </div>
       </div>
@@ -365,14 +436,14 @@ export default function Upscale() {
       {/* NEW: Full Screen Preview Modal */}
       <AnimatePresence>
         {showPreview && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4"
           >
-            <motion.img 
+            <motion.img
               initial={{ scale: 0.9 }} animate={{ scale: 1 }}
-              src={getAIImageUrl(resultUrl!)} 
-              className="max-w-full max-h-full rounded-xl shadow-2xl object-contain" 
+              src={getAIImageUrl(resultUrl!)}
+              className="max-w-full max-h-full rounded-xl shadow-2xl object-contain"
             />
             <button
               onClick={() => setShowPreview(false)}
@@ -386,89 +457,3 @@ export default function Upscale() {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { motion } from "framer-motion";
-// import { Maximize, Sparkles, Zap, ShieldCheck } from "lucide-react";
-
-// export default function Upscale() {
-//   return (
-//     <div className="h-full flex flex-col items-center justify-center bg-[#050505] p-6 relative overflow-hidden">
-//       {/* Background Decorative Elements */}
-//       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#ff1a1a]/5 blur-[120px] rounded-full pointer-events-none" />
-      
-//       <motion.div 
-//         initial={{ opacity: 0, y: 20 }}
-//         animate={{ opacity: 1, y: 0 }}
-//         className="relative z-10 flex flex-col items-center text-center max-w-2xl"
-//       >
-//         {/* Animated Icon Scanner */}
-//         <div className="relative w-32 h-32 mb-8 group">
-//           <div className="absolute inset-0 bg-[#ff1a1a]/20 rounded-3xl blur-xl group-hover:bg-[#ff1a1a]/40 transition-all duration-700" />
-//           <div className="relative h-full w-full bg-[#0a0a0a] border border-white/10 rounded-3xl flex items-center justify-center overflow-hidden">
-//             <Maximize className="w-12 h-12 text-[#ff1a1a]" />
-            
-//             {/* The Scanning Beam */}
-//             <motion.div 
-//               animate={{ top: ["-10%", "110%"] }}
-//               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-//               className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#ff1a1a] to-transparent shadow-[0_0_15px_#ff1a1a] z-20"
-//             />
-//           </div>
-//         </div>
-
-//         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ff1a1a]/10 border border-[#ff1a1a]/20 text-[#ff1a1a] text-[10px] font-black tracking-[0.3em] uppercase mb-4">
-//           <Zap className="w-3 h-3 fill-current" />
-//           Experimental Feature
-//         </div>
-
-//         <h1 className="text-4xl md:text-5xl font-black text-white tracking-tighter mb-4">
-//           ULTRA-HD <span className="text-gray-600 tracking-normal font-light">UPSCALING</span>
-//         </h1>
-        
-//         <p className="text-gray-500 text-sm md:text-base max-w-md leading-relaxed mb-10">
-//           We are fine-tuning our neural super-resolution models to bring 4K textile textures to your fingertips. Zero loss in detail, maximum clarity.
-//         </p>
-
-//         {/* Coming Soon Badge */}
-//         <div className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-//            <span className="text-2xl font-mono font-bold tracking-widest text-white">COMING SOON</span>
-//         </div>
-
-//         {/* Feature Teaser Grid */}
-//         <div className="grid grid-cols-3 gap-8 mt-16 w-full">
-//             <div className="flex flex-col items-center gap-2">
-//                 <ShieldCheck className="w-5 h-5 text-gray-700" />
-//                 <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">Texture Preservation</span>
-//             </div>
-//             <div className="flex flex-col items-center gap-2">
-//                 <Sparkles className="w-5 h-5 text-gray-700" />
-//                 <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">AI Denoising</span>
-//             </div>
-//             <div className="flex flex-col items-center gap-2">
-//                 <Maximize className="w-5 h-5 text-gray-700" />
-//                 <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">8K Export</span>
-//             </div>
-//         </div>
-//       </motion.div>
-//     </div>
-//   );
-// }

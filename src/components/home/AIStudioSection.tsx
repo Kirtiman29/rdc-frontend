@@ -1,3 +1,4 @@
+//src/components/home/AIStudioSection.tsx
 import React, { useEffect, useRef, useState } from 'react';
 
 const AIStudioSection = () => {

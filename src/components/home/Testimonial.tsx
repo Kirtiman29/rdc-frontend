@@ -1,3 +1,5 @@
+//src/components/home/Testimonial.tsx
+
 import { Quote } from 'lucide-react';
 
 const Testimonial = () => {
@@ -18,7 +20,7 @@ const Testimonial = () => {
           <Quote className="mx-auto mb-6 h-10 w-10 text-[#2A2623] opacity-20" />
           
           <blockquote className="mb-6 font-serif text-xl md:text-2xl lg:text-3xl font-light leading-relaxed text-[#2A2623] italic">
-            "Empowering clients with creative excellence, inspired leadership, and a thriving atmosphere. We listen deeply, deliver on time, and prioritize your vision—India’s premier textile prints, client-first. "
+            "Empowering clients with creative excellence, inspired leadership, and a thriving atmosphere. We listen deeply, deliver on time, and prioritize your vision—India’s premier textile prints, client-first."
           </blockquote>
 
         </div>

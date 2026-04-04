@@ -1,3 +1,5 @@
+//src/components/home/TrustedPartners.tsx
+
 import React from 'react';
 
 interface Partner {

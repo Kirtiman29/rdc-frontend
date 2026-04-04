@@ -1,10 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+//src/components/home/SubscriptionSection.tsx
 
-/**
- * Premium Subscription Section - "Coming Soon"
- * Features: Scroll-triggered staggered animations, editorial typography,
- * and a high-end neutral aesthetic.
- */
+import React, { useEffect, useRef, useState } from 'react';
 
 const SubscriptionSection = () => {
   const sectionRef = useRef<HTMLElement>(null);

@@ -1,3 +1,4 @@
+//src/components/home/ShopByCategory.tsx
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getCategories } from '@/api/designApi';
