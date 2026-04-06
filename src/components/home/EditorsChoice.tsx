@@ -1,25 +1,15 @@
-//src/components/home/EditorsChoice.tsx
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Heart, ShoppingBag, Loader2, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Loader2, ArrowRight } from 'lucide-react';
 import { getEditorsPick } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
-import { addToCart } from '@/api/cartApi';
-import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
-import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
-import { formatPrice } from '@/utils/price';
 
 const EditorsChoice = () => {
   const [products, setProducts] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
-  const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
-  const { toast } = useToast();
-  const navigate = useNavigate();
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-  };
+  const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
 
   useEffect(() => {
     const fetchPicks = async () => {
@@ -29,24 +19,12 @@ const EditorsChoice = () => {
 
         const filteredPicks = rawItems
           .filter((product: Design) => product.editorsPick === true)
-          .sort(
-            (a: Design, b: Design) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          .sort((a: Design, b: Design) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           )
-          .slice(0, 8); 
+          .slice(0, 7); // Perfect number for asymmetric grid
 
         setProducts(filteredPicks);
-
-        const token = localStorage.getItem("accessToken");
-        if (token) {
-          const statusEntries = await Promise.all(
-            filteredPicks.map(async (product: Design) => {
-              const isWished = await checkWishlistStatus(product.id);
-              return [product.id, isWished];
-            })
-          );
-          setWishlistState(Object.fromEntries(statusEntries));
-        }
       } catch (error) {
         console.error('Failed to sync editor picks:', error);
       } finally {
@@ -56,77 +34,10 @@ const EditorsChoice = () => {
     fetchPicks();
   }, []);
 
-  const handleAddToCart = async (e: React.MouseEvent, product: Design) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const token = localStorage.getItem("accessToken");
-
-    if (!token) {
-      toast({
-        variant: "destructive",
-        title: "Login Required",
-        description: "Redirecting to login..."
-      });
-      setTimeout(() => navigate("/login"), 500);
-      return;
-    }
-
-    try {
-      await addToCart(product.id, 1);
-      toast({ 
-        title: "Added to Cart", 
-        description: `${product.title} is now in your bag.` 
-      });
-    } catch {
-      toast({
-        variant: "destructive",
-        title: "Cart Error"
-      });
-    }
-  };
-
-  const toggleWishlist = async (e: React.MouseEvent, product: Design) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const token = localStorage.getItem("accessToken");
-
-    if (!token) {
-      toast({
-        variant: "destructive",
-        title: "Login Required",
-        description: "Redirecting to login..."
-      });
-      setTimeout(() => navigate("/login"), 500);
-      return;
-    }
-
-    const isWished = wishlistState[product.id];
-
-    try {
-      if (isWished) {
-        await removeFromWishlist(product.id);
-      } else {
-        await addToWishlist(product.id);
-      }
-      setWishlistState(prev => ({ ...prev, [product.id]: !isWished }));
-      toast({
-        title: isWished ? "Removed" : "Saved",
-        description: "Your wishlist has been updated."
-      });
-    } catch {
-      toast({
-        variant: "destructive",
-        title: "Wishlist Error"
-      });
-    }
-  };
-
   if (loading) {
     return (
-      <div className="py-20 flex justify-center items-center h-96">
-        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+      <div className="py-40 flex justify-center items-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#2A2623]" />
       </div>
     );
   }
@@ -134,91 +45,78 @@ const EditorsChoice = () => {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-10 md:py-10 bg-background font-sans" onContextMenu={handleContextMenu}>
-      <div className="container mx-auto px-4 md:px-8">
-        <div className="flex items-end justify-between mb-12">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
-              Curated Selection
-            </span>
-            <h2 className="text-3xl md:text-4xl font-semibold mt-2 text-[#2A2623]">
-              Editor's Choice
-            </h2>
-          </div>
-          <Link 
-            to="/gallery" 
-            className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors border-b border-muted-foreground/30 pb-1 hidden md:block"
-          >
-            Explore All
-          </Link>
+    <section className="py-24 bg-white" onContextMenu={handleContextMenu}>
+      <div className="container mx-auto px-6 md:px-12">
+        {/* HEADER UPGRADE */}
+        <div className="max-w-3xl mb-16">
+          <span className="text-[10px] font-black uppercase tracking-[0.5em] text-[#2A2623]/40 block mb-4">
+            Editor's Choice
+          </span>
+          <h2 className="font-serif text-5xl md:text-6xl text-[#2A2623] mb-6 tracking-tight">
+            Curated by Experts
+          </h2>
+          <p className="text-[#2A2623]/60 text-base md:text-lg font-light leading-relaxed max-w-xl">
+            Hand-picked print designs that are already turning heads — designs our team knows will move the moment they hit the market.
+          </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          {products.map((product) => (
-            <div key={product.id} className="group animate-fade-in">
-              <Link to={`/product/${product.id}`} className="block relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none">
-                
-                {/* Industrial Watermark */}
-                <div 
-                  className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='22' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'repeat'
-                  }}
-                />
+        {/* ASYMMETRIC SPOTLIGHT GRID */}
+        <div className="grid grid-cols-2 md:grid-cols-4 auto-rows-[250px] md:auto-rows-[300px] gap-6">
+          {products.map((product, index) => {
+            const isPrimaryHero = index === 0;
+            const isWideHero = index === 5;
 
+            return (
+              <Link
+                key={product.id}
+                to={`/product/${product.id}`}
+                className={`group relative overflow-hidden bg-neutral-100 transition-all duration-700 ${isPrimaryHero ? "md:col-span-2 md:row-span-2 col-span-2" :
+                  isWideHero ? "md:col-span-2 col-span-2" :
+                    "col-span-1"
+                  }`}
+              >
+                {/* Visual - No Watermark */}
                 <img
                   src={getAssetUrl(product.media?.find(m => m.role === "COVER")?.url || product.assetUuid)}
                   alt={product.title}
                   draggable={false}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-1000 ease-out group-hover:scale-110"
                 />
-                
-                <div className="absolute top-4 left-4 z-20">
-                  <span className="text-[10px] font-bold uppercase tracking-wider bg-foreground text-background px-3 py-1">
-                    Featured
+
+                {/* Editorial Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80 transition-opacity group-hover:opacity-100" />
+
+                {/* Content Overlay */}
+                <div className="absolute bottom-8 left-8 right-8 z-20">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.4em] text-white/60 block mb-2">
+                    Editor's Pick
                   </span>
-                </div>
-
-                {/* Interaction Icons (Heart and Eye) */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-                  <button 
-                    className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-md ${
-                      wishlistState[product.id] ? 'bg-[#2A2623] text-white' : 'bg-white text-[#2A2623] hover:bg-slate-50'
-                    }`}
-                    onClick={(e) => toggleWishlist(e, product)}
-                  >
-                    <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
-                  </button>
-
-                  <div className="w-10 h-10 bg-white text-[#2A2623] rounded-full flex items-center justify-center shadow-md hover:bg-slate-50 transition-all">
-                    <Eye className="h-4 w-4" />
-                  </div>
-                </div>
-
-                <button 
-                  className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20 shadow-lg"
-                  onClick={(e) => handleAddToCart(e, product)}
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  Add to Cart
-                </button>
-
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
-              </Link>
-
-              <div className="space-y-1 px-1">
-                <Link to={`/product/${product.id}`}>
-                  <h3 className="font-sans text-lg font-medium text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1">
+                  <h3 className={`font-serif text-white tracking-wide transition-all duration-500 ${isPrimaryHero || isWideHero ? "text-3xl md:text-4xl" : "text-xl"
+                    }`}>
                     {product.title}
                   </h3>
-                </Link>
-                <p className="text-sm text-slate-500 font-bold">
-  {formatPrice(product.finalPriceCents || product.basePriceCents)}
-</p>
-              </div>
+                </div>
+
+                {/* Hover Interaction CTA */}
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-700 z-30 pointer-events-none">
+                  <div className="flex items-center gap-3 text-white text-[10px] uppercase tracking-[0.3em] border-b border-white pb-2 translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                    View Design <ArrowRight className="w-3 h-3" />
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
+
+          {/* CTA Link - Integrated in Grid */}
+          <Link
+            to="/gallery"
+            className="col-span-1 flex flex-col items-center justify-center border border-black/5 hover:bg-[#2A2623] hover:text-white transition-all group duration-500"
+          >
+            <span className="text-[10px] uppercase tracking-[0.4em] mb-4">View All</span>
+            <div className="w-12 h-12 rounded-full border border-black/10 group-hover:border-white/20 flex items-center justify-center">
+              <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
             </div>
-          ))}
+          </Link>
         </div>
       </div>
     </section>

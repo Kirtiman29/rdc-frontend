@@ -90,7 +90,7 @@ const Header = () => {
         "bg-[#2A2623] text-white text-[10px] tracking-[0.2em] uppercase py-2 text-center transition-all duration-500 overflow-hidden",
         scrolled ? "h-0 opacity-0" : "h-8 opacity-100"
       )}>
-        Special Offers Upto 20% for New User's
+       Get Special Offers Upto 20% for New User's
       </div>
 
       <header className={cn(

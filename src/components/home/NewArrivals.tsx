@@ -1,52 +1,30 @@
-//src/components/home/NewArrivals.tsx
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Heart, ShoppingBag, Loader2, Eye } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Loader2, ArrowRight } from 'lucide-react';
 import { getNewArrivals } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
-import { addToCart } from '@/api/cartApi';
-import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
-import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
 import { formatPrice } from '@/utils/price';
 
 const NewArrivals = () => {
   const [products, setProducts] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
-  const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
-  const { toast } = useToast();
-  const navigate = useNavigate();
 
-  const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault();
-  };
+  const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
 
   useEffect(() => {
     const fetchNewArrivals = async () => {
       try {
         const data: any = await getNewArrivals(24);
         const rawItems = Array.isArray(data) ? data : (data?.content || []);
-        
+
         const sortedRecent = [...rawItems]
-          .sort(
-            (a: Design, b: Design) =>
-              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          .sort((a: Design, b: Design) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           )
           .slice(0, 8);
 
         setProducts(sortedRecent);
-
-        const token = localStorage.getItem("accessToken");
-        if (token) {
-          const statusEntries = await Promise.all(
-            sortedRecent.map(async (product: Design) => {
-              const isWished = await checkWishlistStatus(product.id);
-              return [product.id, isWished];
-            })
-          );
-          setWishlistState(Object.fromEntries(statusEntries));
-        }
-
       } catch (error) {
         console.error('Failed to sync new arrivals:', error);
       } finally {
@@ -56,78 +34,10 @@ const NewArrivals = () => {
     fetchNewArrivals();
   }, []);
 
-  const handleAddToCart = async (e: React.MouseEvent, product: Design) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const token = localStorage.getItem("accessToken");
-
-    if (!token) {
-      toast({
-        variant: "destructive",
-        title: "Login Required",
-        description: "Redirecting to login..."
-      });
-      setTimeout(() => navigate("/login"), 500);
-      return;
-    }
-
-    try {
-      await addToCart(product.id, 1);
-      toast({ 
-        title: "Added to Bag", 
-        description: `${product.title} is ready for checkout.` 
-      });
-    } catch (error) {
-      toast({ 
-        variant: "destructive", 
-        title: "Cart Error", 
-        description: "Something went wrong." 
-      });
-    }
-  };
-
-  const toggleWishlist = async (e: React.MouseEvent, product: Design) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const token = localStorage.getItem("accessToken");
-
-    if (!token) {
-      toast({
-        variant: "destructive",
-        title: "Login Required",
-        description: "Redirecting to login..."
-      });
-      setTimeout(() => navigate("/login"), 500);
-      return;
-    }
-
-    const isWished = wishlistState[product.id];
-
-    try {
-      if (isWished) {
-        await removeFromWishlist(product.id);
-      } else {
-        await addToWishlist(product.id);
-      }
-      setWishlistState(prev => ({ ...prev, [product.id]: !isWished }));
-      toast({ 
-        title: isWished ? "Removed" : "Saved", 
-        description: "Your selection has been updated." 
-      });
-    } catch (error) {
-      toast({ 
-        variant: "destructive", 
-        title: "Wishlist Error" 
-      });
-    }
-  };
-
   if (loading) {
     return (
       <div className="py-20 flex justify-center items-center h-96">
-        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#1A1A1A]" />
       </div>
     );
   }
@@ -135,99 +45,99 @@ const NewArrivals = () => {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-10 md:py-10 bg-background font-sans" onContextMenu={handleContextMenu}>
-      <div className="container mx-auto px-4 md:px-8">
-        <div className="flex items-end justify-between mb-12">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
-              Just Arrived
+    <section className="py-24 bg-[#FBFAF9]" onContextMenu={handleContextMenu}>
+      <div className="container mx-auto px-6 md:px-12">
+
+        {/* HEADER UPGRADE */}
+        <div className="flex flex-col md:flex-row items-start md:items-end justify-between mb-12 gap-6">
+          <div className="max-w-2xl">
+            <span className="text-[10px] font-black uppercase tracking-[0.5em] text-[#1A1A1A]/40 block mb-3">
+              Latest Drop
             </span>
-            <h2 className="text-3xl md:text-4xl font-semibold mt-2 text-[#2A2623]">
+            <h2 className="font-serif text-4xl md:text-5xl text-[#1A1A1A] mb-4">
               New Arrivals
             </h2>
+            <p className="text-neutral-500 text-sm md:text-base font-light leading-relaxed">
+              Fresh fabric prints just in. Stay ahead with designs your competitors haven't sourced yet.
+            </p>
           </div>
-          <Link 
-            to="/gallery?newArrival=true" 
-            className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors border-b border-muted-foreground/30 pb-1 hidden md:block"
+          <Link
+            to="/gallery?newArrival=true"
+            className="group flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#1A1A1A] border-b border-[#1A1A1A]/10 pb-1"
           >
-            Explore All
+            Explore the Drop <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-          {products.map((product) => (
-            <div key={product.id} className="group animate-fade-in">
-              <Link to={`/product/${product.id}`} className="block relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none rounded-sm">
-                
-                {/* Watermark */}
-                <div 
-                  className="absolute inset-0 z-10 pointer-events-none opacity-[0.22]"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'repeat'
-                  }}
-                />
+        {/* FEATURE BANNER (TOP ADD) */}
+        <div className="mb-20 relative h-[350px] md:h-[450px] overflow-hidden rounded-sm group cursor-pointer">
+          <img
+            src={getAssetUrl(products[0]?.media?.find(m => m.role === "COVER")?.url || products[0]?.assetUuid)}
+            className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+            alt="New Collection"
+          />
+          <div className="absolute inset-0 bg-black/30 transition-colors group-hover:bg-black/40" />
 
+          <div className="absolute bottom-12 left-12 text-white">
+            <span className="text-[10px] font-bold uppercase tracking-[0.4em] mb-3 block">Autumn / Winter '26</span>
+            <h2 className="font-serif text-4xl md:text-5xl mb-4">
+              The Minimalist <br /> Series
+            </h2>
+            <Link to="/gallery" className="inline-flex items-center gap-3 bg-white text-black px-8 py-3 text-[10px] font-bold uppercase tracking-widest hover:bg-[#1A1A1A] hover:text-white transition-colors">
+              Shop Collection
+            </Link>
+          </div>
+        </div>
+
+        {/* CLEAN GRID */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-16">
+          {products.map((product) => (
+            <div key={product.id} className="group flex flex-col">
+              <Link
+                to={`/product/${product.id}`}
+                className="relative aspect-[3/4] overflow-hidden bg-neutral-200 mb-6 select-none"
+              >
+                {/* NEW TAG UPGRADE */}
+                <div className="absolute top-4 left-4 z-20">
+                  <span className="text-[8px] font-black uppercase tracking-[0.3em] bg-white text-black px-2.5 py-1.5 shadow-sm">
+                    New
+                  </span>
+                </div>
+
+                {/* NO WATERMARK */}
                 <img
                   src={getAssetUrl(
                     product.media?.find(m => m.role === "COVER")?.url || product.assetUuid
                   )}
                   alt={product.title}
                   draggable={false}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
                 />
-                
-                <div className="absolute top-4 left-4 z-20">
-                  <span className="text-[9px] font-bold uppercase tracking-widest bg-[#2A2623] text-white px-2 py-1">
-                    New
+
+                {/* Subtle Hover Overlay */}
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-500 pointer-events-none" />
+
+                {/* Minimal View CTA */}
+                <div className="absolute inset-0 flex items-end justify-center pb-8 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white bg-[#1A1A1A] px-6 py-2 shadow-xl">
+                    View Details
                   </span>
                 </div>
-
-                {/* Icons Layer */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-                  <button 
-                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-md ${
-                      wishlistState[product.id] ? 'bg-[#2A2623] text-white' : 'bg-white text-[#2A2623] hover:bg-slate-50'
-                    }`}
-                    onClick={(e) => toggleWishlist(e, product)}
-                  >
-                    <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
-                  </button>
-
-                  <div className="w-9 h-9 bg-white text-[#2A2623] rounded-full flex items-center justify-center shadow-md hover:bg-slate-50 transition-all">
-                    <Eye className="h-4 w-4" />
-                  </div>
-                </div>
-
-                <button 
-                  className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20 shadow-lg"
-                  onClick={(e) => handleAddToCart(e, product)}
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  Add to Cart
-                </button>
-
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
               </Link>
 
-              <div className="space-y-1 px-1">
+              {/* CLEAN CARD DETAILS */}
+              <div className="space-y-1">
                 <Link to={`/product/${product.id}`}>
-                  <h3 className="font-sans text-lg font-medium text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1">
+                  <h3 className="font-serif text-lg text-[#1A1A1A] group-hover:opacity-60 transition-opacity line-clamp-1">
                     {product.title}
                   </h3>
                 </Link>
-                <p className="text-sm text-slate-500 font-bold">
-  {formatPrice(product.finalPriceCents || product.basePriceCents)}
-</p>
+                <p className="text-sm text-neutral-400 font-medium tracking-tight">
+                  {formatPrice(product.finalPriceCents || product.basePriceCents)}
+                </p>
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="mt-12 text-center md:hidden">
-          <Link to="/gallery?newArrival=true" className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors border-b border-muted-foreground/30 pb-1">
-            View All New Arrivals
-          </Link>
         </div>
       </div>
     </section>

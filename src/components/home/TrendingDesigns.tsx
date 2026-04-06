@@ -31,7 +31,7 @@ const TrendingDesigns = () => {
           .sort((a: Design, b: Design) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           )
-          .slice(0, 8); 
+          .slice(0, 9); 
 
         setProducts(filteredTrending);
 
@@ -133,88 +133,81 @@ const TrendingDesigns = () => {
   if (products.length === 0) return null;
 
   return (
-    <section className="py-10 md:py-10 bg-background font-sans" onContextMenu={handleContextMenu}>
+    <section className="py-20 md:py-24 bg-[#FBFAF9] font-sans" onContextMenu={handleContextMenu}>
       <div className="container mx-auto px-4 md:px-8">
-        <div className="flex items-end justify-between mb-12">
-          <div>
-            <span className="text-xs font-bold uppercase tracking-[0.3em] text-muted-foreground">
-              Most Popular
+        
+        {/* Subtle Divider */}
+        <div className="w-full h-[1px] bg-neutral-200 mb-16" />
+
+        <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-6">
+          <div className="max-w-2xl">
+            <span className="text-xs font-bold uppercase tracking-[0.3em] text-[#2A2623] mb-4 block">
+              Curated Selection
             </span>
-            <h2 className="text-3xl md:text-4xl font-semibold mt-2 text-[#2A2623]">
+            <h2 className="text-4xl md:text-5xl font-serif text-[#2A2623]">
               Trending Designs
             </h2>
+            <p className="text-[#2A2623]/70 mt-4 text-lg">
+              Trending designs that match today's consumer taste are selling out fast source now and stay ahead before anyone else does.
+            </p>
           </div>
-          <div className="hidden md:block">
+          <div className="hidden md:block pb-2 shrink-0">
             <Link 
               to="/trends/explore" 
-              className="text-sm font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors border-b border-muted-foreground/30 pb-1"
+              className="text-sm font-bold uppercase tracking-widest text-[#2A2623] hover:text-[#2A2623]/70 transition-colors border-b border-[#2A2623]/30 pb-1"
             >
-              Explore Collection
+              Explore Collection →
             </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-          {products.map((product) => (
-            <div key={product.id} className="group animate-fade-in">
-              <Link to={`/product/${product.id}`} className="block relative aspect-[3/4] overflow-hidden bg-secondary/30 mb-4 select-none rounded-sm">
-                
-                {/* Watermark Overlay */}
-                <div 
-                  className="absolute inset-0 z-10 pointer-events-none opacity-[0.25]"
-                  style={{
-                    backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='22' font-weight='900' fill='none' stroke='white' stroke-width='0.8' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")`,
-                    backgroundRepeat: 'repeat'
-                  }}
-                />
+        <div className="grid grid-cols-2 md:grid-cols-4 auto-rows-[260px] md:auto-rows-[300px] gap-6 animate-fade-in">
+          {products.map((product, index) => (
+            <Link 
+              key={product.id}
+              to={`/product/${product.id}`} 
+              className={`group relative overflow-hidden bg-neutral-100 block ${
+                [0, 3, 5].includes(index % 9) ? "row-span-2" : ""
+              }`}
+            >
+              {/* Product Background */}
+              <img
+                src={getAssetUrl(
+                  product.media?.find(m => m.role === "COVER")?.url || product.assetUuid
+                )}
+                alt={product.title}
+                draggable={false}
+                className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.05]"
+              />
+              
+              {/* Gradient Overlay for Text Readability & Hover Blur Effect */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-90 transition-all duration-700 group-hover:bg-black/30" />
 
-                <img
-                  src={getAssetUrl(
-                    product.media?.find(m => m.role === "COVER")?.url || product.assetUuid
-                  )}
-                  alt={product.title}
-                  draggable={false}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                
-                {/* Actions Layer */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-                  <button 
-                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-md ${
-                      wishlistState[product.id] ? 'bg-[#2A2623] text-white' : 'bg-white text-[#2A2623] hover:bg-slate-50'
-                    }`}
-                    onClick={(e) => toggleWishlist(e, product)}
-                  >
-                    <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
-                  </button>
-
-                  <div className="w-9 h-9 bg-white text-[#2A2623] rounded-full flex items-center justify-center shadow-md hover:bg-slate-50 transition-all">
-                    <Eye className="h-4 w-4" />
-                  </div>
-                </div>
-
+              {/* Top Right Subtle Actions (Wishlist) */}
+              <div className="absolute top-4 right-4 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-20">
                 <button 
-                  className="absolute bottom-4 left-4 right-4 h-10 bg-[#2A2623] text-white rounded-sm flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest opacity-100 md:opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-black z-20 shadow-lg"
-                  onClick={(e) => handleAddToCart(e, product)}
+                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+                    wishlistState[product.id] ? 'bg-[#2A2623] text-white' : 'bg-white/90 backdrop-blur text-[#2A2623] hover:bg-white'
+                  }`}
+                  onClick={(e) => toggleWishlist(e, product)}
                 >
-                  <ShoppingBag className="h-4 w-4" />
-                  Add to Cart
+                  <Heart className={`h-4 w-4 ${wishlistState[product.id] ? 'fill-current' : ''}`} />
                 </button>
-
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300 pointer-events-none" />
-              </Link>
-
-              <div className="space-y-1 px-1">
-                <Link to={`/product/${product.id}`}>
-                  <h3 className="font-sans text-lg font-medium text-[#2A2623] group-hover:text-muted-foreground transition-colors line-clamp-1">
-                    {product.title}
-                  </h3>
-                </Link>
-                <p className="text-sm text-slate-500 font-bold">
-  {formatPrice(product.finalPriceCents || product.basePriceCents)}
-</p>
               </div>
-            </div>
+
+              {/* Text Content Overlay */}
+              <div className="absolute bottom-6 left-6 right-6 text-white z-20 flex flex-col justify-end h-full">
+                <span className="text-[10px] font-bold tracking-widest uppercase opacity-0 -translate-y-2 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 mb-3">
+                  View Design →
+                </span>
+                <h3 className="font-serif text-2xl drop-shadow-sm leading-tight group-hover:-translate-y-1 transition-transform duration-500">
+                  {product.title}
+                </h3>
+                <p className="text-sm font-medium opacity-80 mt-1.5 group-hover:-translate-y-1 transition-transform duration-500">
+                  {formatPrice(product.finalPriceCents || product.basePriceCents)}
+                </p>
+              </div>
+            </Link>
           ))}
         </div>  
       </div>
