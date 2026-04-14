@@ -2,7 +2,7 @@
 import React from "react";
 import { 
   Wand2, Image, Heart, Settings, LayoutDashboard, 
-  Maximize, Search, Sparkles 
+  Maximize, Search, Sparkles, Palette, SwatchBook
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +12,8 @@ const navSection = [
   { label: "Generate Design", path: "/ai-studio/generate", icon: Wand2 },
   { label: "Upscale", path: "/ai-studio/upscale", icon: Maximize },
   { label: "Pattern Finder", path: "/ai-studio/finder", icon: Search },
+  { label: "Recolor Studio", path: "/ai-studio/recolor", icon: Palette },
+  { label: "Color Separation", path: "/ai-studio/color-separation", icon: SwatchBook },
 ];
 
 const librarySection = [

@@ -1,9 +1,11 @@
-import React from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 // Importing your actual layout components
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import { getPublishedBlogs, type PublicBlog } from "@/api/blogApi";
+import { getAssetUrl } from "@/api/apiClient";
 
 // Assets
 import pattern1 from "@/assets/sample-pattern-1.jpg";
@@ -21,10 +23,46 @@ import {
   BookOpen
 } from "lucide-react";
 
-// --- RENAMED TO PREVENT CIRCULAR LOOP ---
+const fallbackImages = [pattern1, pattern2, pattern3, pattern4];
+
+const getBlogImage = (image: string | undefined, fallbackIndex: number) => {
+  if (!image) return fallbackImages[fallbackIndex % fallbackImages.length];
+
+  if (image.startsWith("http") && !image.includes("/api/assets/")) {
+    return image;
+  }
+
+  return getAssetUrl(image);
+};
+
+const formatBlogDate = (date: string | undefined) => {
+  if (!date) return "Recently Published";
+
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return date;
+
+  return new Intl.DateTimeFormat("en-IN", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(parsed);
+};
+
+const mapPublicBlogToArticle = (blog: PublicBlog, index: number) => ({
+  id: blog.id,
+  slug: blog.slug,
+  category: blog.category || "Editorial",
+  title: blog.title,
+  excerpt: blog.excerpt,
+  image: getBlogImage(blog.image, index),
+  author: blog.author || "RDC Editorial",
+  date: formatBlogDate(blog.publishedAt),
+});
+
 const BLOG_ARTICLES_DATA = [
   {
     id: 1,
+    slug: "counterintuitive-networking-strategies-for-designers",
     category: "Creative Entrepreneurship",
     title: "Counterintuitive Networking Strategies for Designers",
     excerpt: "Malko Sakai is the founder of Airtight Concepts, a business consulting firm that specializes in eliminating business stagnation...",
@@ -34,6 +72,7 @@ const BLOG_ARTICLES_DATA = [
   },
   {
     id: 2,
+    slug: "painting-murals-sculpture-and-more-with-hello-kirsten",
     category: "Artistic Style",
     title: "Painting, Murals, Sculpture and more with Hello Kirsten",
     excerpt: "Hello Kirsten is a muralist and fine artist working in Toronto, Canada. She mixes patterns and interesting color palettes...",
@@ -43,6 +82,7 @@ const BLOG_ARTICLES_DATA = [
   },
   {
     id: 3,
+    slug: "mixing-analog-digital-printing-techniques-for-fabric",
     category: "Textile History",
     title: "Mixing Analog + Digital Printing Techniques for Fabric",
     excerpt: "Kineret Enoch is a textile and surface pattern designer with over 15 years of experience developing prints and textile collections...",
@@ -52,6 +92,7 @@ const BLOG_ARTICLES_DATA = [
   },
   {
     id: 4,
+    slug: "joy-patterned-filled-homes-from-megan-kelso",
     category: "Home Decor",
     title: "Joy & Patterned Filled Homes From Megan Kelso",
     excerpt: "Megan Kelso creates hand-painted artwork for interior textiles and wallpaper in the high desert of Oregon. In college, Megan majored...",
@@ -70,6 +111,33 @@ const SIDEBAR_TOPICS = [
 ];
 
 export default function Blog() {
+  const [blogs, setBlogs] = useState<PublicBlog[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchBlogs = async () => {
+      try {
+        const publishedBlogs = await getPublishedBlogs();
+        if (isMounted) {
+          setBlogs(publishedBlogs);
+        }
+      } catch (error) {
+        console.error("Failed to load public blogs:", error);
+      }
+    };
+
+    fetchBlogs();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const articles = blogs.length > 0
+    ? blogs.map(mapPublicBlogToArticle)
+    : BLOG_ARTICLES_DATA;
+
   return (
     <div className="min-h-screen bg-white text-black font-sans flex flex-col">
       {/* 1. YOUR HEADER */}
@@ -101,7 +169,7 @@ export default function Blog() {
             
             {/* LEFT: ARTICLES */}
             <div className="lg:col-span-8 space-y-20">
-              {BLOG_ARTICLES_DATA.map((post, index) => (
+              {articles.map((post, index) => (
                 <motion.article 
                   key={post.id}
                   initial={{ opacity: 0, y: 20 }}

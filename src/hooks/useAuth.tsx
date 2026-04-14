@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { getToken, getRefreshToken, saveTokens, clearTokens } from "@/api/apiClient";
+import { AUTH_STATE_CHANGE_EVENT, getToken, getRefreshToken, saveTokens, clearTokens } from "@/api/apiClient";
 
 interface User {
   id: string;
@@ -19,13 +19,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const decodeToken = (token: string): User | null => {
   try {
     const base64Url = token.split(".")[1];
-    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-    const decoded = JSON.parse(atob(base64));
+    const paddedBase64 = `${base64Url.replace(/-/g, "+").replace(/_/g, "/")}${"=".repeat((4 - (base64Url.length % 4)) % 4)}`;
+    const decoded = JSON.parse(atob(paddedBase64));
 
     return {
       id: decoded.sub,
       email: decoded.email || "",
-      name: decoded.name || "Industrial User",
+      name: decoded.name || decoded.displayName || decoded.email?.split("@")[0] || "Industrial User",
     };
   } catch {
     return null;
@@ -35,6 +35,29 @@ const decodeToken = (token: string): User | null => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
+
+  const syncAuthState = () => {
+    const accessToken = getToken();
+    const refreshToken = getRefreshToken();
+
+    if (!accessToken || !refreshToken) {
+      setIsAuthenticated(false);
+      setUser(null);
+      return;
+    }
+
+    const decodedUser = decodeToken(accessToken);
+
+    if (!decodedUser) {
+      clearTokens();
+      setIsAuthenticated(false);
+      setUser(null);
+      return;
+    }
+
+    setIsAuthenticated(true);
+    setUser(decodedUser);
+  };
 
   const logout = () => {
     clearTokens();
@@ -49,23 +72,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * Axios interceptor will handle refresh automatically.
    */
   useEffect(() => {
-    const accessToken = getToken();
-    const refreshToken = getRefreshToken();
+    syncAuthState();
 
-    if (!accessToken || !refreshToken) {
-      setIsAuthenticated(false);
-      setUser(null);
-      return;
-    }
+    const handleAuthStateChange = () => syncAuthState();
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "accessToken" || event.key === "refreshToken" || event.key === null) {
+        syncAuthState();
+      }
+    };
 
-    const decodedUser = decodeToken(accessToken);
+    window.addEventListener(AUTH_STATE_CHANGE_EVENT, handleAuthStateChange);
+    window.addEventListener("storage", handleStorage);
 
-    if (decodedUser) {
-      setIsAuthenticated(true);
-      setUser(decodedUser);
-    } else {
-      logout();
-    }
+    return () => {
+      window.removeEventListener(AUTH_STATE_CHANGE_EVENT, handleAuthStateChange);
+      window.removeEventListener("storage", handleStorage);
+    };
   }, []);
 
   /**
@@ -73,11 +95,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const login = (accessToken: string, refreshToken: string) => {
     saveTokens(accessToken, refreshToken);
-
-    const decodedUser = decodeToken(accessToken);
-
-    setIsAuthenticated(true);
-    setUser(decodedUser);
+    syncAuthState();
   };
 
   return (

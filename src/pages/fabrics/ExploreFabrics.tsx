@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Link } from "react-router-dom";
@@ -9,6 +10,41 @@ import pattern4 from "@/assets/sample-pattern-4.jpg";
 import pattern5 from "@/assets/sample-pattern-5.jpg";
 import pattern6 from "@/assets/sample-pattern-6.jpg";
 import { Star } from "lucide-react";
+import { getFabrics } from "@/api/fabricApi";
+import { getAssetUrl } from "@/api/apiClient";
+import { formatPrice } from "@/utils/price";
+import type { Design } from "@/types/product";
+
+const fallbackCollections = [
+  { image: pattern1, title: "Field & Feather" },
+  { image: pattern2, title: "Coquette Spring Dreams" },
+  { image: pattern3, title: "Coastal Boho" },
+  { image: pattern4, title: "Spring & Easter" },
+  { image: pattern5, title: "Cottage Daydream" },
+  { image: pattern6, title: "Minimalist Vibes" },
+];
+
+const fallbackFavorites = [
+  { image: pattern1, title: "Classic Navy Stripes on Linen", byline: "by Studio RDC", reviews: 128, rating: 5 },
+  { image: pattern2, title: "Botanical Leaf on Cotton Poplin", byline: "by Bloom Collective", reviews: 95, rating: 5 },
+  { image: pattern3, title: "Abstract Geo on Velvet", byline: "by Modernist", reviews: 88, rating: 4 },
+  { image: pattern4, title: "Watercolor Floral on Silky Satin", byline: "by Art & Soul", reviews: 210, rating: 5 },
+];
+
+const getFabricImage = (fabric: Design) => {
+  const cover = fabric.media?.find((item) => item.role === "COVER");
+  return getAssetUrl(cover?.url || fabric.assetUuid);
+};
+
+const getFabricMeta = (fabric: Design) => {
+  const parts = [
+    fabric.imageType,
+    fabric.resolution ? `${fabric.resolution} GSM` : undefined,
+    fabric.repeatSize,
+  ].filter(Boolean);
+
+  return parts.join(" - ");
+};
 
 // Icon components mapping based on Spoonflower design
 const UniquePrintsIcon = () => (
@@ -108,6 +144,32 @@ const PrintedInUSAIcon = () => (
 );
 
 const ExploreFabrics = () => {
+  const [fabrics, setFabrics] = useState<Design[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchFabrics = async () => {
+      try {
+        const response = await getFabrics();
+        if (isMounted) {
+          setFabrics(response.content.filter((fabric) => fabric.active));
+        }
+      } catch (error) {
+        console.error("Failed to load public fabrics:", error);
+      }
+    };
+
+    fetchFabrics();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const collectionFabrics = fabrics.slice(0, 6);
+  const favoriteFabrics = fabrics.slice(0, 4);
+
   return (
     <div className="min-h-screen bg-[#F5F4F0] flex flex-col">
       <Header />
@@ -204,84 +266,35 @@ const ExploreFabrics = () => {
 
             {/* Collection Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
-              {/* Collection Item 1 */}
-              <Link to="#" className="group">
-                <div className="aspect-square bg-white p-4 rounded-xl border border-neutral-100 shadow-sm group-hover:border-neutral-200 group-hover:shadow-md transition">
-                  <img
-                    src={pattern1}
-                    alt="Collection Pattern"
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                </div>
-                <p className="mt-4 text-sm font-semibold text-neutral-800 text-center group-hover:text-black transition-colors">
-                  Field & Feather
-                </p>
-              </Link>
-              {/* Collection Item 2 */}
-              <Link to="#" className="group">
-                <div className="aspect-square bg-white p-4 rounded-xl border border-neutral-100 shadow-sm group-hover:border-neutral-200 group-hover:shadow-md transition">
-                  <img
-                    src={pattern2}
-                    alt="Collection Pattern"
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                </div>
-                <p className="mt-4 text-sm font-semibold text-neutral-800 text-center group-hover:text-black transition-colors">
-                  Coquette Spring Dreams
-                </p>
-              </Link>
-              {/* Collection Item 3 */}
-              <Link to="#" className="group">
-                <div className="aspect-square bg-white p-4 rounded-xl border border-neutral-100 shadow-sm group-hover:border-neutral-200 group-hover:shadow-md transition">
-                  <img
-                    src={pattern3}
-                    alt="Collection Pattern"
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                </div>
-                <p className="mt-4 text-sm font-semibold text-neutral-800 text-center group-hover:text-black transition-colors">
-                  Coastal Boho
-                </p>
-              </Link>
-              {/* Collection Item 4 */}
-              <Link to="#" className="group">
-                <div className="aspect-square bg-white p-4 rounded-xl border border-neutral-100 shadow-sm group-hover:border-neutral-200 group-hover:shadow-md transition">
-                  <img
-                    src={pattern4}
-                    alt="Collection Pattern"
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                </div>
-                <p className="mt-4 text-sm font-semibold text-neutral-800 text-center group-hover:text-black transition-colors">
-                  Spring & Easter
-                </p>
-              </Link>
-              {/* Collection Item 5 */}
-              <Link to="#" className="group">
-                <div className="aspect-square bg-white p-4 rounded-xl border border-neutral-100 shadow-sm group-hover:border-neutral-200 group-hover:shadow-md transition">
-                  <img
-                    src={pattern5}
-                    alt="Collection Pattern"
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                </div>
-                <p className="mt-4 text-sm font-semibold text-neutral-800 text-center group-hover:text-black transition-colors">
-                  Cottage Daydream
-                </p>
-              </Link>
-              {/* Collection Item 6 */}
-              <Link to="#" className="group">
-                <div className="aspect-square bg-white p-4 rounded-xl border border-neutral-100 shadow-sm group-hover:border-neutral-200 group-hover:shadow-md transition">
-                  <img
-                    src={pattern6}
-                    alt="Collection Pattern"
-                    className="w-full h-full object-cover rounded-lg"
-                  />
-                </div>
-                <p className="mt-4 text-sm font-semibold text-neutral-800 text-center group-hover:text-black transition-colors">
-                  Minimalist Vibes
-                </p>
-              </Link>
+              {collectionFabrics.length > 0
+                ? collectionFabrics.map((fabric) => (
+                    <Link key={fabric.id} to={`/fabrics/design/${fabric.id}`} className="group">
+                      <div className="aspect-square bg-white p-4 rounded-xl border border-neutral-100 shadow-sm group-hover:border-neutral-200 group-hover:shadow-md transition">
+                        <img
+                          src={getFabricImage(fabric)}
+                          alt={fabric.title}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      </div>
+                      <p className="mt-4 text-sm font-semibold text-neutral-800 text-center group-hover:text-black transition-colors">
+                        {fabric.title}
+                      </p>
+                    </Link>
+                  ))
+                : fallbackCollections.map((collection) => (
+                    <Link key={collection.title} to="#" className="group">
+                      <div className="aspect-square bg-white p-4 rounded-xl border border-neutral-100 shadow-sm group-hover:border-neutral-200 group-hover:shadow-md transition">
+                        <img
+                          src={collection.image}
+                          alt="Collection Pattern"
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      </div>
+                      <p className="mt-4 text-sm font-semibold text-neutral-800 text-center group-hover:text-black transition-colors">
+                        {collection.title}
+                      </p>
+                    </Link>
+                  ))}
             </div>
 
             {/* Explore More Button */}
@@ -305,104 +318,65 @@ const ExploreFabrics = () => {
 
             {/* Favorite Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {/* Favorite Item 1 */}
-              <div className="flex flex-col group border border-neutral-100 rounded-xl overflow-hidden hover:border-neutral-200 hover:shadow-lg transition">
-                <img
-                  src={pattern1}
-                  alt="Customer Favorite Pattern"
-                  className="w-full aspect-[4/3] object-cover group-hover:scale-105 transition"
-                />
-                <div className="p-6">
-                  <p className="text-sm font-bold text-neutral-800 truncate">
-                    Classic Navy Stripes on Linen
-                  </p>
-                  <p className="text-xs text-neutral-500 mt-1">by Studio RDC</p>
-                  <div className="flex items-center gap-1 text-[#FFD700] mt-3">
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <span className="text-sm text-neutral-600 ml-1">
-                      (128 Reviews)
-                    </span>
-                  </div>
-                </div>
-              </div>
-              {/* Favorite Item 2 */}
-              <div className="flex flex-col group border border-neutral-100 rounded-xl overflow-hidden hover:border-neutral-200 hover:shadow-lg transition">
-                <img
-                  src={pattern2}
-                  alt="Customer Favorite Pattern"
-                  className="w-full aspect-[4/3] object-cover group-hover:scale-105 transition"
-                />
-                <div className="p-6">
-                  <p className="text-sm font-bold text-neutral-800 truncate">
-                    Botanical Leaf on Cotton Poplin
-                  </p>
-                  <p className="text-xs text-neutral-500 mt-1">
-                    by Bloom Collective
-                  </p>
-                  <div className="flex items-center gap-1 text-[#FFD700] mt-3">
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <span className="text-sm text-neutral-600 ml-1">
-                      (95 Reviews)
-                    </span>
-                  </div>
-                </div>
-              </div>
-              {/* Favorite Item 3 */}
-              <div className="flex flex-col group border border-neutral-100 rounded-xl overflow-hidden hover:border-neutral-200 hover:shadow-lg transition">
-                <img
-                  src={pattern3}
-                  alt="Customer Favorite Pattern"
-                  className="w-full aspect-[4/3] object-cover group-hover:scale-105 transition"
-                />
-                <div className="p-6">
-                  <p className="text-sm font-bold text-neutral-800 truncate">
-                    Abstract Geo on Velvet
-                  </p>
-                  <p className="text-xs text-neutral-500 mt-1">by Modernist</p>
-                  <div className="flex items-center gap-1 text-[#FFD700] mt-3">
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} />
-                    <span className="text-sm text-neutral-600 ml-1">
-                      (88 Reviews)
-                    </span>
-                  </div>
-                </div>
-              </div>
-              {/* Favorite Item 4 */}
-              <div className="flex flex-col group border border-neutral-100 rounded-xl overflow-hidden hover:border-neutral-200 hover:shadow-lg transition">
-                <img
-                  src={pattern4}
-                  alt="Customer Favorite Pattern"
-                  className="w-full aspect-[4/3] object-cover group-hover:scale-105 transition"
-                />
-                <div className="p-6">
-                  <p className="text-sm font-bold text-neutral-800 truncate">
-                    Watercolor Floral on Silky Satin
-                  </p>
-                  <p className="text-xs text-neutral-500 mt-1">by Art & Soul</p>
-                  <div className="flex items-center gap-1 text-[#FFD700] mt-3">
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <Star size={16} fill="currentColor" />
-                    <span className="text-sm text-neutral-600 ml-1">
-                      (210 Reviews)
-                    </span>
-                  </div>
-                </div>
-              </div>
+              {favoriteFabrics.length > 0
+                ? favoriteFabrics.map((fabric) => (
+                    <Link
+                      key={fabric.id}
+                      to={`/fabrics/design/${fabric.id}`}
+                      className="flex flex-col group border border-neutral-100 rounded-xl overflow-hidden hover:border-neutral-200 hover:shadow-lg transition"
+                    >
+                      <img
+                        src={getFabricImage(fabric)}
+                        alt={fabric.title}
+                        className="w-full aspect-[4/3] object-cover group-hover:scale-105 transition"
+                      />
+                      <div className="p-6">
+                        <p className="text-sm font-bold text-neutral-800 truncate">
+                          {fabric.title}
+                        </p>
+                        <p className="text-xs text-neutral-500 mt-1">
+                          {getFabricMeta(fabric) || "Premium fabric"} - {formatPrice(fabric.finalPriceCents)} / meter
+                        </p>
+                        <div className="flex items-center gap-1 text-[#FFD700] mt-3">
+                          <Star size={16} fill="currentColor" />
+                          <Star size={16} fill="currentColor" />
+                          <Star size={16} fill="currentColor" />
+                          <Star size={16} fill="currentColor" />
+                          <Star size={16} fill="currentColor" />
+                          <span className="text-sm text-neutral-600 ml-1">
+                            In stock
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                : fallbackFavorites.map((favorite) => (
+                    <div key={favorite.title} className="flex flex-col group border border-neutral-100 rounded-xl overflow-hidden hover:border-neutral-200 hover:shadow-lg transition">
+                      <img
+                        src={favorite.image}
+                        alt="Customer Favorite Pattern"
+                        className="w-full aspect-[4/3] object-cover group-hover:scale-105 transition"
+                      />
+                      <div className="p-6">
+                        <p className="text-sm font-bold text-neutral-800 truncate">
+                          {favorite.title}
+                        </p>
+                        <p className="text-xs text-neutral-500 mt-1">{favorite.byline}</p>
+                        <div className="flex items-center gap-1 text-[#FFD700] mt-3">
+                          {Array.from({ length: 5 }).map((_, index) => (
+                            <Star
+                              key={index}
+                              size={16}
+                              fill={index < favorite.rating ? "currentColor" : "none"}
+                            />
+                          ))}
+                          <span className="text-sm text-neutral-600 ml-1">
+                            ({favorite.reviews} Reviews)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
             </div>
 
             {/* Explore Favorites Button */}

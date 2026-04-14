@@ -7,7 +7,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import ProductCard from "@/components/products/ProductCard";
 import FabricsFilters from "@/components/products/FabricsFilters";
-import { getDesigns } from "@/api/designApi";
+import { getFabrics } from "@/api/fabricApi";
 import type { Design, ProductFilter } from "@/types/product";
 import { Button } from "@/components/ui/button";
 
@@ -33,7 +33,7 @@ const Fabrics = () => {
     setLoading(true);
     try {
       // mapping our state to the API request
-      const response: any = await getDesigns({
+      const response = await getFabrics({
         ...filters,
         page,
         size: PAGE_SIZE,
@@ -56,10 +56,11 @@ const Fabrics = () => {
   useEffect(() => {
     fetchFabrics();
 
-    const params: any = {};
+    const params: Record<string, string> = {};
     if (page > 0) params.page = page.toString();
     if (filters.sortBy) params.sortBy = filters.sortBy;
-    if (filters.segment) params.segment = filters.segment;
+    if (typeof filters.segment === "string") params.segment = filters.segment;
+    if (Array.isArray(filters.segment)) params.segment = filters.segment.join(",");
     if (filters.color) params.color = filters.color;
     if (filters.style) params.style = filters.style;
 

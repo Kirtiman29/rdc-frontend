@@ -2,19 +2,28 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
-  ChevronRight, ShoppingBag, Heart, Loader2, PlayCircle, 
-  ShieldCheck, Hash, AlertCircle, Info, Maximize2 
+  ChevronRight, Heart, Loader2, 
+  ShieldCheck, Info 
 } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/products/ProductCard';
-import { getDesignById, getDesigns } from '@/api/designApi';
+import { getFabricById, getFabrics } from '@/api/fabricApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { addToCart } from '@/api/cartApi';
-import { checkWishlistStatus, addToWishlist, removeFromWishlist } from '@/api/wishlistApi';
+import { checkWishlistStatus } from '@/api/wishlistApi';
 import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
+
+const isUnauthorizedError = (error: unknown) => {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    (error as { response?: { status?: number } }).response?.status === 401
+  );
+};
 
 const IndetailFabrics = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,9 +46,9 @@ const IndetailFabrics = () => {
       if (!id) return;
       setLoading(true);
       try {
-        const designData: any = await getDesignById(Number(id)); 
+        const designData = await getFabricById(Number(id)); 
         setProduct(designData);
-        const cover = designData.media?.find((m: any) => m.role === "COVER");
+        const cover = designData.media?.find((m) => m.role === "COVER");
 
         setActiveMediaUrl(
           cover ? getAssetUrl(cover.url) : getAssetUrl(designData.assetUuid)
@@ -49,8 +58,8 @@ const IndetailFabrics = () => {
         // Fetch Related (by segment)
         try {
           const primarySegment = designData.segments?.[0] || designData.segment;
-          const res: any = await getDesigns({ segment: primarySegment, size: 5 });
-          const content = (Array.isArray(res) ? res : res?.content || [])
+          const res = await getFabrics({ segment: primarySegment, size: 5 });
+          const content = (res.content || [])
             .filter((p: Design) => p.id !== designData.id);
           setRelatedProducts(content.slice(0, 4));
         } catch (err) {
@@ -74,8 +83,8 @@ const IndetailFabrics = () => {
     try {
       await addToCart(product.id, 1);
       toast({ title: "Added to Bag", description: `${product.title} has been added.` });
-    } catch (error: any) {
-      if (error?.response?.status === 401) {
+    } catch (error: unknown) {
+      if (isUnauthorizedError(error)) {
         navigate('/login', { state: { redirectTo: `/fabrics/design/${product.id}` } });
       }
     } finally { setIsAdding(false); }
@@ -133,7 +142,7 @@ const IndetailFabrics = () => {
                   {product.media.map((m, idx) => (
                     <button 
                       key={idx}
-                      onClick={() => { setActiveMediaUrl(getAssetUrl(m.url)); setActiveMediaType(m.type as any); }}
+                      onClick={() => { setActiveMediaUrl(getAssetUrl(m.url)); setActiveMediaType(m.type === 'VIDEO' ? 'VIDEO' : 'IMAGE'); }}
                       className={`relative h-24 w-20 flex-shrink-0 border-2 transition-all ${activeMediaUrl === getAssetUrl(m.url) ? 'border-black' : 'border-transparent opacity-60'}`}
                     >
                       <img src={getAssetUrl(m.url)} className="h-full w-full object-cover" alt="Thumbnail" />

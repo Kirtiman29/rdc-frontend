@@ -19,19 +19,26 @@ export const INDIAN_STATES = [
 ========================================= */
 const TOKEN_KEY = "accessToken";
 const REFRESH_KEY = "refreshToken";
+export const AUTH_STATE_CHANGE_EVENT = "auth-state-change";
 
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const getRefreshToken = () => localStorage.getItem(REFRESH_KEY);
 
+const notifyAuthStateChange = () => {
+  window.dispatchEvent(new Event(AUTH_STATE_CHANGE_EVENT));
+};
+
 export const saveTokens = (accessToken: string, refreshToken: string) => {
   localStorage.setItem(TOKEN_KEY, accessToken);
   localStorage.setItem(REFRESH_KEY, refreshToken);
+  notifyAuthStateChange();
 };
 
 export const clearTokens = () => {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_KEY);
+  notifyAuthStateChange();
 };
 
 /* =========================================
@@ -41,6 +48,8 @@ const BASE_DOMAIN = import.meta.env.VITE_BASE_URL || "https://ruchitadesigncompa
 
 const AUTH_URL =
   import.meta.env.VITE_AUTH_SERVICE_URL || BASE_DOMAIN;
+
+const AUTH_CONTEXT_URL = `${AUTH_URL.replace(/\/$/, "")}/auth`;
 
 const ASSET_URL =
   import.meta.env.VITE_ASSET_SERVICE_URL || BASE_DOMAIN;
@@ -149,10 +158,7 @@ export const applyIndustrialInterceptors = (instance: AxiosInstance) => {
           }
 
           /* 🔑 IMPORTANT: use plain axios (no interceptor) */
-          const refreshResponse = await axios.post(
-            `${AUTH_URL}/api/auth/refresh`,
-            { refreshToken }
-          );
+          const refreshResponse = await axios.post(`${AUTH_CONTEXT_URL}/refresh`, { refreshToken });
 
           const data = refreshResponse.data?.data || refreshResponse.data;
 

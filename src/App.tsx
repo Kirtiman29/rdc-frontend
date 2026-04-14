@@ -38,7 +38,7 @@ import NotFound from "./pages/NotFound";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import Fabrics from "./pages/fabrics/Fabrics";
-import Blog from "./pages/blog";
+import Blog from "./pages/Blog";
 
 // AI Studio Imports
 import Home from "./ai/pages/Home";
@@ -49,6 +49,8 @@ import AiNotFound from "@/ai/pages/NotFound";
 import Upscale from "@/ai/pages/Upscale";
 import PatternFinder from "@/ai/pages/Patternfinder";
 import Favorites from "@/ai/pages/favorites";
+import TextileRecolorStudio from "@/ai/pages/TextileRecolorStudio";
+import ColorSeparation from "@/ai/pages/ColorSeparation";
 import ExploreFabrics from "@/pages/fabrics/ExploreFabrics";
 import IndetailFabrics from "./pages/fabrics/IndetailFabrics";
 
@@ -160,10 +162,12 @@ const App = () => (
                 <Route path="dashboard" element={<Home />} />
                 <Route path="gallery" element={<MyDesigns />} />
                 <Route path="generate" element={<Generate />} />
-                <Route path="*" element={<AiNotFound />} />
                 <Route path="upscale" element={<Upscale />} />
                 <Route path="finder" element={<PatternFinder />} />
+                <Route path="recolor" element={<TextileRecolorStudio />} />
+                <Route path="color-separation" element={<ColorSeparation />} />
                 <Route path="favorites" element={<Favorites />} />
+                <Route path="*" element={<AiNotFound />} />
               </Route>
 
               {/* GLOBAL */}

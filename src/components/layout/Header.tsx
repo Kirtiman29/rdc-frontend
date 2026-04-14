@@ -2,14 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Search, User, Heart, ShoppingBag,
-  Menu, X, LogOut, ChevronRight, ChevronDown
+  Menu, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MegaMenu from './MegaMenu';
 import SearchOverlay from './SearchOverlay';
 import { getCart } from '@/api/cartApi';
-import { getToken, clearTokens } from '@/api/apiClient';
 import AIStudioLoader from "@/components/layout/AIStudioLoader";
+import { useAuth } from '@/hooks/useAuth';
 
 let hoverTimeout: any;
 
@@ -59,16 +59,17 @@ const Header = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { isAuthenticated, user, logout } = useAuth();
 
   const [showLoader, setShowLoader] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const [cartCount, setCartCount] = useState(0);
-  const isLoggedIn = !!getToken();
+
+  const profileLabel = user?.name?.trim()?.charAt(0)?.toUpperCase() || user?.email?.trim()?.charAt(0)?.toUpperCase() || "U";
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -77,8 +78,7 @@ const Header = () => {
   }, []);
 
   const handleLogout = () => {
-    clearTokens();
-    navigate('/login');
+    logout();
   };
 
   return (
@@ -222,21 +222,41 @@ const Header = () => {
                 )}
               </Link>
 
-              <div className="relative group ml-2">
-                <button className="flex items-center gap-1 p-2 text-[#2A2623]/70 hover:text-[#2A2623] transition-all">
-                  <User className="h-[18px] w-[18px] stroke-[1.5px]" />
-                </button>
+              {isAuthenticated ? (
+                <div className="relative group ml-2">
+                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-[#2A2623]/15 bg-[#2A2623] text-xs font-bold uppercase tracking-widest text-white transition-all hover:scale-105">
+                    {profileLabel}
+                  </button>
 
-                {/* Profile Hover Menu */}
-                <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-50">
-                  <div className="bg-white border border-[#2A2623]/5 shadow-2xl w-48 p-4 flex flex-col gap-3">
-                    <Link to="/profile" className="text-[10px] uppercase tracking-widest font-bold hover:text-red-500">Account</Link>
-                    <Link to="/orders" className="text-[10px] uppercase tracking-widest font-bold hover:text-red-500">Orders</Link>
-                    <div className="h-[1px] bg-[#2A2623]/5" />
-                    <button onClick={handleLogout} className="text-[10px] uppercase tracking-widest font-bold text-red-500 text-left">Logout</button>
+                  <div className="absolute right-0 top-full pt-2 opacity-0 translate-y-2 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto transition-all duration-300 z-50">
+                    <div className="bg-white border border-[#2A2623]/5 shadow-2xl min-w-52 p-4 flex flex-col gap-3">
+                      <div className="border-b border-[#2A2623]/5 pb-3">
+                        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Signed in as</p>
+                        <p className="mt-1 text-sm font-medium text-[#2A2623]">{user?.email || user?.name || "User"}</p>
+                      </div>
+                      <Link to="/profile" className="text-[10px] uppercase tracking-widest font-bold hover:text-red-500">Account</Link>
+                      <Link to="/orders" className="text-[10px] uppercase tracking-widest font-bold hover:text-red-500">Orders</Link>
+                      <div className="h-[1px] bg-[#2A2623]/5" />
+                      <button onClick={handleLogout} className="text-[10px] uppercase tracking-widest font-bold text-red-500 text-left">Logout</button>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="ml-2 hidden sm:flex items-center gap-2">
+                  <Link
+                    to="/login"
+                    className="px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#2A2623] transition-colors hover:text-black"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="rounded-sm bg-[#2A2623] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-white transition-colors hover:bg-black"
+                  >
+                    Signup
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -269,6 +289,49 @@ const Header = () => {
               {item.label}
             </Link>
           ))}
+
+          <div className="border-t border-[#2A2623]/5 pt-6">
+            {isAuthenticated ? (
+              <div className="flex flex-col gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Signed in as</p>
+                  <p className="mt-1 text-sm font-medium text-[#2A2623]">{user?.email || user?.name || "User"}</p>
+                </div>
+                <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="text-sm font-medium text-[#2A2623]">
+                  Profile
+                </Link>
+                <Link to="/orders" onClick={() => setIsMobileMenuOpen(false)} className="text-sm font-medium text-[#2A2623]">
+                  Orders
+                </Link>
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="text-left text-sm font-medium text-red-500"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <Link
+                  to="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-center rounded-sm border border-[#2A2623]/15 px-4 py-3 text-[11px] font-bold uppercase tracking-[0.18em] text-[#2A2623]"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/signup"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="text-center rounded-sm bg-[#2A2623] px-4 py-3 text-[11px] font-bold uppercase tracking-[0.18em] text-white"
+                >
+                  Signup
+                </Link>
+              </div>
+            )}
+          </div>
         </nav>
       </div>
 
