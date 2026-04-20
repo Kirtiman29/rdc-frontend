@@ -1,6 +1,15 @@
-import { Sparkles, ArrowRight, Zap, Play, History, Star, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Sparkles, ArrowRight, Zap, Play, History, Star, ShieldCheck, KeyRound } from "lucide-react";
 import { Link } from "react-router-dom";
 import { DesignCard } from "@/ai/components/generate/DesignCard";
+import { getToken } from "@/api/apiClient";
+import {
+  EMPTY_SUBSCRIPTION_SUMMARY,
+  getMySubscription,
+  getRemainingDesigns,
+  hasActiveSubscription,
+  type UserSubscriptionSummary,
+} from "@/api/subscriptionApi";
 
 // Asset Imports
 import pattern1 from "@/assets/sample-pattern-1.jpg";
@@ -26,14 +35,37 @@ const suggestedPrompts = [
   { category: "ETHNIC", color: "text-violet-400", prompt: "Tribal ethnic weave with chevron motifs, warm earth tones, handwoven feel" },
 ];
 
-const stats = [
-  { value: "128", label: "DESIGNS CREATED", icon: History },
-  { value: "24", label: "FAVORITES", icon: Star },
-  { value: "PRO", label: "PLAN STATUS", icon: ShieldCheck },
-  { value: "99.8%", label: "SYSTEM UPTIME", icon: Zap },
-];
-
 export default function Home() {
+  const [subscription, setSubscription] = useState<UserSubscriptionSummary>(EMPTY_SUBSCRIPTION_SUMMARY);
+
+  useEffect(() => {
+    const loadSubscription = async () => {
+      if (!getToken()) return;
+
+      try {
+        const summary = await getMySubscription();
+        setSubscription(summary);
+      } catch (error) {
+        console.warn("AI Studio subscription summary unavailable:", error);
+        setSubscription(EMPTY_SUBSCRIPTION_SUMMARY);
+      }
+    };
+
+    void loadSubscription();
+  }, []);
+
+  const stats = useMemo(() => {
+    const active = hasActiveSubscription(subscription);
+    const remainingDesigns = getRemainingDesigns(subscription);
+
+    return [
+      { value: String(remainingDesigns), label: "DESIGN USES LEFT", icon: History },
+      { value: String(subscription.availableCredits || 0), label: "AI CREDITS", icon: KeyRound },
+      { value: active ? subscription.planName || "ACTIVE" : "NONE", label: "PLAN STATUS", icon: ShieldCheck },
+      { value: subscription.planType || "LOCKED", label: "ACCESS TYPE", icon: Zap },
+    ];
+  }, [subscription]);
+
   return (
     <div className="h-full overflow-y-auto bg-[#050505] custom-scrollbar">
       <div className="max-w-[1400px] mx-auto p-6 lg:p-10 space-y-12">
@@ -54,6 +86,11 @@ export default function Home() {
               <p className="text-gray-400 text-lg mb-8 leading-relaxed max-w-md">
                 Every great collection starts with a pattern no one has made yet. Textile gives designers, brands, and makers the power to generate original, culturally rich, studio-ready fabric designs at the speed of imagination.
               </p>
+              {!hasActiveSubscription(subscription) && (
+                <p className="mb-5 rounded-lg border border-[#ff1a1a]/20 bg-[#ff1a1a]/10 px-4 py-3 text-sm text-[#ff8a8a]">
+                  Choose a plan to unlock AI generation credits and premium design usage.
+                </p>
+              )}
               <div className="flex flex-wrap gap-4">
                 <Link
                   to="/ai-studio/generate"

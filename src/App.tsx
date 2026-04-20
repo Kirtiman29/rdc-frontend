@@ -51,6 +51,7 @@ import PatternFinder from "@/ai/pages/Patternfinder";
 import Favorites from "@/ai/pages/favorites";
 import TextileRecolorStudio from "@/ai/pages/TextileRecolorStudio";
 import ColorSeparation from "@/ai/pages/ColorSeparation";
+import AiProfile from "@/ai/pages/Profile";
 import ExploreFabrics from "@/pages/fabrics/ExploreFabrics";
 import IndetailFabrics from "./pages/fabrics/IndetailFabrics";
 
@@ -167,6 +168,7 @@ const App = () => (
                 <Route path="recolor" element={<TextileRecolorStudio />} />
                 <Route path="color-separation" element={<ColorSeparation />} />
                 <Route path="favorites" element={<Favorites />} />
+                <Route path="profile" element={<AiProfile />} />
                 <Route path="*" element={<AiNotFound />} />
               </Route>
 

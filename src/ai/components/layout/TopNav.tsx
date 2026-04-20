@@ -1,6 +1,10 @@
+import { useEffect, useState } from "react";
 import { Search, Bell, User, LogOut, Settings } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { getToken } from "@/api/apiClient";
+import { getMyCredits } from "@/api/subscriptionApi";
 const logo = "/rdc-logo.png";
 
 import {
@@ -21,6 +25,26 @@ const navItems = [
 export function TopNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout, user } = useAuth();
+  const [credits, setCredits] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadCredits = async () => {
+      if (!getToken()) {
+        setCredits(null);
+        return;
+      }
+
+      try {
+        const response = await getMyCredits();
+        setCredits(response);
+      } catch {
+        setCredits(null);
+      }
+    };
+
+    void loadCredits();
+  }, [user]);
 
   return (
     <header className="h-16 border-b border-white/5 bg-[#0f0f0f]/60 backdrop-blur-xl flex items-center px-6 gap-8 shrink-0 sticky top-0 z-[100]">
@@ -99,6 +123,16 @@ export function TopNav() {
           <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-[#ff1a1a] rounded-full border border-[#0f0f0f]" />
         </button>
 
+        {credits !== null && (
+          <Link
+            to="/ai-studio/profile"
+            className="hidden sm:flex h-9 items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 text-xs font-semibold text-gray-300 hover:bg-white/[0.07] hover:text-white transition-colors"
+          >
+            <span className="h-1.5 w-1.5 rounded-full bg-[#ff1a1a]" />
+            {credits} credits
+          </Link>
+        )}
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="h-9 w-9 rounded-full bg-gradient-to-br from-[#ff1a1a] to-[#990000] p-[1px] hover:shadow-[0_0_15px_rgba(255,26,26,0.4)] transition-shadow">
@@ -118,17 +152,17 @@ export function TopNav() {
             </DropdownMenuLabel>
             
             <div className="space-y-1">
-              <DropdownMenuItem onClick={() => navigate("/profile")} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
+              <DropdownMenuItem onClick={() => navigate("/ai-studio/profile")} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
                 <User className="h-4 w-4 text-gray-400" /> <span>Profile</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
+              <DropdownMenuItem onClick={() => navigate("/ai-studio/profile")} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
                 <Settings className="h-4 w-4 text-gray-400" /> <span>Settings</span>
               </DropdownMenuItem>
             </div>
 
             <DropdownMenuSeparator className="my-2 bg-white/5" />
 
-            <DropdownMenuItem className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#ff1a1a]/10 text-[#ff1a1a] cursor-pointer transition-colors">
+            <DropdownMenuItem onClick={logout} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#ff1a1a]/10 text-[#ff1a1a] cursor-pointer transition-colors">
               <LogOut className="h-4 w-4" /> <span>Log out</span>
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google';
-import { Eye, EyeOff, Loader2, Mail } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, ShieldCheck } from 'lucide-react';
 
 import { loginUser, loginWithGoogle, requestUserOtp, verifyUserOtp } from '../../api/authApi';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,9 +24,30 @@ const OTP_ERROR_MESSAGES: Record<string, string> = {
   UNAUTHORIZED_ROLE: 'This email is not allowed in the user login flow.',
 };
 
+type ApiErrorLike = {
+  response?: {
+    status?: number;
+    data?: {
+      error?: string;
+      message?: string;
+      status?: string;
+    };
+  };
+};
+
 const getOtpErrorMessage = (error: unknown, fallback: string) => {
-  const apiError = (error as { response?: { data?: { error?: string } } })?.response?.data?.error;
+  const apiError = (error as ApiErrorLike)?.response?.data?.error;
   return (apiError && OTP_ERROR_MESSAGES[apiError]) || apiError || fallback;
+};
+
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  const data = (error as ApiErrorLike)?.response?.data;
+  return data?.message || data?.error || fallback;
+};
+
+const isTwoFactorRequired = (error: unknown) => {
+  const response = (error as ApiErrorLike)?.response;
+  return response?.status === 401 && response.data?.status === '2FA_REQUIRED';
 };
 
 const Login = () => {
@@ -41,6 +62,8 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [creds, setCreds] = useState({ email: '', password: '' });
   const [otp, setOtp] = useState('');
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+  const [twoFactorPending, setTwoFactorPending] = useState(false);
   const [otpRequestedFor, setOtpRequestedFor] = useState('');
   const [otpExpiresAt, setOtpExpiresAt] = useState<number | null>(null);
   const [secondsRemaining, setSecondsRemaining] = useState(0);
@@ -71,6 +94,8 @@ const Login = () => {
   };
 
   const completeLogin = (accessToken: string, refreshToken: string, message: string) => {
+    setTwoFactorPending(false);
+    setTwoFactorCode('');
     setAuthState(accessToken, refreshToken);
     toast({ title: message });
     navigate(from, { replace: true });
@@ -78,10 +103,20 @@ const Login = () => {
 
   const handlePasswordLogin = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (twoFactorPending && twoFactorCode.length !== OTP_LENGTH) {
+      toast({
+        variant: 'destructive',
+        title: 'Enter 2FA code',
+        description: 'Please enter the full 6-digit authenticator code.',
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response: any = await loginUser(creds.email, creds.password);
+      const response = await loginUser(creds.email, creds.password, twoFactorPending ? twoFactorCode : undefined);
       const { accessToken, refreshToken } = response;
 
       if (!accessToken || !refreshToken) {
@@ -89,11 +124,21 @@ const Login = () => {
       }
 
       completeLogin(accessToken, refreshToken, 'Welcome back!');
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (isTwoFactorRequired(error)) {
+        setTwoFactorPending(true);
+        setTwoFactorCode('');
+        toast({
+          title: 'Two-factor code required',
+          description: 'Enter the 6-digit code from your authenticator app.',
+        });
+        return;
+      }
+
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: error.response?.data?.error || 'Invalid email or password.',
+        description: getApiErrorMessage(error, 'Invalid email or password.'),
       });
     } finally {
       setLoading(false);
@@ -139,7 +184,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response: any = await verifyUserOtp(otpRequestedFor || creds.email, otp);
+      const response = await verifyUserOtp(otpRequestedFor || creds.email, otp);
       const { accessToken, refreshToken } = response;
 
       if (!accessToken || !refreshToken) {
@@ -162,7 +207,7 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const response: any = await loginWithGoogle(res.credential!);
+      const response = await loginWithGoogle(res.credential!);
       const { accessToken, refreshToken } = response;
 
       if (!accessToken || !refreshToken) {
@@ -217,7 +262,11 @@ const Login = () => {
                 placeholder="abc@xyz.com"
                 required
                 value={creds.email}
-                onChange={(e) => setCreds({ ...creds, email: e.target.value })}
+                onChange={(e) => {
+                  setCreds({ ...creds, email: e.target.value });
+                  setTwoFactorPending(false);
+                  setTwoFactorCode('');
+                }}
                 className="h-11"
               />
             </div>
@@ -238,7 +287,11 @@ const Login = () => {
                   placeholder="........"
                   required
                   value={creds.password}
-                  onChange={(e) => setCreds({ ...creds, password: e.target.value })}
+                  onChange={(e) => {
+                    setCreds({ ...creds, password: e.target.value });
+                    setTwoFactorPending(false);
+                    setTwoFactorCode('');
+                  }}
                   className="h-11 pr-10"
                 />
                 <button
@@ -251,8 +304,39 @@ const Login = () => {
               </div>
             </div>
 
+            {twoFactorPending && (
+              <div className="space-y-4 rounded-sm border bg-secondary/20 p-4">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 text-[#2A2623]" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Authenticator verification</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Enter the 6-digit code from Google Authenticator, Authy, or your preferred TOTP app.
+                    </p>
+                  </div>
+                </div>
+
+                <InputOTP
+                  maxLength={OTP_LENGTH}
+                  value={twoFactorCode}
+                  onChange={setTwoFactorCode}
+                  containerClassName="justify-center"
+                  pattern="^[0-9]+$"
+                >
+                  <InputOTPGroup>
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+            )}
+
             <Button className="w-full h-12 bg-[#2A2623] hover:bg-black uppercase text-xs font-bold tracking-[0.15em]" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Sign In
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {twoFactorPending ? 'Verify & Sign In' : 'Sign In'}
             </Button>
           </form>
         ) : (

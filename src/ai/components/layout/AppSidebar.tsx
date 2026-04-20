@@ -2,7 +2,7 @@
 import React from "react";
 import { 
   Wand2, Image, Heart, Settings, LayoutDashboard, 
-  Maximize, Search, Sparkles, Palette, SwatchBook
+  Maximize, Search, Sparkles, Palette, SwatchBook, User
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +19,7 @@ const navSection = [
 const librarySection = [
   { label: "My Designs", path: "/ai-studio/gallery", icon: Image, count: 12 },
   { label: "Favorites", path: "/ai-studio/favorites", icon: Heart, count: 5 },
+  { label: "Profile", path: "/ai-studio/profile", icon: User },
 ];
 
 export function AppSidebar() {
@@ -46,8 +47,8 @@ export function AppSidebar() {
 
       <div className="mt-auto px-4 pb-4 pt-4 border-t border-white/5 relative z-10">
         <SidebarLink
-          item={{ label: "Settings", path: "/ai-studio/settings", icon: Settings }}
-          active={location.pathname === "/ai-studio/settings"}
+          item={{ label: "Settings", path: "/ai-studio/profile", icon: Settings }}
+          active={location.pathname === "/ai-studio/profile"}
         />
         
         {/* Premium Upgrade Card */}

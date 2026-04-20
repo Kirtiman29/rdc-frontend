@@ -49,7 +49,7 @@ const BASE_DOMAIN = import.meta.env.VITE_BASE_URL || "https://ruchitadesigncompa
 const AUTH_URL =
   import.meta.env.VITE_AUTH_SERVICE_URL || BASE_DOMAIN;
 
-const AUTH_CONTEXT_URL = `${AUTH_URL.replace(/\/$/, "")}/auth`;
+const AUTH_CONTEXT_URL = `${AUTH_URL.replace(/\/$/, "")}/api/auth`;
 
 const ASSET_URL =
   import.meta.env.VITE_ASSET_SERVICE_URL || BASE_DOMAIN;
@@ -65,6 +65,9 @@ const WISHLIST_URL =
 
 const PAYMENT_URL =
   import.meta.env.VITE_PAYMENT_SERVICE_URL || BASE_DOMAIN;
+
+const SUBSCRIPTION_URL =
+  import.meta.env.VITE_SUBSCRIPTION_SERVICE_URL || BASE_DOMAIN;
 
 const ADMIN_URL =
   import.meta.env.VITE_ADMIN_SERVICE_URL || BASE_DOMAIN;
@@ -118,9 +121,18 @@ export const applyIndustrialInterceptors = (instance: AxiosInstance) => {
 
     async error => {
 
-      const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+      const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
 
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      if (!originalRequest) {
+        return Promise.reject(error);
+      }
+
+      const hasBearerAuth = Boolean(
+        originalRequest.headers?.Authorization || originalRequest.headers?.authorization
+      );
+      const isTwoFactorChallenge = error.response?.data?.status === "2FA_REQUIRED";
+
+      if (error.response?.status === 401 && hasBearerAuth && !isTwoFactorChallenge && !originalRequest._retry) {
 
         if (isRefreshing) {
 
@@ -232,8 +244,16 @@ export const paymentApi = axios.create({
   baseURL: createUrl(PAYMENT_URL, "/payments")
 });
 
+export const publicSubscriptionApi = axios.create({
+  baseURL: createUrl(SUBSCRIPTION_URL, "/public/subscriptions")
+});
+
+export const subscriptionApi = axios.create({
+  baseURL: createUrl(SUBSCRIPTION_URL, "/subscriptions")
+});
+
 /* APPLY INTERCEPTORS ONLY TO SECURE APIS */
-[userApi, cartApi, orderApi, wishlistApi, paymentApi]
+[userApi, cartApi, orderApi, wishlistApi, paymentApi, subscriptionApi]
   .forEach(applyIndustrialInterceptors);
 
 /* =========================================
