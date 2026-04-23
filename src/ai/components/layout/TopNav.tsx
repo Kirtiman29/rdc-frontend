@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { getToken } from "@/api/apiClient";
 import { getMyCredits } from "@/api/subscriptionApi";
+import { AI_CREDITS_UPDATED_EVENT } from "@/api/aiApi";
 const logo = "/rdc-logo.png";
 
 import {
@@ -45,6 +46,19 @@ export function TopNav() {
 
     void loadCredits();
   }, [user]);
+
+  useEffect(() => {
+    const handleCreditsUpdate = (event: Event) => {
+      const customEvent = event as CustomEvent<number>;
+      if (typeof customEvent.detail === "number") {
+        setCredits(customEvent.detail);
+      }
+    };
+
+    window.addEventListener(AI_CREDITS_UPDATED_EVENT, handleCreditsUpdate as EventListener);
+    return () =>
+      window.removeEventListener(AI_CREDITS_UPDATED_EVENT, handleCreditsUpdate as EventListener);
+  }, []);
 
   return (
     <header className="h-16 border-b border-white/5 bg-[#0f0f0f]/60 backdrop-blur-xl flex items-center px-6 gap-8 shrink-0 sticky top-0 z-[100]">

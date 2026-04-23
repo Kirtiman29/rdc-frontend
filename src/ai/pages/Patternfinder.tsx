@@ -6,7 +6,11 @@ import {
   Sparkles, Download, Wand2, X, Maximize2,
   ShieldCheck
 } from "lucide-react";
-import { generateSeamlessPattern, getAIImageUrl } from "../../api/aiApi";
+import {
+  generateSeamlessPattern,
+  getAIImageUrl,
+  getAiErrorMessage,
+} from "../../api/aiApi";
 import toast from "react-hot-toast";
 
 export default function PatternFinder() {
@@ -62,7 +66,7 @@ export default function PatternFinder() {
       }
     } catch (error) {
       console.error(error);
-      toast.error("Error generating pattern");
+      toast.error(getAiErrorMessage(error, "Error generating pattern"));
     } finally {
       setIsExtracting(false);
     }
@@ -341,7 +345,7 @@ export default function PatternFinder() {
             <div className="absolute top-8 left-8 right-8 flex justify-between items-center z-10">
               <div className="px-4 py-2 bg-black/50 border border-white/10 rounded-xl flex items-center gap-3">
                 <Scan className="w-4 h-4 text-[#ff1a1a]" />
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-white">Interactive Pattern Preview</span>
+                <span className="text-xs font-black uppercase tracking-[0.2em] text-white">Full Design Preview</span>
               </div>
               <div className="flex items-center gap-4">
                 <button 
@@ -360,22 +364,19 @@ export default function PatternFinder() {
               </div>
             </div>
 
-            {/* Pattern Preview Grid */}
+            {/* Full-size single image preview */}
             <div className="w-full h-full p-4 md:p-24 overflow-hidden relative">
               <motion.div 
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 transition={{ type: "spring", bounce: 0, duration: 0.5 }}
-                className="w-full h-full rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden"
+                className="w-full h-full rounded-3xl border border-white/10 shadow-2xl relative overflow-hidden bg-[#0a0a0a] flex items-center justify-center"
               >
-                <div 
-                  className="absolute inset-0"
-                  style={{ 
-                    backgroundImage: `url(${resultImage})`,
-                    backgroundSize: '256px', // Fixed tile size for the showcase preview
-                    backgroundRepeat: 'repeat'
-                  }}
+                <img
+                  src={resultImage}
+                  alt="Full design preview"
+                  className="max-w-full max-h-full object-contain"
                 />
               </motion.div>
             </div>

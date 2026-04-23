@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { upscaleImage, upscaleBatch, getAIImageUrl } from "@/api/aiApi";
+import { upscaleImage, getAIImageUrl } from "@/api/aiApi";
 import JSZip from "jszip";
-import { saveAs } from "file-saver";
 import {
   Maximize,
   Zap,
@@ -23,6 +22,7 @@ export default function Upscale() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -129,29 +129,34 @@ export default function Upscale() {
 
     try {
       setIsProcessing(true);
-      const userId = 1;
 
       if (mode === "single") {
-        const res = await upscaleImage(file!, upscaleType as any, userId);
+        const res = await upscaleImage(file!, upscaleType as any);
+        setRemainingCredits(res.remainingCredits ?? null);
         if (res && res.image) {
           setResultUrl(res.image);
           setSliderPosition(50);
         }
 
       } else {
-        // 🔥 BATCH → ALWAYS ZIP
-        // Create a ZIP from the current files array to send to the backend's zip_file field
-        const uploadZip = new JSZip();
+        const resultZip = new JSZip();
+
         for (let i = 0; i < files.length; i++) {
-          uploadZip.file(files[i].name, files[i]);
+          const sourceFile = files[i];
+          const response = await upscaleImage(sourceFile, upscaleType as any);
+          setRemainingCredits(response.remainingCredits ?? null);
+
+          if (!response.image) {
+            throw new Error(`Upscale failed for ${sourceFile.name}`);
+          }
+
+          const assetResponse = await fetch(getAIImageUrl(response.image));
+          const blob = await assetResponse.blob();
+          resultZip.file(`upscaled-${sourceFile.name}`, blob);
         }
-        const zipBlob = await uploadZip.generateAsync({ type: "blob" });
-        const zipFile = new File([zipBlob], "upload.zip", { type: "application/zip" });
 
-        const blob = await upscaleBatch(zipFile, upscaleType, userId);
-
-        // 🔥 direct download
-        const url = window.URL.createObjectURL(blob);
+        const zippedOutput = await resultZip.generateAsync({ type: "blob" });
+        const url = window.URL.createObjectURL(zippedOutput);
 
         const a = document.createElement("a");
         a.href = url;
@@ -418,15 +423,21 @@ export default function Upscale() {
             </button>
 
             <button
-              disabled={!resultUrl || isProcessing}
+              disabled={mode === "batch" ? files.length === 0 || isProcessing : !resultUrl || isProcessing}
               onClick={mode === "batch" ? handleGenerate : handleDownload}
               className="group w-full h-14 rounded-[18px] border border-[#ff1a1a]/30 bg-white/[0.03] text-white disabled:opacity-20 transition-all hover:bg-[#ff1a1a]/10"
             >
               <div className="flex items-center justify-center gap-3 font-bold uppercase tracking-[0.2em] text-xs">
                 <Download className="w-4 h-4 text-[#ff1a1a]" />
-                Download Result
+                {mode === "batch" ? "Download ZIP" : "Download Result"}
               </div>
             </button>
+
+            {typeof remainingCredits === "number" && (
+              <div className="rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">
+                Credits Left: <span className="text-white">{remainingCredits}</span>
+              </div>
+            )}
 
 
           </div>

@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Search, User, Heart, ShoppingBag,
-  Menu, X
+  Search, Heart, ShoppingBag,
+  Menu, Sparkles, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MegaMenu from './MegaMenu';
@@ -11,7 +11,7 @@ import { getCart } from '@/api/cartApi';
 import AIStudioLoader from "@/components/layout/AIStudioLoader";
 import { useAuth } from '@/hooks/useAuth';
 
-let hoverTimeout: any;
+let hoverTimeout: ReturnType<typeof setTimeout> | undefined;
 
 const navItems = [
   { label: 'Home', href: '/' },
@@ -30,6 +30,7 @@ const navItems = [
   },
   { label: 'Trends', href: '/trends/explore' },
   { label: 'Special Offers', href: '/special-offers/explore' },
+  { label: 'Subscription', href: '/subscription' },
   { label: 'Blogs', href: '/blogs' },
   {
     label: 'Fabrics',
@@ -202,6 +203,14 @@ const Header = () => {
 
             {/* RIGHT: Icons Section */}
             <div className="flex items-center justify-end gap-2 sm:gap-5 lg:flex-1">
+              <Link
+                to="/subscription"
+                className="hidden md:inline-flex items-center gap-2 rounded-full border border-[#2A2623]/10 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#2A2623] transition-all hover:-translate-y-0.5 hover:border-[#2A2623]/20 hover:bg-[#f8f4ee]"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Plans
+              </Link>
+
               <button
                 onClick={() => setShowSearch(true)}
                 className="p-2 text-[#2A2623]/70 hover:text-[#2A2623] transition-all hover:scale-110 active:scale-95"

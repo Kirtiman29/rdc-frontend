@@ -39,6 +39,7 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import Fabrics from "./pages/fabrics/Fabrics";
 import Blog from "./pages/Blog";
+import Subscription from "./pages/Subscription";
 
 // AI Studio Imports
 import Home from "./ai/pages/Home";
@@ -107,6 +108,7 @@ const App = () => (
               <Route path="/special-offers/explore" element={<ExploreOffers />} />
               
               <Route path="/blogs" element={<Blog />} />
+              <Route path="/subscription" element={<Subscription />} />
               {/* Auth Routes */}
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />

@@ -1,6 +1,6 @@
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
-import HeroEditorial from '@/components/home/HeroEditorial';
+import HeroEditorial from '@/components/home/Homebanner';
 import TrendingDesigns from '@/components/home/TrendingDesigns';
 import PremiumDesigns from '@/components/home/PremiumDesigns';
 import EditorsChoice from '@/components/home/EditorsChoice';

@@ -1,7 +1,7 @@
 // src/components/home/SubscriptionSection.tsx
 
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Check, Loader2, Sparkles, Wand2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -171,6 +171,15 @@ const SubscriptionSection = () => {
           >
             Choose design access, AI credits, or both for your next textile workflow.
           </p>
+
+          <div className={`mb-12 transition-all duration-1000 ease-out ${animate('delay-300')}`}>
+            <Link
+              to="/subscription"
+              className="inline-flex items-center justify-center rounded-sm border border-[#2A2623]/10 bg-white px-5 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-[#2A2623] transition-transform hover:-translate-y-0.5"
+            >
+              View Monthly And Yearly Plans
+            </Link>
+          </div>
         </div>
 
         {loading ? (

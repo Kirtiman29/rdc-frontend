@@ -25,7 +25,8 @@ function GeneratorPanel({
   setUserPrompt,
   manualPrompt,
   onEnhance,
-  isEnhancing
+  isEnhancing,
+  remainingCredits
 }: any) {
 
   const [isDragOver, setIsDragOver] = useState(false);
@@ -236,6 +237,11 @@ function GeneratorPanel({
           {isGenerating ? "PROCESSING..." : "GENERATE DESIGN"}
         </div>
       </button>
+      {typeof remainingCredits === "number" && (
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">
+          Credits Left: <span className="text-white">{remainingCredits}</span>
+        </p>
+      )}
       {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
     </div>
   );
@@ -254,6 +260,7 @@ export default function Generate() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [numImages, setNumImages] = useState(1);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
 
   // Step 5: Move strength and style here
   const [strength, setStrength] = useState(0.75);
@@ -304,6 +311,7 @@ export default function Generate() {
 
       // Call Upscale API
       const res = await upscaleImage(file, "normal", 1);
+      setRemainingCredits(res.remainingCredits ?? null);
 
       // Download the result automatically
       if (res && res.image) {
@@ -350,6 +358,7 @@ export default function Generate() {
       console.log("Enhanced:", res);
 
       setUserPrompt(res.enhanced_prompt);
+      setRemainingCredits(res.remainingCredits ?? null);
 
     } catch (err) {
       console.error("Enhance failed", err);
@@ -362,8 +371,8 @@ export default function Generate() {
   const handleGenerate = async () => {
     if (isGenerating) return;
 
-    if (!file) {
-      alert("Please upload a reference image");
+    if (!file && !userPrompt.trim()) {
+      alert("Please add a prompt or upload a reference image");
       return;
     }
 
@@ -378,7 +387,9 @@ export default function Generate() {
       formData.append("guidance_scale", "10");
       formData.append("user_prompt", userPrompt);
       formData.append("manual_prompt", manualPrompt || userPrompt);
-      formData.append("file", file);
+      if (file) {
+        formData.append("file", file);
+      }
 
       console.log("🚀 Sending request...");
       console.log("File:", file);
@@ -393,6 +404,7 @@ export default function Generate() {
       console.log("✅ Response received:", res);
 
       setGeneratedImages(res.images);
+      setRemainingCredits(res.remainingCredits ?? null);
 
     } catch (err: any) {
       console.error("❌ ERROR:", err);
@@ -452,6 +464,7 @@ export default function Generate() {
             manualPrompt={manualPrompt}
             onEnhance={handleEnhance}
             isEnhancing={isEnhancing}
+            remainingCredits={remainingCredits}
           />
         </div>
       </div>
