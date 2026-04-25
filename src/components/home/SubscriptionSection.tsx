@@ -9,9 +9,6 @@ import { getToken } from '@/api/apiClient';
 import {
   formatPlanPrice,
   getPlans,
-  initiateSubscriptionPayment,
-  openSubscriptionCheckout,
-  verifySubscriptionPayment,
   type SubscriptionPlan,
 } from '@/api/subscriptionApi';
 import { useToast } from '@/hooks/use-toast';
@@ -53,7 +50,6 @@ const SubscriptionSection = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [payingPlanId, setPayingPlanId] = useState<number | null>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -96,49 +92,11 @@ const SubscriptionSection = () => {
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     if (!getToken()) {
-      navigate('/login', { state: { from: '/#subscriptions' } });
+      navigate('/login', { state: { from: `/checkout?planId=${plan.id}` } });
       return;
     }
 
-    setPayingPlanId(plan.id);
-
-    try {
-      const payment = await initiateSubscriptionPayment(plan.id);
-
-      await openSubscriptionCheckout({
-        payment,
-        onSuccess: async (response) => {
-          const verification = await verifySubscriptionPayment(response);
-
-          if (verification.status !== 'SUCCESS' && verification.status !== 'PAID') {
-            throw new Error('Payment verification failed');
-          }
-
-          toast({
-            title: 'Subscription activated',
-            description: `${payment.planName} is ready to use.`,
-          });
-          setPayingPlanId(null);
-          navigate('/profile');
-        },
-        onDismiss: () => setPayingPlanId(null),
-        onFailure: () => {
-          setPayingPlanId(null);
-          toast({
-            variant: 'destructive',
-            title: 'Payment failed',
-            description: 'Razorpay could not complete the payment. Please try again.',
-          });
-        },
-      });
-    } catch (error) {
-      setPayingPlanId(null);
-      toast({
-        variant: 'destructive',
-        title: 'Subscription payment failed',
-        description: getApiErrorMessage(error, 'Please try again in a moment.'),
-      });
-    }
+    navigate(`/checkout?planId=${plan.id}`);
   };
 
   return (
@@ -194,7 +152,6 @@ const SubscriptionSection = () => {
           <div className={`grid gap-5 md:grid-cols-2 lg:grid-cols-3 transition-all duration-1000 ease-out ${animate('delay-450')}`}>
             {plans.map((plan) => {
               const isCombo = plan.planType === 'COMBO';
-              const isPaying = payingPlanId === plan.id;
 
               return (
                 <article
@@ -234,10 +191,9 @@ const SubscriptionSection = () => {
                   <Button
                     type="button"
                     onClick={() => void handleSubscribe(plan)}
-                    disabled={payingPlanId !== null}
                     className="h-12 w-full rounded-sm bg-[#2A2623] text-[10px] font-bold uppercase tracking-[0.2em] text-white hover:bg-black"
                   >
-                    {isPaying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+                    <Wand2 className="mr-2 h-4 w-4" />
                     Subscribe
                   </Button>
                 </article>

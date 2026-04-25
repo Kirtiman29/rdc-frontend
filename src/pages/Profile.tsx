@@ -337,7 +337,7 @@ const Profile = () => {
           <div className="grid gap-4 md:grid-cols-3 mb-8">
             <SummaryTile icon={CreditCard} label="Plan" value={subscription.planName || 'No active plan'} detail={subscriptionActive ? `${subscription.planType} ${subscription.billingCycle}` : 'Choose a plan to unlock access'} />
             <SummaryTile icon={CalendarDays} label="Expires" value={formatSubscriptionDate(subscription.endDate)} detail={subscription.status || 'No active subscription'} />
-            <SummaryTile icon={KeyRound} label="Credits" value={`${subscription.availableCredits || 0}`} detail={`${remainingDesigns}/${subscription.designLimit || 0} design usages left`} />
+            <SummaryTile icon={KeyRound} label="Usage Left" value={`${remainingDesigns}`} detail={`${remainingDesigns}/${subscription.designLimit || 0} design requests left`} />
           </div>
 
           <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">

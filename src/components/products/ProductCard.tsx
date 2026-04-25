@@ -27,6 +27,8 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
   };
 
   const categoryLabel = product.category?.name || product.segment?.replace('_', ' ') || 'Textile';
+  const isSubscriptionDesign = Boolean(product.subscriptionOnly);
+  const cardPrice = product.finalPriceCents ?? product.basePriceCents;
 
   useEffect(() => {
     let isMounted = true;
@@ -104,6 +106,11 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
                 Luxury
               </span>
             )}
+            {isSubscriptionDesign && (
+              <span className="rounded-sm bg-[#BA1B1C] px-2 py-1 text-[10px] font-bold uppercase text-white shadow-sm">
+                Subscription Only
+              </span>
+            )}
             {product.discountPercent > 0 && (
               <span className="rounded-sm bg-destructive px-2 py-1 text-[10px] font-bold uppercase text-white shadow-sm">
                 {product.discountPercent}% OFF
@@ -133,7 +140,7 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
             </div>
           )}
 
-          {product.active && (
+          {product.active && !isSubscriptionDesign && (
             <div className="absolute bottom-3 left-3 right-3 z-30 translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
               <Button
                 className="w-full gap-2 shadow-xl bg-[#2A2623] hover:bg-black uppercase text-[10px] font-bold tracking-widest h-10 rounded-sm"
@@ -144,6 +151,14 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
                 {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
                 Add to Cart
               </Button>
+            </div>
+          )}
+
+          {product.active && isSubscriptionDesign && (
+            <div className="absolute bottom-3 left-3 right-3 z-30 translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
+              <div className="flex h-10 items-center justify-center rounded-sm bg-[#BA1B1C] px-3 text-[10px] font-bold uppercase tracking-widest text-white shadow-xl">
+                Request On Detail
+              </div>
             </div>
           )}
           
@@ -164,9 +179,9 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
         {/* ✅ Price Display Refactored for Whole Rupees */}
         <div className="flex items-center gap-2">
           <span className="font-bold text-[#2A2623]">
-            {formatPrice(product.finalPriceCents)}
+            {isSubscriptionDesign ? 'Included in subscription' : formatPrice(cardPrice)}
           </span>
-          {product.discountPercent > 0 && (
+          {!isSubscriptionDesign && product.discountPercent > 0 && (
             <span className="text-xs text-muted-foreground line-through font-light">
               {formatPrice(product.basePriceCents)}
             </span>

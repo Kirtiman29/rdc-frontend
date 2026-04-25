@@ -32,6 +32,7 @@ export interface Design {
   finalPriceCents: number;
   discountPercent: number;
   specialOffer: boolean;
+  subscriptionOnly?: boolean;
   
   // High-level Flags
   luxury: boolean;

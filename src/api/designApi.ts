@@ -1,14 +1,32 @@
 import { userApi } from './apiClient';
 import type { Design, Category, DesignsResponse, DesignFilters } from '../types/product';
 
+export interface SubscriptionDesignDownloadResponse {
+  requestId: number;
+  orderId: number;
+  designId: number;
+  designIdentifier: string;
+  designTitle: string;
+  status: 'PENDING' | 'SENT' | string;
+  remainingDesigns: number;
+  alreadyRequested: boolean;
+  message: string;
+}
+
+type DesignCollectionResponse = {
+  content?: Design[];
+  designs?: Design[];
+};
+
 /**
  * Helper: Safely extract array from Spring Boot Pageable response
  * Data is already unwrapped by apiClient interceptor.
  */
-const extractArray = (data: any): Design[] => {
+const extractArray = (data: unknown): Design[] => {
   if (!data) return [];
   if (Array.isArray(data)) return data;
-  return data.content || data.designs || [];
+  const response = data as DesignCollectionResponse;
+  return response.content || response.designs || [];
 };
 
 /**
@@ -81,4 +99,10 @@ export const getDesignById = async (id: string | number): Promise<Design> => {
 export const getRelatedDesigns = async (designId: string | number, limit: number = 4): Promise<Design[]> => {
   const data = await userApi.get(`/public/designs/${designId}/related?limit=${limit}`);
   return extractArray(data);
+};
+
+export const requestSubscriptionDesignDownload = async (
+  designId: string | number
+): Promise<SubscriptionDesignDownloadResponse> => {
+  return await userApi.post(`/public/designs/download/${designId}`);
 };

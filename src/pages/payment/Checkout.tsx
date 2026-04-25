@@ -2,6 +2,14 @@ import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { createOrder } from '@/api/orderApi'; 
 import { processIndustrialPayment } from '@/api/paymentApi';
+import {
+    formatPlanPrice,
+    getPlans,
+    initiateSubscriptionPayment,
+    openSubscriptionCheckout,
+    verifySubscriptionPayment,
+    type SubscriptionPlan,
+} from '@/api/subscriptionApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,8 +48,12 @@ export default function Checkout() {
     const { items } = useCart();
     
     const cart = items || []; 
+    const subscriptionPlanId = Number(searchParams.get('planId'));
+    const isSubscriptionCheckout = Number.isFinite(subscriptionPlanId) && subscriptionPlanId > 0;
     
     const [step, setStep] = useState<'review' | 'details'>('review');
+    const [subscriptionPlans, setSubscriptionPlans] = useState<SubscriptionPlan[]>([]);
+    const [isLoadingSubscriptionPlan, setIsLoadingSubscriptionPlan] = useState(false);
     
     // Form States
     const [customerName, setCustomerName] = useState(user?.name || '');
@@ -61,6 +73,11 @@ export default function Checkout() {
     const [isOpeningGateway, setIsOpeningGateway] = useState(false); 
     const [isVerifyingSuccess, setIsVerifyingSuccess] = useState(false); 
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+    const selectedSubscriptionPlan = useMemo(
+        () => subscriptionPlans.find((plan) => plan.id === subscriptionPlanId) || null,
+        [subscriptionPlanId, subscriptionPlans]
+    );
 
     const grandTotal = useMemo(() => 
         cart.reduce((sum, item) => sum + (item.priceCents * item.quantity), 0),
@@ -91,6 +108,24 @@ export default function Checkout() {
     useEffect(() => {
         loadRazorpay();
     }, []);
+
+    useEffect(() => {
+        if (!isSubscriptionCheckout) return;
+
+        const loadSubscriptionPlan = async () => {
+            setIsLoadingSubscriptionPlan(true);
+            try {
+                const response = await getPlans();
+                setSubscriptionPlans(response);
+            } catch (error: any) {
+                handleError(error?.response?.data?.message || "Subscription plan could not be loaded.");
+            } finally {
+                setIsLoadingSubscriptionPlan(false);
+            }
+        };
+
+        void loadSubscriptionPlan();
+    }, [isSubscriptionCheckout]);
 
     // GST Auto-prefix logic
     useEffect(() => {
@@ -125,7 +160,62 @@ export default function Checkout() {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const handleSubscriptionPayment = async () => {
+        if (isLoadingSubscriptionPlan) return;
+        if (!selectedSubscriptionPlan) return handleError("Subscription plan was not found.");
+        if (isProcessing || isOpeningGateway) return;
+
+        setIsProcessing(true);
+        setErrorMsg(null);
+
+        try {
+            const payment = await initiateSubscriptionPayment(selectedSubscriptionPlan.id);
+
+            await openSubscriptionCheckout({
+                payment,
+                onSuccess: async (response) => {
+                    try {
+                        setIsVerifyingSuccess(true);
+                        const verification = await verifySubscriptionPayment(response);
+
+                        if (verification.status !== 'SUCCESS' && verification.status !== 'PAID') {
+                            throw new Error('Payment verification failed');
+                        }
+
+                        navigate('/profile');
+                    } catch (error: any) {
+                        setIsVerifyingSuccess(false);
+                        setIsOpeningGateway(false);
+                        setIsProcessing(false);
+                        handleError(error?.response?.data?.message || error?.message || "Payment verification failed.");
+                    }
+                },
+                onDismiss: () => {
+                    setIsOpeningGateway(false);
+                    setIsProcessing(false);
+                },
+                onFailure: () => {
+                    setIsOpeningGateway(false);
+                    setIsProcessing(false);
+                    handleError("Razorpay could not complete the payment. Please try again.");
+                },
+            });
+
+            setIsOpeningGateway(true);
+            setIsProcessing(false);
+        } catch (error: any) {
+            setIsProcessing(false);
+            setIsOpeningGateway(false);
+            handleError(error?.response?.data?.message || error?.message || "Subscription payment could not be started.");
+        }
+    };
+
     const handleCheckout = async () => {
+        if (isSubscriptionCheckout) {
+            await handleSubscriptionPayment();
+            return;
+        }
+
         console.log("🔥 Checkout Clicked");
         // ✅ FIX: Better user feedback for empty cart
         if (cart.length === 0) return handleError("Your cart is empty.");
@@ -300,8 +390,18 @@ console.log("🚀 CALLING PAYMENT API NOW...");
         <div className="min-h-screen bg-white">
             <div className="bg-white border-b border-gray-100 py-4 sticky top-0 z-50">
                 <div className="container mx-auto px-6 flex justify-between items-center">
-                    <button onClick={() => step === 'details' ? setStep('review') : navigate('/cart')} className="flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors">
-                        <ArrowLeft size={16} /> {step === 'details' ? 'Review Order' : 'Back to Cart'}
+                    <button
+                        onClick={() => {
+                            if (isSubscriptionCheckout) {
+                                navigate('/subscription');
+                                return;
+                            }
+
+                            step === 'details' ? setStep('review') : navigate('/cart');
+                        }}
+                        className="flex items-center gap-2 text-sm text-gray-400 hover:text-black transition-colors"
+                    >
+                        <ArrowLeft size={16} /> {isSubscriptionCheckout ? 'Back to Plans' : step === 'details' ? 'Review Order' : 'Back to Cart'}
                     </button>
                     <div className="flex items-center gap-2 text-gray-500">
                         <ShieldCheck size={16} />
@@ -325,16 +425,61 @@ console.log("🚀 CALLING PAYMENT API NOW...");
 
                     <div className="mb-16">
                         <span className="text-xs text-gray-400">
-                            {step === 'review' ? 'Step 1 of 2' : 'Step 2 of 2'}
+                            {isSubscriptionCheckout ? 'Subscription Checkout' : step === 'review' ? 'Step 1 of 2' : 'Step 2 of 2'}
                         </span>
                         <h1 className="font-serif text-4xl mt-2 text-[#1A1A1A]">
-                            {step === 'review' ? 'Review Items' : 'Shipping & Billing'}
+                            {isSubscriptionCheckout ? 'Review Subscription' : step === 'review' ? 'Review Items' : 'Shipping & Billing'}
                         </h1>
                     </div>
 
                     <div className="grid lg:grid-cols-12 gap-12 items-start">
                         <div className="lg:col-span-7 space-y-8">
-                            {step === 'review' ? (
+                            {isSubscriptionCheckout ? (
+                                <div className="bg-white border border-gray-100 rounded-lg shadow-sm p-8">
+                                    {isLoadingSubscriptionPlan ? (
+                                        <div className="flex min-h-[220px] items-center justify-center">
+                                            <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                                        </div>
+                                    ) : selectedSubscriptionPlan ? (
+                                        <div>
+                                            <div className="flex items-start justify-between gap-6">
+                                                <div>
+                                                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">
+                                                        {selectedSubscriptionPlan.planType}
+                                                    </p>
+                                                    <h2 className="font-serif text-3xl mt-3 text-[#1A1A1A]">
+                                                        {selectedSubscriptionPlan.name}
+                                                    </h2>
+                                                    <p className="mt-3 text-sm leading-6 text-gray-500">
+                                                        {selectedSubscriptionPlan.billingCycle === 'MONTHLY'
+                                                            ? 'Billed monthly for flexible studio access.'
+                                                            : 'Billed yearly for uninterrupted studio access.'}
+                                                    </p>
+                                                </div>
+                                                <div className="rounded-full border border-gray-100 bg-gray-50 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] text-gray-500">
+                                                    {selectedSubscriptionPlan.billingCycle}
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+                                                <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+                                                    <p className="text-xs uppercase tracking-[0.18em] text-gray-400">Designs</p>
+                                                    <p className="mt-2 text-2xl font-semibold text-black">{selectedSubscriptionPlan.designLimit}</p>
+                                                </div>
+                                                <div className="rounded-md border border-gray-100 bg-gray-50 p-4">
+                                                    <p className="text-xs uppercase tracking-[0.18em] text-gray-400">AI Credits</p>
+                                                    <p className="mt-2 text-2xl font-semibold text-black">{selectedSubscriptionPlan.creditLimit}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="min-h-[220px] text-center flex flex-col items-center justify-center">
+                                            <p className="font-serif text-2xl text-[#1A1A1A]">Plan not found</p>
+                                            <p className="mt-2 text-sm text-gray-500">Please choose a subscription plan again.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : step === 'review' ? (
                                 <div className="divide-y divide-gray-100 bg-white border border-gray-100 rounded-lg shadow-sm">
                                     {cart.map((item) => (
                                         <div key={item.id} className="p-8 flex gap-8 items-center hover:bg-gray-50/50 transition-all group">
@@ -463,30 +608,60 @@ console.log("🚀 CALLING PAYMENT API NOW...");
                             <div className="bg-white p-8 sticky top-24 border border-gray-100 rounded-lg shadow-sm">
                                 <h2 className="font-serif text-2xl mb-8 text-[#1A1A1A]">Summary</h2>
                                 <div className="space-y-4 mb-8 text-sm">
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-500">Net Amount</span>
-                                        <span className="font-medium">{formatPrice(taxableSubtotal)}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-gray-500 italic">GST (18% Incl.)</span>
-                                        <span className="text-gray-400">{formatPrice(gstAmount)}</span>
-                                    </div>
+                                    {isSubscriptionCheckout ? (
+                                        <>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Plan</span>
+                                                <span className="font-medium text-right">{selectedSubscriptionPlan?.name || 'Subscription'}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Billing</span>
+                                                <span className="font-medium">{selectedSubscriptionPlan?.billingCycle || '-'}</span>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Net Amount</span>
+                                                <span className="font-medium">{formatPrice(taxableSubtotal)}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500 italic">GST (18% Incl.)</span>
+                                                <span className="text-gray-400">{formatPrice(gstAmount)}</span>
+                                            </div>
+                                        </>
+                                    )}
                                     <div className="h-px bg-gray-100 my-6" />
                                     <div className="flex justify-between items-end">
                                         <span className="font-medium text-base">Total Payable</span>
-                                        <span className="text-3xl font-bold text-black">{formatPrice(grandTotal)}</span>
+                                        <span className="text-3xl font-bold text-black">
+                                            {isSubscriptionCheckout
+                                                ? selectedSubscriptionPlan
+                                                    ? formatPlanPrice(selectedSubscriptionPlan.price)
+                                                    : '-'
+                                                : formatPrice(grandTotal)}
+                                        </span>
                                     </div>
                                 </div>
 
                                 <Button 
                                     onClick={handleCheckout} 
-                                    disabled={isProcessing || isOpeningGateway || cart.length === 0} 
+                                    disabled={
+                                        isProcessing ||
+                                        isOpeningGateway ||
+                                        isLoadingSubscriptionPlan ||
+                                        (isSubscriptionCheckout ? !selectedSubscriptionPlan : cart.length === 0)
+                                    } 
                                     className="w-full h-14 bg-black hover:bg-zinc-800 transition-all text-white rounded-md text-sm font-medium active:scale-[0.98]"
                                 >
                                     {isProcessing ? (
                                         <span className="flex items-center gap-3"><Loader2 className="animate-spin w-4" /> Verifying...</span>
                                     ) : (
-                                        step === 'review' ? "Continue to Shipping" : "Initialize Payment"
+                                        isSubscriptionCheckout
+                                            ? "Proceed To Payment"
+                                            : step === 'review'
+                                                ? "Continue to Shipping"
+                                                : "Initialize Payment"
                                     )}
                                 </Button>
                                     

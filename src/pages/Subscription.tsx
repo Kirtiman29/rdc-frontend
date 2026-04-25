@@ -10,12 +10,10 @@ import {
   EMPTY_SUBSCRIPTION_SUMMARY,
   formatPlanPrice,
   formatSubscriptionDate,
+  getRemainingDesigns,
   getMySubscription,
   getPlans,
   hasActiveSubscription,
-  initiateSubscriptionPayment,
-  openSubscriptionCheckout,
-  verifySubscriptionPayment,
   type BillingCycle,
   type PlanType,
   type SubscriptionPlan,
@@ -135,7 +133,6 @@ const Subscription = () => {
   const [selectedCycle, setSelectedCycle] = useState<BillingCycle>('MONTHLY');
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [payingPlanId, setPayingPlanId] = useState<number | null>(null);
   const [subscription, setSubscription] = useState<UserSubscriptionSummary>(
     EMPTY_SUBSCRIPTION_SUMMARY
   );
@@ -194,62 +191,16 @@ const Subscription = () => {
     (first, second) => getPlanOrder(first.planType) - getPlanOrder(second.planType)
   );
   const activeSubscription = hasActiveSubscription(subscription);
+  const remainingDesigns = getRemainingDesigns(subscription);
   const copy = cycleCopy[selectedCycle];
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     if (!getToken()) {
-      navigate('/login', { state: { from: '/subscription' } });
+      navigate('/login', { state: { from: `/checkout?planId=${plan.id}` } });
       return;
     }
 
-    setPayingPlanId(plan.id);
-
-    try {
-      const payment = await initiateSubscriptionPayment(plan.id);
-
-      await openSubscriptionCheckout({
-        payment,
-        onSuccess: async (response) => {
-          const verification = await verifySubscriptionPayment(response);
-
-          if (verification.status !== 'SUCCESS' && verification.status !== 'PAID') {
-            throw new Error('Payment verification failed');
-          }
-
-          toast({
-            title: 'Subscription activated',
-            description: `${payment.planName} is ready to use.`,
-          });
-
-          setPayingPlanId(null);
-
-          try {
-            const summary = await getMySubscription();
-            setSubscription(summary);
-          } catch (error) {
-            console.warn('Subscription summary refresh failed:', error);
-          }
-
-          navigate('/profile');
-        },
-        onDismiss: () => setPayingPlanId(null),
-        onFailure: () => {
-          setPayingPlanId(null);
-          toast({
-            variant: 'destructive',
-            title: 'Payment failed',
-            description: 'Razorpay could not complete the payment. Please try again.',
-          });
-        },
-      });
-    } catch (error) {
-      setPayingPlanId(null);
-      toast({
-        variant: 'destructive',
-        title: 'Subscription payment failed',
-        description: getApiErrorMessage(error, 'Please try again in a moment.'),
-      });
-    }
+    navigate(`/checkout?planId=${plan.id}`);
   };
 
   return (
@@ -293,7 +244,7 @@ const Subscription = () => {
                     {subscription.billingCycle ? ` · ${subscription.billingCycle}` : ''}
                   </h3>
                   <p className="mt-2 text-sm text-slate-600">
-                    Credits left: {subscription.availableCredits || 0} · Valid until{' '}
+                    Design requests left: {remainingDesigns} · Credits left: {subscription.availableCredits || 0} · Valid until{' '}
                     {formatSubscriptionDate(subscription.endDate)}
                   </p>
                 </div>
@@ -372,7 +323,6 @@ const Subscription = () => {
                 {visiblePlans.map((plan) => {
                   const isFeatured = plan.planType === 'COMBO';
                   const isActivePlan = activeSubscription && subscription.planId === plan.id;
-                  const isPaying = payingPlanId === plan.id;
                   const cycleText = selectedCycle === 'MONTHLY' ? 'month' : 'year';
                   const cycleBillingCopy =
                     selectedCycle === 'MONTHLY'
@@ -487,18 +437,13 @@ const Subscription = () => {
                         <Button
                           type="button"
                           onClick={() => void handleSubscribe(plan)}
-                          disabled={payingPlanId !== null}
                           className={`mt-6 h-12 w-full rounded-[14px] text-[11px] font-black uppercase tracking-[0.18em] transition-colors ${
                             isFeatured
                               ? 'bg-[#1A1A1A] text-white hover:bg-[#BA1B1C]'
                               : 'border border-slate-300 bg-white text-slate-950 hover:bg-slate-50'
                           }`}
                         >
-                          {isPaying ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          ) : (
-                            <Wand2 className="mr-2 h-4 w-4" />
-                          )}
+                          <Wand2 className="mr-2 h-4 w-4" />
                           {isActivePlan
                             ? 'Subscribed'
                             : isFeatured

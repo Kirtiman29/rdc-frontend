@@ -10,6 +10,7 @@ export interface SubscriptionPlan {
   planType: PlanType;
   billingCycle: BillingCycle;
   price: number;
+  pricePerDesign: number | null;
   designLimit: number;
   creditLimit: number;
 }
@@ -27,6 +28,8 @@ export interface UserSubscriptionSummary {
   creditLimit: number;
   availableCredits: number;
   usedDesigns: number;
+  remainingDesigns: number;
+  pricePerDesign: number | null;
 }
 
 export interface InitiateSubscriptionPaymentResponse {
@@ -85,6 +88,8 @@ export const EMPTY_SUBSCRIPTION_SUMMARY: UserSubscriptionSummary = {
   creditLimit: 0,
   availableCredits: 0,
   usedDesigns: 0,
+  remainingDesigns: 0,
+  pricePerDesign: null,
 };
 
 export const getPlans = async (): Promise<SubscriptionPlan[]> => {
@@ -94,6 +99,10 @@ export const getPlans = async (): Promise<SubscriptionPlan[]> => {
 
 export const getMySubscription = async (): Promise<UserSubscriptionSummary> => {
   return await subscriptionApi.get<UserSubscriptionSummary, UserSubscriptionSummary>('/me');
+};
+
+export const getMySubscriptionUsage = async (): Promise<UserSubscriptionSummary> => {
+  return await subscriptionApi.get<UserSubscriptionSummary, UserSubscriptionSummary>('/me/usage');
 };
 
 export const getMyCredits = async (): Promise<number> => {
@@ -122,6 +131,10 @@ export const hasActiveSubscription = (summary?: UserSubscriptionSummary | null) 
 };
 
 export const getRemainingDesigns = (summary?: UserSubscriptionSummary | null) => {
+  if (typeof summary?.remainingDesigns === 'number') {
+    return Math.max(summary.remainingDesigns, 0);
+  }
+
   return Math.max((summary?.designLimit ?? 0) - (summary?.usedDesigns ?? 0), 0);
 };
 
