@@ -4,7 +4,35 @@ import {
   Zap, Palette, Download, X, Maximize, Plus, Minus
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { generateDesign, getAIImageUrl, enhancePrompt, upscaleImage } from "@/api/aiApi"; // Assuming your api folder is in src
+import {
+  generateDesign,
+  getAIImageUrl,
+  enhancePrompt,
+  upscaleImage,
+  type GenerateResponse,
+} from "@/api/aiApi";
+import AiCreditCost from "@/ai/components/AiCreditCost";
+
+type GeneratedImage = GenerateResponse["images"][number];
+
+type GeneratorPanelProps = {
+  onGenerate: () => void;
+  isGenerating: boolean;
+  setFile: (file: File | null) => void;
+  strength: number;
+  setStrength: React.Dispatch<React.SetStateAction<number>>;
+  activeStyle: string;
+  setActiveStyle: React.Dispatch<React.SetStateAction<string>>;
+  error: string;
+  previewUrl: string | null;
+  numImages: number;
+  setNumImages: React.Dispatch<React.SetStateAction<number>>;
+  userPrompt: string;
+  setUserPrompt: React.Dispatch<React.SetStateAction<string>>;
+  onEnhance: () => void;
+  isEnhancing: boolean;
+  remainingCredits: number | null;
+};
 
 // --- SUB-COMPONENT: GENERATOR PANEL ---
 // Refactored to receive props from parent (Step 2)
@@ -12,7 +40,6 @@ function GeneratorPanel({
   onGenerate,
   isGenerating,
   setFile,
-  setPrompt,
   strength,
   setStrength,
   activeStyle,
@@ -23,11 +50,10 @@ function GeneratorPanel({
   setNumImages,
   userPrompt,
   setUserPrompt,
-  manualPrompt,
   onEnhance,
   isEnhancing,
   remainingCredits
-}: any) {
+}: GeneratorPanelProps) {
 
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -173,15 +199,18 @@ function GeneratorPanel({
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <label className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Prompt</label>
-          <motion.button
-            onClick={onEnhance}
-            disabled={isEnhancing}
-            whileHover={{ scale: 1.05, backgroundColor: "#ff1a1a", color: "#fff" }}
-            whileTap={{ scale: 0.95 }}
-            className="text-[10px] font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ff1a1a]/10 text-[#ff1a1a] border border-[#ff1a1a]/20 transition-all disabled:opacity-50"
-          >
-            <Wand2 className="w-3 h-3" /> {isEnhancing ? "Enhancing..." : "Enhance"}
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <AiCreditCost credits={2} label="Enhance" className="shrink-0" />
+            <motion.button
+              onClick={onEnhance}
+              disabled={isEnhancing}
+              whileHover={{ scale: 1.05, backgroundColor: "#ff1a1a", color: "#fff" }}
+              whileTap={{ scale: 0.95 }}
+              className="text-[10px] font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#ff1a1a]/10 text-[#ff1a1a] border border-[#ff1a1a]/20 transition-all disabled:opacity-50"
+            >
+              <Wand2 className="w-3 h-3" /> {isEnhancing ? "Enhancing..." : "Enhance"}
+            </motion.button>
+          </div>
         </div>
         {/* Step 4: Fix Prompt Input */}
         <textarea
@@ -227,16 +256,24 @@ function GeneratorPanel({
       </div>
 
       {/* 6. GENERATE BUTTON */}
-      <button
-        onClick={onGenerate}
-        disabled={isGenerating}
-        className="w-full group relative overflow-hidden py-4 rounded-2xl bg-[#ff1a1a] text-white font-bold tracking-wider transition-all hover:shadow-[0_8px_30px_rgba(255,26,26,0.3)] disabled:opacity-40 disabled:hover:shadow-none"
-      >
-        <div className="relative z-10 flex items-center justify-center gap-2">
-          {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-          {isGenerating ? "PROCESSING..." : "GENERATE DESIGN"}
+      <div className="space-y-3">
+        <div className="flex justify-between gap-3">
+          <AiCreditCost credits={numImages * 10} label="This Run" />
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600">
+            10 Credits Per Output
+          </span>
         </div>
-      </button>
+        <button
+          onClick={onGenerate}
+          disabled={isGenerating}
+          className="w-full group relative overflow-hidden py-4 rounded-2xl bg-[#ff1a1a] text-white font-bold tracking-wider transition-all hover:shadow-[0_8px_30px_rgba(255,26,26,0.3)] disabled:opacity-40 disabled:hover:shadow-none"
+        >
+          <div className="relative z-10 flex items-center justify-center gap-2">
+            {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
+            {isGenerating ? "PROCESSING..." : "GENERATE DESIGN"}
+          </div>
+        </button>
+      </div>
       {typeof remainingCredits === "number" && (
         <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">
           Credits Left: <span className="text-white">{remainingCredits}</span>
@@ -253,7 +290,7 @@ export default function Generate() {
   const [file, setFile] = useState<File | null>(null);
   const [userPrompt, setUserPrompt] = useState("");
   const [manualPrompt, setManualPrompt] = useState("");
-  const [generatedImages, setGeneratedImages] = useState<any[]>([]);
+  const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [error, setError] = useState("");
@@ -406,11 +443,12 @@ export default function Generate() {
       setGeneratedImages(res.images);
       setRemainingCredits(res.remainingCredits ?? null);
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("❌ ERROR:", err);
-      console.error("❌ ERROR RESPONSE:", err?.response);
+      const errorObj = err as any;
+      console.error("❌ ERROR RESPONSE:", errorObj?.response);
 
-      setError(err?.response?.data?.message || "Generation failed");
+      setError(errorObj?.response?.data?.message || "Generation failed");
     } finally {
       setIsGenerating(false);
     }
@@ -450,7 +488,6 @@ export default function Generate() {
             onGenerate={handleGenerate}
             isGenerating={isGenerating}
             setFile={setFile}
-            setPrompt={setUserPrompt}
             strength={strength}
             setStrength={setStrength}
             activeStyle={activeStyle}
@@ -461,7 +498,6 @@ export default function Generate() {
             setNumImages={setNumImages}
             userPrompt={userPrompt}
             setUserPrompt={setUserPrompt}
-            manualPrompt={manualPrompt}
             onEnhance={handleEnhance}
             isEnhancing={isEnhancing}
             remainingCredits={remainingCredits}
@@ -529,7 +565,7 @@ export default function Generate() {
                               <span>Upscaling...</span>
                             </>
                           ) : (
-                            <span>Upscale</span>
+                            <span>Upscale · 5C</span>
                           )}
                         </button>
 

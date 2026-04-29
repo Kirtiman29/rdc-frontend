@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, ArrowRight, Mail, ShieldCheck, Loader2 } from 'lucide-react';
-import { orderApi } from '@/api/apiClient';
+import { getOrderDetails } from '@/api/orderApi';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -24,11 +24,14 @@ export default function PaymentSuccess() {
     const maxAttempts = 5;
 
     const verifyStatus = async () => {
+      if (!orderId) {
+        return;
+      }
+
       try {
-        // Hit Order Service Port 8095
-        const order: any = await orderApi.get(`/${orderId}`);
+        const order = await getOrderDetails(orderId);
         
-        if (order && order.status === 'PAID') {
+        if (order && order.status?.toUpperCase() === 'PAID') {
           // Sync complete
           setIsSyncing(false);
           startCountdown();

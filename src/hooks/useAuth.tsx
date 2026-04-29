@@ -1,11 +1,18 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 import { AUTH_STATE_CHANGE_EVENT, getToken, getRefreshToken, saveTokens, clearTokens } from "@/api/apiClient";
+import { getCurrentUser } from "@/api/authApi";
 
 interface User {
   id: string;
   email: string;
   name: string;
 }
+
+type ApiErrorLike = {
+  response?: {
+    status?: number;
+  };
+};
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -35,14 +42,18 @@ const decodeToken = (token: string): User | null => {
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [user, setUser] = useState<User | null>(null);
+  const syncRequestRef = useRef(0);
 
-  const syncAuthState = () => {
+  const syncAuthState = async () => {
+    const requestId = ++syncRequestRef.current;
     const accessToken = getToken();
     const refreshToken = getRefreshToken();
 
     if (!accessToken || !refreshToken) {
-      setIsAuthenticated(false);
-      setUser(null);
+      if (syncRequestRef.current === requestId) {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
       return;
     }
 
@@ -50,13 +61,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (!decodedUser) {
       clearTokens();
-      setIsAuthenticated(false);
-      setUser(null);
+      if (syncRequestRef.current === requestId) {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
       return;
     }
 
-    setIsAuthenticated(true);
-    setUser(decodedUser);
+    if (syncRequestRef.current === requestId) {
+      setIsAuthenticated(true);
+      setUser(decodedUser);
+    }
+
+    try {
+      const currentUser = await getCurrentUser();
+
+      if (syncRequestRef.current !== requestId) {
+        return;
+      }
+
+      setIsAuthenticated(true);
+      setUser({
+        id: decodedUser.id,
+        email: currentUser.email || decodedUser.email,
+        name: currentUser.name || decodedUser.name,
+      });
+    } catch (error) {
+      const status = (error as ApiErrorLike)?.response?.status;
+
+      if (syncRequestRef.current !== requestId) {
+        return;
+      }
+
+      if (status === 401 || status === 403) {
+        clearTokens();
+        setIsAuthenticated(false);
+        setUser(null);
+        return;
+      }
+
+      setIsAuthenticated(true);
+      setUser(decodedUser);
+    }
   };
 
   const logout = () => {
@@ -72,12 +118,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    * Axios interceptor will handle refresh automatically.
    */
   useEffect(() => {
-    syncAuthState();
+    void syncAuthState();
 
-    const handleAuthStateChange = () => syncAuthState();
+    const handleAuthStateChange = () => {
+      void syncAuthState();
+    };
     const handleStorage = (event: StorageEvent) => {
       if (event.key === "accessToken" || event.key === "refreshToken" || event.key === null) {
-        syncAuthState();
+        void syncAuthState();
       }
     };
 
@@ -95,7 +143,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const login = (accessToken: string, refreshToken: string) => {
     saveTokens(accessToken, refreshToken);
-    syncAuthState();
+    const decodedUser = decodeToken(accessToken);
+
+    if (decodedUser) {
+      setIsAuthenticated(true);
+      setUser(decodedUser);
+    }
+
+    void syncAuthState();
   };
 
   return (

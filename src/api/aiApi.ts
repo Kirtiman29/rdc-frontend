@@ -67,9 +67,12 @@ const getUrlPath = (url: string) => {
 };
 
 const shouldUseAiServiceForOutput = (url: string) =>
-  Boolean(AI_SERVICE_URL) && /^\/?patterns(?:\/|$)/i.test(getUrlPath(url).replace(/^\/+/, ""));
+  Boolean(AI_SERVICE_URL) &&
+  /^(?:patterns|output|files(?:\/|$)|static(?:\/|$)|storage(?:\/|$))/i.test(
+    getUrlPath(url).replace(/^\/+/, "")
+  );
 
-const normalizeAiPatternOutputUrl = (url: string) => {
+const normalizeAiServiceOutputUrl = (url: string) => {
   try {
     const parsedUrl = new URL(url, "http://placeholder.local");
     return joinUrl(AI_SERVICE_URL, `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`);
@@ -81,7 +84,7 @@ const normalizeAiPatternOutputUrl = (url: string) => {
 const normalizeAiOutputUrlFromBase = (baseUrl: string, url?: string | null) => {
   if (!url) return "";
   if (/^(data:|blob:)/i.test(url)) return url;
-  if (shouldUseAiServiceForOutput(url)) return normalizeAiPatternOutputUrl(url);
+  if (shouldUseAiServiceForOutput(url)) return normalizeAiServiceOutputUrl(url);
   if (/^https?:\/\//i.test(url)) return url;
   return joinUrl(baseUrl, url);
 };
@@ -331,6 +334,8 @@ export type BuiltInAiToolName =
   | "PROMPT_ENHANCER"
   | "UPSCALE"
   | "TEXTILE_GENERATOR"
+  | "IMAGE_TO_IMAGE"
+  | "GEMINI_TEXT_TO_IMAGE"
   | "IMAGE_MIX"
   | "COLORWAY"
   | "COLOR_SEPARATION"
@@ -372,6 +377,18 @@ export interface EnhanceResponse {
 }
 
 export type UpscaleMode = "normal" | "double" | "textile";
+
+const mapUpscaleModeToModel = (mode: UpscaleMode) => {
+  switch (mode) {
+    case "textile":
+      return "textile";
+    case "double":
+      return "double_upscale";
+    case "normal":
+    default:
+      return "standard";
+  }
+};
 
 export interface UpscaleResponse {
   status: string;
@@ -514,12 +531,14 @@ export const generateDesign = async (formData: FormData): Promise<GenerateRespon
   const inputUrl =
     referenceFile instanceof File ? await uploadAiInputAsset(referenceFile) : null;
   const styleValue = String(formData.get("style") || "floral");
+  const prompt = String(formData.get("user_prompt") || formData.get("manual_prompt") || "");
+  const toolName: AiToolName = inputUrl ? "IMAGE_TO_IMAGE" : "TEXTILE_GENERATOR";
 
   const response = await invokeAiTool({
-    toolName: "TEXTILE_GENERATOR",
+    toolName,
     inputUrl,
     params: {
-      user_prompt: String(formData.get("user_prompt") || formData.get("manual_prompt") || ""),
+      user_prompt: prompt,
       strength: toNumber(formData.get("strength"), 0.75),
       guidance_scale: toNumber(formData.get("guidance_scale"), 8),
       num_images: toNumber(formData.get("num_images"), 1),
@@ -552,7 +571,7 @@ export const upscaleImage = async (
     toolName: "UPSCALE",
     inputUrl,
     params: {
-      mode,
+      model: mapUpscaleModeToModel(mode),
     },
   });
 
@@ -674,7 +693,7 @@ export const generateSeamlessPattern = async (
   }
 };
 
-export const getHistory = async (_style?: string): Promise<any> => [];
+export const getHistory = async (_style?: string): Promise<unknown[]> => [];
 
 export const checkAIHealth = async () => ({
   status: "ok",

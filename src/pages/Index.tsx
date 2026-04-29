@@ -12,7 +12,6 @@ import AIStudioSection from '@/components/home/AIStudioSection';
 import TrustedPartners from '@/components/home/TrustedPartners';
 import Testimonial from '@/components/home/Testimonial';
 import ShopBySegment from '@/components/home/ShopBySegment';
-import Newsletter from '@/components/home/Newsletter';
 
 const Index = () => {
   return (
@@ -24,11 +23,14 @@ const Index = () => {
         {/* HERO */}
         <HeroEditorial />
 
+        {/* TRENDING */}
+        <TrendingDesigns />
+
         {/* SEGMENT */}
         <ShopBySegment />
 
-        {/* TRENDING */}
-        <TrendingDesigns />
+        {/* PREMIUM */}
+        <PremiumDesigns />
 
         {/* CATEGORY */}
         <ShopByCategory />
@@ -36,14 +38,14 @@ const Index = () => {
         {/* EDITORS */}
         <EditorsChoice />
 
-        {/* PREMIUM */}
-        <PremiumDesigns />
-
         {/* AI STUDIO */}
         <AIStudioSection />
 
         {/* NEW ARRIVALS */}
         <NewArrivals />
+
+        {/* SUBSCRIPTION */}
+        <SubscriptionSection />
 
         {/* OFFERS */}
         <SpecialOffers />
@@ -53,12 +55,6 @@ const Index = () => {
 
         {/* PARTNERS */}
         <TrustedPartners />
-
-        {/* NEWSLETTER */}
-        <Newsletter />
-
-        {/* SUBSCRIPTION */}
-        <SubscriptionSection />
 
       </main>
 

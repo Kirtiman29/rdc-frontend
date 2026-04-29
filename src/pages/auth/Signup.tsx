@@ -6,13 +6,14 @@ import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { registerUser, loginWithGoogle } from '@/api/authApi'; 
-import { saveTokens } from '@/api/apiClient';
 import { Loader2, MailCheck, Eye, EyeOff } from 'lucide-react';
 
 const Signup = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
@@ -57,8 +58,8 @@ const Signup = () => {
   const handleGoogleSuccess = async (res: CredentialResponse) => {
     setIsSubmitting(true);
     try {
-      const data: any = await loginWithGoogle(res.credential!); 
-      saveTokens(data.accessToken, data.refreshToken);
+      const data = await loginWithGoogle(res.credential!); 
+      login(data.accessToken, data.refreshToken);
       
       toast({ title: "Welcome!", description: "Account authenticated via Google." });
       navigate('/');

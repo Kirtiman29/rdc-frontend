@@ -12,6 +12,7 @@ import {
   getAiErrorMessage,
 } from "../../api/aiApi";
 import toast from "react-hot-toast";
+import AiCreditCost from "@/ai/components/AiCreditCost";
 
 export default function PatternFinder() {
   const [file, setFile] = useState<File | null>(null);
@@ -107,9 +108,12 @@ export default function PatternFinder() {
             </h1>
           </motion.div>
           
-          <p className="text-gray-500 text-xs md:text-sm max-w-sm uppercase font-bold tracking-widest leading-relaxed">
-            Deconstruct real-world <span className="text-white">garments</span> into print-ready <span className="text-white">seamless tiles</span>.
-          </p>
+          <div className="flex flex-col items-start gap-3 md:items-end">
+            <p className="text-gray-500 text-xs md:text-sm max-w-sm uppercase font-bold tracking-widest leading-relaxed">
+              Deconstruct real-world <span className="text-white">garments</span> into print-ready <span className="text-white">seamless tiles</span>.
+            </p>
+            <AiCreditCost credits={7} label="Per Pattern" />
+          </div>
         </div>
 
         {/* MAIN INTERACTIVE AREA */}

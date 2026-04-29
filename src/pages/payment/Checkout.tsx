@@ -246,9 +246,12 @@ export default function Checkout() {
 
         setIsProcessing(true);
         try {
+            if (!Number.isFinite(Number(user?.id))) {
+                throw new Error("Your session is missing a valid user ID. Please sign in again.");
+            }
+
             const orderPayload = {
-                // ✅ FIX: Use a fallback for userId to prevent NaN
-                userId: user?.id ? Number(user.id) : 1,
+                userId: Number(user?.id),
                 customerName: customerName.trim(),
                 customerEmail: customerEmail.trim(),
                 customerPhone: customerPhone.trim(),
@@ -268,10 +271,11 @@ export default function Checkout() {
                 }))
             };
 
-            let response: any;
+            const createdOrder = await createOrder(orderPayload);
+            const response: any = createdOrder;
 
 try {
-    response = await createOrder(orderPayload);
+    const actualOrderId = Number(createdOrder.id);
     console.log("🧾 RAW ORDER RESPONSE:", JSON.stringify(response, null, 2));
 } catch (err: any) {
     console.error("❌ ORDER API FAILED:", err);
@@ -363,7 +367,7 @@ console.log("🚀 CALLING PAYMENT API NOW...");
         } catch (error: any) {
             setIsProcessing(false);
             setIsOpeningGateway(false);
-            handleError(error.response?.data?.message || "Transaction aborted.");
+            handleError(error.response?.data?.message || error.message || "Transaction aborted.");
         }
     };
 

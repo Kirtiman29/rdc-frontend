@@ -19,7 +19,7 @@ export default function MyDesigns() {
       setLoading(true);
       try {
         const styleParam = activeFilter === "All" ? undefined : activeFilter.toLowerCase();
-        const data = await getHistory(styleParam);
+        const data: any = await getHistory(styleParam);
         
         // Handle different possible API wrapper structures comfortably
         const results = Array.isArray(data) ? data : data?.data || data?.history || data?.images || [];

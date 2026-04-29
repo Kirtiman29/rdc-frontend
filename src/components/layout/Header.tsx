@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import MegaMenu from './MegaMenu';
 import SearchOverlay from './SearchOverlay';
 import { getCart } from '@/api/cartApi';
-import AIStudioLoader from "@/components/layout/AIStudioLoader";
 import { useAuth } from '@/hooks/useAuth';
 
 let hoverTimeout: ReturnType<typeof setTimeout> | undefined;
@@ -62,7 +61,6 @@ const Header = () => {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { isAuthenticated, user, logout } = useAuth();
 
-  const [showLoader, setShowLoader] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -84,8 +82,6 @@ const Header = () => {
 
   return (
     <>
-      {showLoader && <AIStudioLoader onFinish={() => setShowLoader(false)} />}
-
       {/* Announcement Bar (Optional - Premium Feel) */}
       <div className={cn(
         "bg-[#2A2623] text-white text-[10px] tracking-[0.2em] uppercase py-2 text-center transition-all duration-500 overflow-hidden",
@@ -143,7 +139,7 @@ const Header = () => {
                 >
                   {item.isSpecial ? (
                     <button
-                      onClick={() => setShowLoader(true)}
+                      onClick={() => navigate(item.href)}
                       className="group relative px-4 py-1.5 overflow-hidden rounded-full transition-all duration-500"
                     >
                       <span className="absolute inset-0 bg-gradient-to-r from-red-500 to-rose-600 opacity-90 transition-transform duration-500 group-hover:scale-105" />

@@ -13,6 +13,7 @@ import Index from "./pages/Index";
 import Gallery from "./pages/Gallery";
 import ProductDetail from "./pages/ProductDetail";
 import Orders from "./pages/Orders";
+import OrderDetail from "./pages/OrderDetail";
 import Profile from "./pages/Profile"; 
 import Login from "./pages/auth/Login"; 
 import Wishlist from "./pages/Wishlist";
@@ -124,6 +125,10 @@ const App = () => (
               <Route 
                 path="/orders" 
                 element={<ProtectedRoute><Orders /></ProtectedRoute>} 
+              />
+              <Route 
+                path="/orders/:orderId" 
+                element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} 
               />
               <Route 
                 path="/profile" 

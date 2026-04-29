@@ -1,5 +1,10 @@
 import axios, { AxiosProgressEvent } from "axios";
 import { getToken } from "./apiClient";
+import {
+  invokeAiTool,
+  normalizeAiOutputUrl,
+  uploadAiInputAsset,
+} from "./aiApi";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -32,6 +37,10 @@ export const API_BASE_URL =
   normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) ||
   normalizeBaseUrl(import.meta.env.VITE_AI_SERVICE_URL) ||
   getDefaultApiBaseUrl();
+
+const FASTAPI_PUBLIC_URL =
+  normalizeBaseUrl(import.meta.env.VITE_AI_SERVICE_URL) ||
+  "http://192.168.0.154:8000";
 
 export const COLOR_SEPARATION_ENDPOINT =
   import.meta.env.VITE_COLOR_SEPARATION_ENDPOINT || "/color-separation/";
@@ -108,19 +117,15 @@ const toNullableNumber = (value: unknown) => {
   return Number.isFinite(parsedValue) ? parsedValue : null;
 };
 
-const joinApiUrl = (baseUrl: string, path: string) => {
-  const cleanBaseUrl = normalizeBaseUrl(baseUrl);
-  const normalizedPath = path.replace(/\\/g, "/");
-  const cleanPath = normalizedPath.startsWith("/")
-    ? normalizedPath
-    : `/${normalizedPath}`;
-
-  return `${cleanBaseUrl}${cleanPath}`;
-};
-
 const getAuthHeaders = () => {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : undefined;
+};
+
+const fixFastApiOutputPath = (path?: string | null) => {
+  if (!path) return "";
+
+  return path.replace("/storage/outputs/", "/static/outputs/");
 };
 
 export const normalizeColorSeparationResponse = (
@@ -210,11 +215,11 @@ export function getColorSeparationErrorMessage(error: unknown) {
 
   if (axios.isAxiosError(error)) {
     if (error.code === "ECONNABORTED") {
-      return `The backend did not respond within ${COLOR_SEPARATION_TIMEOUT_SECONDS}s. Large artworks can take longer, so try Manual mode or a smaller image, and make sure the API at ${API_BASE_URL} is responding.`;
+      return `The AI gateway did not respond within ${COLOR_SEPARATION_TIMEOUT_SECONDS}s. Large artworks can take longer, so try Manual mode or a smaller image, and make sure the service is responding.`;
     }
 
     if (error.message === "Network Error") {
-      return `Could not reach the color separation API at ${API_BASE_URL}. Make sure the backend is running and reachable.`;
+      return "Could not reach the AI gateway for color separation. Make sure the backend services are running and reachable.";
     }
 
     const responseData = error.response?.data;
@@ -255,79 +260,103 @@ export async function separateColors(
   options: SeparateColorsOptions = {}
 ) {
   const { signal, onUploadProgress } = options;
-  const formData = new FormData();
-  formData.append("file", file);
+  void onUploadProgress;
+  void options.colorCountField;
 
-  if (numColors !== "" && numColors !== null && numColors !== undefined) {
-    formData.append(options.colorCountField || "num_colors", String(numColors));
+  if (signal?.aborted) {
+    throw new DOMException("Color separation was cancelled.", "AbortError");
   }
 
   if (import.meta.env.DEV) {
     console.log("Color separation request payload", {
       fileName: file?.name,
-      num_colors: formData.get("num_colors"),
+      num_colors: numColors,
     });
   }
 
-  const response = await axios.post(
-    joinApiUrl(API_BASE_URL, COLOR_SEPARATION_ENDPOINT),
-    formData,
-    {
-      timeout: COLOR_SEPARATION_TIMEOUT_MS,
-      signal,
-      onUploadProgress,
-      headers: getAuthHeaders(),
-    }
-  );
+  const inputUrl = await uploadAiInputAsset(file);
 
-  if (import.meta.env.DEV) {
-    console.log("Color separation response", response.data);
+  if (signal?.aborted) {
+    throw new DOMException("Color separation was cancelled.", "AbortError");
   }
 
-  return normalizeColorSeparationResponse(response.data);
-}
-
-export async function getColorSeparationJobs(limit?: number) {
-  const response = await axios.get(joinApiUrl(API_BASE_URL, COLOR_SEPARATION_JOBS_ENDPOINT), {
-    params: limit ? { limit } : undefined,
-    timeout: COLOR_SEPARATION_TIMEOUT_MS,
-    headers: getAuthHeaders(),
+  const response = await invokeAiTool<ColorSeparationResponse>({
+    toolName: "COLOR_SEPARATION",
+    inputUrl,
+    params: {
+      ...(numColors !== "" && numColors !== null && numColors !== undefined
+        ? { num_colors: Number(numColors) }
+        : {}),
+      merge_similar_colors: false,
+    },
   });
 
-  return toArray(response.data)
-    .map(normalizeColorSeparationJobSummary)
-    .filter((job) => job.job_id);
+  if (import.meta.env.DEV) {
+    console.log("Color separation response", response);
+  }
+
+  if (!response.success) {
+    throw new Error(response.message || "Color separation failed.");
+  }
+
+  const previewUrl = fixFastApiOutputPath(response.outputUrl);
+
+  const normalizedPayload =
+    response.outputData || {
+      status: response.success ? "success" : "error",
+      reconstructable: false,
+      original_image: inputUrl,
+      reconstructed_preview: previewUrl,
+      num_colors: 0,
+      detected_colors: [],
+      layers: previewUrl
+        ? [
+            {
+              layer_index: 1,
+              layer_name: "Reconstructed Preview",
+              layer_path: previewUrl,
+            },
+          ]
+        : [],
+    };
+
+  return normalizeColorSeparationResponse(normalizedPayload);
 }
 
-export async function getColorSeparationJob(jobId: string) {
-  const safeJobId = encodeURIComponent(jobId);
-  const response = await axios.get(
-    joinApiUrl(API_BASE_URL, `${COLOR_SEPARATION_JOBS_ENDPOINT}/${safeJobId}`),
-    {
-      timeout: COLOR_SEPARATION_TIMEOUT_MS,
-      headers: getAuthHeaders(),
-    }
-  );
+export async function getColorSeparationJobs(_limit?: number) {
+  return [];
+}
 
-  return normalizeColorSeparationResponse(response.data);
+export async function getColorSeparationJob(_jobId: string) {
+  throw new Error(
+    "Color separation job history is not available through the AI gateway yet."
+  );
 }
 
 export const getFullImageUrl = (path?: string | null) => {
-  if (!path || typeof path !== "string" || path === "null") {
-    return "";
+  if (!path || typeof path !== "string" || path === "null") return "";
+
+  const fixedPath = fixFastApiOutputPath(path);
+
+  if (/^https?:\/\//i.test(fixedPath)) {
+    try {
+      const url = new URL(fixedPath);
+
+      if (url.pathname.startsWith("/static/")) {
+        return `${FASTAPI_PUBLIC_URL}${url.pathname}${url.search}${url.hash}`;
+      }
+
+      return fixedPath;
+    } catch {
+      return fixedPath;
+    }
   }
 
-  if (/^https?:\/\//i.test(path)) {
-    return path;
+  if (fixedPath.startsWith("/static/")) {
+    return `${FASTAPI_PUBLIC_URL}${fixedPath}`;
   }
 
-  const normalizedPath = path.replace(/\\/g, "/");
-
-  if (normalizedPath.startsWith("/")) {
-    return joinApiUrl(API_BASE_URL, normalizedPath);
-  }
-
-  return joinApiUrl(API_BASE_URL, normalizedPath);
+  return normalizeAiOutputUrl(fixedPath);
 };
 
 export async function downloadAsset(path: string, filename: string) {

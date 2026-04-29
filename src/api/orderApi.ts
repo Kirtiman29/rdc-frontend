@@ -1,91 +1,83 @@
-// src/api/orderApi.ts
 import { orderApi } from './apiClient';
-import axios from 'axios';
-import type { OrderResponse } from '../types/product'; 
+import type { ApiDataEnvelope, OrderResponse } from '@/types/order';
 
 export interface OrderItemRequest {
-    designId: number;
-    quantity: number;
-    priceCents: number;
-    designTitle?: string;
+  designId: number;
+  quantity: number;
+  priceCents: number;
+  designTitle?: string;
 }
 
 export interface CreateOrderRequest {
-    userId: number;
-    customerName: string;
-    customerEmail: string;
-    customerPhone?: string;
-    
-    // New Billing Fields
-    organizationName?: string;
-    addressOne: string;
-    addressTwo?: string;
-    city: string;
-    pincode: string;
-    country?: string; // Default 'India' usually handled by backend
-    
-    billingState: string;
-    customerGstin: string | null;
-    totalPriceCents: number;
-    items: OrderItemRequest[];
+  userId: number;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  organizationName?: string;
+  addressOne: string;
+  addressTwo?: string;
+  city: string;
+  pincode: string;
+  country?: string;
+  billingState: string;
+  customerGstin: string | null;
+  totalPriceCents: number;
+  items: OrderItemRequest[];
 }
 
-/**
- * ✅ Creates a new order with full billing/GST details
- */
-export const createOrder = async (orderPayload: CreateOrderRequest): Promise<any> => {
-    const res = await orderApi.post('/', orderPayload);
+type OrderPayload = OrderResponse | ApiDataEnvelope<OrderResponse>;
+type OrderListPayload = OrderResponse[] | ApiDataEnvelope<OrderResponse[]>;
+type OrderDownloadPayload = { downloadUrl: string } | ApiDataEnvelope<{ downloadUrl: string }>;
 
-    console.log("🔥 CREATE ORDER RAW:", res);
+const unwrapApiData = <T>(payload: T | ApiDataEnvelope<T>): T => {
+  if (payload && typeof payload === 'object' && 'data' in payload) {
+    return payload.data;
+  }
 
-    return JSON.parse(JSON.stringify(res));
+  return payload as T;
+};
+
+const normalizeOrder = (order: OrderResponse): OrderResponse => ({
+  ...order,
+  items: Array.isArray(order.items) ? order.items : [],
+});
+
+export const createOrder = async (orderPayload: CreateOrderRequest): Promise<OrderResponse> => {
+  const response = await orderApi.post<OrderPayload, OrderPayload>('/', orderPayload);
+  return normalizeOrder(unwrapApiData(response));
 };
 
 export const getOrderDetails = async (orderId: string | number): Promise<OrderResponse> => {
-    return await orderApi.get(`/${orderId}`);
+  const response = await orderApi.get<OrderPayload, OrderPayload>(`/${orderId}`);
+  return normalizeOrder(unwrapApiData(response));
 };
 
 export const getMyOrders = async (): Promise<OrderResponse[]> => {
-    return await orderApi.get('');
+  const response = await orderApi.get<OrderListPayload, OrderListPayload>('/');
+  return unwrapApiData(response).map(normalizeOrder);
 };
 
 export const getOrderDownloadLink = async (orderId: number): Promise<{ downloadUrl: string }> => {
-    return await orderApi.get(`/${orderId}/download`);
+  const response = await orderApi.get<OrderDownloadPayload, OrderDownloadPayload>(`/${orderId}/download`);
+  return unwrapApiData(response);
 };
 
-/**
- * ✅ Logic to fetch and download the Generated GST Invoice PDF
- */
 export const downloadInvoicePdf = async (orderId: number) => {
-    try {
-        const token = localStorage.getItem('accessToken');
-        // Use the baseURL from the instance to stay consistent with production/dev environments
-        const baseUrl = orderApi.defaults.baseURL;
+  const file = await orderApi.get<Blob, Blob>(`/${orderId}/invoice`, {
+    responseType: 'blob',
+    headers: {
+      Accept: 'application/pdf',
+    },
+  });
 
-        const response = await axios.get(`${baseUrl}/${orderId}/invoice`, {
-            responseType: 'blob',
-            headers: { 
-                Authorization: `Bearer ${token}`,
-                'Accept': 'application/pdf'
-            }
-        });
-        
-        const file = new Blob([response.data], { type: 'application/pdf' });
-        const fileURL = window.URL.createObjectURL(file);
-        
-        const fileLink = document.createElement('a');
-        fileLink.href = fileURL;
-        fileLink.setAttribute('download', `Invoice-RDC-ORD${orderId}.pdf`);
-        document.body.appendChild(fileLink);
-        fileLink.click();
-        
-        // Cleanup
-        fileLink.remove();
-        window.URL.revokeObjectURL(fileURL);
-    } catch (error) {
-        console.error('❌ Download failed:', error);
-        alert('Invoice generation failed or not yet available.');
-    }
+  const fileUrl = window.URL.createObjectURL(file);
+  const fileLink = document.createElement('a');
+  fileLink.href = fileUrl;
+  fileLink.setAttribute('download', `Invoice-RDC-ORD${orderId}.pdf`);
+  document.body.appendChild(fileLink);
+  fileLink.click();
+  fileLink.remove();
+  window.URL.revokeObjectURL(fileUrl);
 };
 
 export default orderApi;

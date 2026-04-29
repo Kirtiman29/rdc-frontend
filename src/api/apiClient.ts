@@ -1,5 +1,6 @@
 // src/api/apiClient.ts
 import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse } from "axios";
+import { createApiUrl, serviceApiUrls, serviceOrigins } from "./serviceConfig";
 
 /* =========================================
    INDIAN STATES
@@ -44,43 +45,6 @@ export const clearTokens = () => {
 /* =========================================
    SERVICE URLS
 ========================================= */
-const BASE_DOMAIN = import.meta.env.VITE_BASE_URL || "https://ruchitadesigncompany.in";
-
-const AUTH_URL =
-  import.meta.env.VITE_AUTH_SERVICE_URL || BASE_DOMAIN;
-
-const AUTH_CONTEXT_URL = `${AUTH_URL.replace(/\/$/, "")}/api/auth`;
-
-const ASSET_URL =
-  import.meta.env.VITE_ASSET_SERVICE_URL || BASE_DOMAIN;
-
-const CART_URL =
-  import.meta.env.VITE_CART_SERVICE_URL || BASE_DOMAIN;
-
-const ORDER_URL =
-  import.meta.env.VITE_ORDER_SERVICE_URL || BASE_DOMAIN;
-
-const WISHLIST_URL =
-  import.meta.env.VITE_WISHLIST_SERVICE_URL || BASE_DOMAIN;
-
-const PAYMENT_URL =
-  import.meta.env.VITE_PAYMENT_SERVICE_URL || BASE_DOMAIN;
-
-const SUBSCRIPTION_URL =
-  import.meta.env.VITE_SUBSCRIPTION_SERVICE_URL || BASE_DOMAIN;
-
-const ADMIN_URL =
-  import.meta.env.VITE_ADMIN_SERVICE_URL || BASE_DOMAIN;
-
-/* =========================================
-   URL BUILDER
-========================================= */
-const createUrl = (baseUrl: string, path = "") => {
-  const cleanBase = baseUrl.replace(/\/$/, "");
-  const cleanPath = path ? (path.startsWith("/") ? path : `/${path}`) : "/";
-  return `${cleanBase}/api${cleanPath}`;
-};
-
 /* =========================================
    REFRESH TOKEN STATE
 ========================================= */
@@ -170,7 +134,7 @@ export const applyIndustrialInterceptors = (instance: AxiosInstance) => {
           }
 
           /* 🔑 IMPORTANT: use plain axios (no interceptor) */
-          const refreshResponse = await axios.post(`${AUTH_CONTEXT_URL}/refresh`, { refreshToken });
+          const refreshResponse = await axios.post(serviceApiUrls.authRefresh, { refreshToken });
 
           const data = refreshResponse.data?.data || refreshResponse.data;
 
@@ -220,36 +184,36 @@ export const applyIndustrialInterceptors = (instance: AxiosInstance) => {
 
 /* PUBLIC API (NO TOKEN) */
 export const publicApi = axios.create({
-  baseURL: createUrl(ADMIN_URL)
+  baseURL: serviceApiUrls.admin
 });
 
 /* AUTH REQUIRED APIS */
 export const userApi = axios.create({
-  baseURL: createUrl(ADMIN_URL)
+  baseURL: serviceApiUrls.admin
 });
 
 export const cartApi = axios.create({
-  baseURL: createUrl(CART_URL, "/cart")
+  baseURL: serviceApiUrls.cart
 });
 
 export const orderApi = axios.create({
-  baseURL: createUrl(ORDER_URL, "/orders")
+  baseURL: serviceApiUrls.order
 });
 
 export const wishlistApi = axios.create({
-  baseURL: createUrl(WISHLIST_URL, "/wishlist")
+  baseURL: serviceApiUrls.wishlist
 });
 
 export const paymentApi = axios.create({
-  baseURL: createUrl(PAYMENT_URL, "/payments")
+  baseURL: serviceApiUrls.payment
 });
 
 export const publicSubscriptionApi = axios.create({
-  baseURL: createUrl(SUBSCRIPTION_URL, "/public/subscriptions")
+  baseURL: serviceApiUrls.publicSubscription
 });
 
 export const subscriptionApi = axios.create({
-  baseURL: createUrl(SUBSCRIPTION_URL, "/subscriptions")
+  baseURL: serviceApiUrls.subscription
 });
 
 /* APPLY INTERCEPTORS ONLY TO SECURE APIS */
@@ -265,18 +229,18 @@ export const getAssetUrl = (urlOrUuid?: string | null) => {
     return "https://placehold.co/600x800?text=Design+Pending";
   }
 
-  const baseDownload = createUrl(ASSET_URL, "/assets/download/");
+  const baseDownload = createApiUrl(serviceOrigins.asset, "assets/download");
 
   if (urlOrUuid.includes("http")) {
 
     const parts = urlOrUuid.split("/");
     const uuid = parts.filter(Boolean).pop();
 
-    return `${baseDownload}${uuid}`;
+    return `${baseDownload}/${uuid}`;
 
   }
 
-  return `${baseDownload}${urlOrUuid}`;
+  return `${baseDownload}/${urlOrUuid}`;
 };
 
 /* DEFAULT EXPORT */

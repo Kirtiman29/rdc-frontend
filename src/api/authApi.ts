@@ -1,9 +1,6 @@
 import axios from 'axios';
 import { applyIndustrialInterceptors, clearTokens } from './apiClient';
-
-const AUTH_SERVICE_URL = (import.meta.env.VITE_AUTH_SERVICE_URL || import.meta.env.VITE_BASE_URL || 'https://ruchitadesigncompany.in').replace(/\/$/, '');
-const AUTH_BASE_URL = `${AUTH_SERVICE_URL}/api/auth`.replace(/([^:]\/)\/+/g, '$1');
-const USER_BASE_URL = `${AUTH_SERVICE_URL}/api/users`.replace(/([^:]\/)\/+/g, '$1');
+import { serviceApiUrls } from './serviceConfig';
 
 export interface UserSubscription {
   planName: string;
@@ -44,15 +41,22 @@ export interface TwoFactorSetupResponse {
 export interface AuthTokenResponse {
   accessToken: string;
   refreshToken: string;
+  tokenType?: string;
+  expiresIn?: number;
+}
+
+export interface AuthMeResponse {
+  name: string;
+  email: string;
 }
 
 export const authApi = axios.create({
-  baseURL: AUTH_BASE_URL,
+  baseURL: serviceApiUrls.auth,
   headers: { 'Content-Type': 'application/json' },
 });
 
 export const profileApi = axios.create({
-  baseURL: USER_BASE_URL,
+  baseURL: serviceApiUrls.userProfile,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -81,6 +85,10 @@ export const verifyUserOtp = async (email: string, otp: string): Promise<AuthTok
 
 export const loginWithGoogle = async (idToken: string): Promise<AuthTokenResponse> => {
   return await authApi.post<AuthTokenResponse, AuthTokenResponse>('/google', { idToken });
+};
+
+export const getCurrentUser = async (): Promise<AuthMeResponse> => {
+  return await authApi.get<AuthMeResponse, AuthMeResponse>('/me');
 };
 
 export const getProfile = async (): Promise<UserProfile> => {

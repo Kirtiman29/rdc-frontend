@@ -3,89 +3,87 @@ import { ArrowRight, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const Newsletter = () => {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
     setStatus('loading');
-    // Simulate API call
     setTimeout(() => setStatus('success'), 1500);
   };
 
   return (
-    <section className="py-32 bg-[#F8F7F4] border-y border-black/5">
-      <div className="container mx-auto px-6">
-        <div className="max-w-xl mx-auto text-center">
-          
-          {/* HEADER SECTION */}
-          <span className="text-[10px] font-black uppercase tracking-[0.5em] text-[#1A1A1A]/40 block mb-6">
-            Stay Connected
-          </span>
-          <h2 className="font-serif text-4xl md:text-5xl text-[#1A1A1A] mb-6">
-            Stay Inspired
-          </h2>
-          
-          <div className="w-12 h-[1px] bg-[#1A1A1A]/20 mx-auto mb-8" />
-          
-          <p className="text-neutral-500 text-sm md:text-base font-light leading-relaxed mb-12 max-w-sm mx-auto italic">
-            Receive curated updates on new textile collections, seasonal trends, and exclusive studio releases.
+    <div className="rounded-[24px] border border-white/50 bg-[#F8F6F1] px-6 py-8 text-[#1A1A1A] shadow-[0_18px_45px_rgba(0,0,0,0.08)] md:px-8 md:py-9 lg:px-10">
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(520px,0.95fr)] lg:items-center lg:gap-12">
+        <div className="max-w-2xl">
+          <p className="text-[10px] font-bold uppercase tracking-[0.32em] text-[#8A8177]">
+            Newsletter
           </p>
 
-          {/* INVITATION FORM */}
-          <form 
-            onSubmit={handleSubmit}
-            className="relative max-w-md mx-auto"
+          <h3 className="mt-4 max-w-lg font-serif text-3xl leading-[1.08] text-[#1A1A1A] md:text-4xl lg:text-[3rem]">
+            Get news, trends and updates in your inbox
+          </h3>
+        </div>
+
+        <form onSubmit={handleSubmit} className="relative w-full">
+          <div
+            className={cn(
+              'transition-all duration-500',
+              status === 'success'
+                ? 'pointer-events-none translate-y-3 opacity-0'
+                : 'translate-y-0 opacity-100'
+            )}
           >
-            <div className={cn(
-              "flex items-center transition-all duration-700 border-b border-[#1A1A1A]/20 pb-2 group",
-              status === 'success' ? "opacity-0 translate-y-4 pointer-events-none" : "opacity-100"
-            )}>
-              <input 
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Your email address"
-                className="flex-1 bg-transparent border-none outline-none text-sm py-2 placeholder:text-neutral-300 placeholder:italic font-light"
-                required
-              />
-              
-              <button 
+            <div className="flex flex-col gap-5 md:flex-row md:items-end">
+              <label className="block flex-1">
+                <span className="mb-4 block text-sm font-semibold text-[#2A2623]">
+                  Your email address
+                </span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  className="h-12 w-full border-0 border-b border-[#1A1A1A]/16 bg-transparent px-0 text-base text-[#1A1A1A] outline-none transition-colors placeholder:text-[#B6AEA4] focus:border-[#1A1A1A]/45"
+                  required
+                />
+              </label>
+
+              <button
                 type="submit"
                 disabled={status === 'loading'}
-                className="group/btn flex items-center gap-3 text-[10px] font-bold uppercase tracking-[0.3em] text-[#1A1A1A] pl-4 hover:opacity-60 transition-all"
+                className="group inline-flex h-14 items-center justify-center gap-3 rounded-[2px] bg-[#373332] px-8 text-sm font-bold text-white transition-colors hover:bg-[#1A1A1A] disabled:cursor-not-allowed disabled:opacity-70 md:min-w-[160px]"
               >
-                {status === 'loading' ? 'Sending' : 'Join'}
-                <ArrowRight className={cn(
-                  "w-4 h-4 transition-transform duration-500",
-                  status !== 'loading' && "group-hover:translate-x-2"
-                )} />
+                {status === 'loading' ? 'Submitting' : 'Subscribe'}
+                <ArrowRight
+                  className={cn(
+                    'h-4 w-4 transition-transform duration-300',
+                    status !== 'loading' && 'group-hover:translate-x-1'
+                  )}
+                />
               </button>
             </div>
+          </div>
 
-            {/* SUCCESS MESSAGE */}
-            <div className={cn(
-              "absolute inset-0 flex items-center justify-center transition-all duration-700",
-              status === 'success' ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
-            )}>
-              <div className="flex items-center gap-3 text-[#1A1A1A]">
-                <div className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center">
-                  <Check className="w-4 h-4" />
-                </div>
-                <span className="text-xs font-bold uppercase tracking-widest">You are on the list</span>
+          <div
+            className={cn(
+              'absolute inset-0 flex items-center justify-center transition-all duration-500 md:justify-start',
+              status === 'success'
+                ? 'translate-y-0 opacity-100'
+                : 'pointer-events-none -translate-y-3 opacity-0'
+            )}
+          >
+            <div className="flex items-center gap-3 text-[#1A1A1A]">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#1A1A1A]/10 bg-white/80">
+                <Check className="h-4 w-4" />
               </div>
+              <span className="text-sm font-semibold">You are subscribed.</span>
             </div>
-          </form>
-
-          {/* TRUST FOOTNOTE */}
-          <p className="text-[9px] font-medium uppercase tracking-widest text-neutral-400 mt-12 opacity-60">
-            No spam. Only curated artistry.
-          </p>
-
-        </div>
+          </div>
+        </form>
       </div>
-    </section>
+    </div>
   );
 };
 

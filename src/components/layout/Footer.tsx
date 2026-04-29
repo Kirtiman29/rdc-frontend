@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import Newsletter from "@/components/home/Newsletter";
 import {
   Facebook,
   Instagram,
@@ -19,7 +20,11 @@ const PinterestIcon = ({ className }: { className?: string }) => (
 export default function Footer() {
   return (
     <footer className="bg-[#2A2623] text-white">
-      <div className="container mx-auto px-4 md:px-8 py-16">
+      <div className="container mx-auto px-4 pt-8 md:px-8 md:pt-10">
+        <Newsletter />
+      </div>
+
+      <div className="container mx-auto px-4 pb-16 pt-12 md:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">

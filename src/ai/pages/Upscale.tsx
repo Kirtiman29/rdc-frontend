@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { upscaleImage, getAIImageUrl } from "@/api/aiApi";
+import { upscaleImage, getAIImageUrl, type UpscaleMode } from "@/api/aiApi";
 import JSZip from "jszip";
 import {
   Maximize,
@@ -13,6 +13,13 @@ import {
   Download,
   X,
 } from "lucide-react";
+import AiCreditCost from "@/ai/components/AiCreditCost";
+
+const upscaleCreditMap = {
+  normal: 5,
+  textile: 10,
+  double: 15,
+} as const;
 
 export default function Upscale() {
   const [file, setFile] = useState<File | null>(null);
@@ -45,9 +52,15 @@ export default function Upscale() {
     }
   };
   const [sliderPosition, setSliderPosition] = useState(50);
-  const [upscaleType, setUpscaleType] = useState("textile");
+  const [upscaleType, setUpscaleType] = useState<UpscaleMode>("textile");
   const [showPreview, setShowPreview] = useState(false); // Modal state
   const [isDragging, setIsDragging] = useState(false);
+
+  const upscaleOptions: Array<{ id: UpscaleMode; label: string; desc: string }> = [
+    { id: "normal", label: "Standard Upscale", desc: "General purpose enhancement" },
+    { id: "textile", label: "Textile Fiber AI", desc: "Preserves thread detail & weave texture" },
+    { id: "double", label: "Double Scale Ultra", desc: "Maximum smoothness for prints" },
+  ];
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!resultUrl) return;
@@ -80,7 +93,7 @@ export default function Upscale() {
     if (!selectedFiles) return;
 
     if (mode === "batch") {
-      let extractedFiles: File[] = [];
+      const extractedFiles: File[] = [];
 
       for (let i = 0; i < selectedFiles.length; i++) {
         const file = selectedFiles[i];
@@ -131,7 +144,7 @@ export default function Upscale() {
       setIsProcessing(true);
 
       if (mode === "single") {
-        const res = await upscaleImage(file!, upscaleType as any);
+        const res = await upscaleImage(file!, upscaleType);
         setRemainingCredits(res.remainingCredits ?? null);
         if (res && res.image) {
           setResultUrl(res.image);
@@ -143,7 +156,7 @@ export default function Upscale() {
 
         for (let i = 0; i < files.length; i++) {
           const sourceFile = files[i];
-          const response = await upscaleImage(sourceFile, upscaleType as any);
+          const response = await upscaleImage(sourceFile, upscaleType);
           setRemainingCredits(response.remainingCredits ?? null);
 
           if (!response.image) {
@@ -206,9 +219,12 @@ export default function Upscale() {
               Ultra-HD <span className="text-gray-600 font-light">Upscaler</span>
             </h1>
           </div>
-          <p className="text-gray-500 text-xs uppercase tracking-widest font-bold">
-            Textile Fidelity: <span className="text-white">Enhanced</span>
-          </p>
+          <div className="flex flex-col items-start gap-3 md:items-end">
+            <p className="text-gray-500 text-xs uppercase tracking-widest font-bold">
+              Textile Fidelity: <span className="text-white">Enhanced</span>
+            </p>
+            <AiCreditCost credits={upscaleCreditMap[upscaleType]} label="This Model" />
+          </div>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-10">
@@ -368,7 +384,10 @@ export default function Upscale() {
                 {["single", "batch"].map((m) => (
                   <button
                     key={m}
-                    onClick={() => { setMode(m as any); resetUpload(); }}
+                    onClick={() => {
+                      setMode(m as "single" | "batch");
+                      resetUpload();
+                    }}
                     className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${mode === m
                       ? "bg-[#ff1a1a] text-white shadow-[0_0_20px_rgba(255,26,26,0.2)]"
                       : "bg-white/5 text-gray-400 hover:bg-white/10"
@@ -383,11 +402,7 @@ export default function Upscale() {
             <div className="p-6 rounded-[24px] bg-white/[0.03] border border-white/10">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 block">Optimization Model</label>
               <div className="flex flex-col gap-3">
-                {[
-                  { id: 'normal', label: 'Standard Upscale', desc: 'General purpose enhancement' },
-                  { id: 'textile', label: 'Textile Fiber AI', desc: 'Preserves thread detail & weave texture' },
-                  { id: 'double', label: 'Double Scale Ultra', desc: 'Maximum smoothness for prints' }
-                ].map((type) => (
+                {upscaleOptions.map((type) => (
                   <button
                     key={type.id}
                     onClick={() => setUpscaleType(type.id)}
@@ -402,7 +417,9 @@ export default function Upscale() {
                       </div>
                       <div>
                         <p className="text-xs font-bold uppercase">{type.label}</p>
-                        <p className="text-[10px] text-gray-500">{type.desc}</p>
+                        <p className="text-[10px] text-gray-500">
+                          {type.desc} · {upscaleCreditMap[type.id]} credits
+                        </p>
                       </div>
                     </div>
                     {upscaleType === type.id && <CheckCircle2 className="w-4 h-4 text-[#ff1a1a]" />}
