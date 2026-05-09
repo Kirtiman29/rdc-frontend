@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { getCategories } from '@/api/designApi';
 import { Loader2, ArrowRight } from 'lucide-react';
 import type { Category } from '@/types/product';
+import { getCategoryPath } from '@/utils/routes';
 
 const ShopByCategory = () => {
   const [dbCategories, setDbCategories] = useState<Category[]>([]);
@@ -109,7 +110,7 @@ const ShopByCategory = () => {
             return (
               <Link 
                 key={category.id} 
-                to={`/gallery?category=${category.id}`} 
+                to={getCategoryPath(category)} 
                 className={`group relative overflow-hidden bg-neutral-100 block select-none ${
                   isHero ? 'md:col-span-2 md:row-span-2 h-[420px] md:h-auto' : 'md:col-span-1 md:row-span-1 h-[280px] md:h-auto'
                 }`}

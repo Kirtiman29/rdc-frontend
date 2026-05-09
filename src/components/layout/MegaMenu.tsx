@@ -5,6 +5,7 @@ import { getAssetUrl } from '@/api/apiClient';
 import type { Design } from '@/types/product';
 import { Loader2, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getProductPath } from '@/utils/routes';
 
 interface MenuItem {
   label: string;
@@ -139,7 +140,7 @@ const MegaMenu = () => {
                     <Loader2 className="animate-spin text-slate-300 h-6 w-6" />
                   </div>
                 ) : previewProduct && (
-                  <Link to={`/product/${previewProduct.id}`} className="block">
+                  <Link to={getProductPath(previewProduct)} className="block">
                     <div className="relative aspect-[4/3] rounded-xl overflow-hidden">
                       {/* Artistic Overlay */}
                       <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-500 z-10" />

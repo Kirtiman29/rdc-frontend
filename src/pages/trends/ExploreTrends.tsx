@@ -16,6 +16,7 @@ import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
 import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
+import { getProductPath } from '@/utils/routes';
 import { formatPrice } from '@/utils/price';
 import trendingBanner from "@/assets/trending-banner.png";
 
@@ -110,7 +111,7 @@ const ExploreTrends = () => {
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {products.slice(0, 4).map((product) => (
-                <Link key={product.id} to={`/product/${product.id}`} className="group space-y-6">
+                <Link key={product.id} to={getProductPath(product)} className="group space-y-6">
                   <div className="aspect-[3/4] overflow-hidden bg-neutral-50 relative">
                      <img src={getAssetUrl(product.assetUuid)} className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-105" alt={product.title} />
                   </div>
@@ -176,7 +177,7 @@ const ExploreTrends = () => {
                     </div>
                     <p className="text-sm font-medium">{formatPrice(product.finalPriceCents)}</p>
                   </div>
-                  <Link to={`/product/${product.id}`} className="mt-8 flex items-center justify-center gap-3 py-4 border border-neutral-200 text-[10px] font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all">
+                  <Link to={getProductPath(product)} className="mt-8 flex items-center justify-center gap-3 py-4 border border-neutral-200 text-[10px] font-bold uppercase tracking-widest hover:bg-black hover:text-white transition-all">
                     View Details <ArrowUpRight size={14} />
                   </Link>
                 </div>

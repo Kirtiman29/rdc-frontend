@@ -1,16 +1,61 @@
 import { useState } from 'react';
-import { ArrowRight, Check } from 'lucide-react';
+import { AlertCircle, ArrowRight, Check, Loader2 } from 'lucide-react';
+
+import {
+  getNewsletterErrorMessage,
+  subscribeToNewsletter,
+} from '@/api/newsletterApi';
 import { cn } from '@/lib/utils';
+
+type NewsletterStatus = 'idle' | 'loading' | 'success' | 'error';
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const Newsletter = () => {
   const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
+  const [status, setStatus] = useState<NewsletterStatus>('idle');
+  const [message, setMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+
+    const normalizedEmail = email.trim();
+
+    if (!normalizedEmail) {
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(normalizedEmail)) {
+      setStatus('error');
+      setMessage('Please enter a valid email address.');
+      return;
+    }
+
     setStatus('loading');
-    setTimeout(() => setStatus('success'), 1500);
+    setMessage('');
+
+    try {
+      const response = await subscribeToNewsletter({
+        email: normalizedEmail,
+        source: 'footer',
+      });
+
+      setStatus('success');
+      setMessage(response.message || 'Subscribed successfully.');
+      setEmail('');
+    } catch (error) {
+      setStatus('error');
+      setMessage(getNewsletterErrorMessage(error));
+    }
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+
+    if (status !== 'idle') {
+      setStatus('idle');
+      setMessage('');
+    }
   };
 
   return (
@@ -26,61 +71,60 @@ const Newsletter = () => {
           </h3>
         </div>
 
-        <form onSubmit={handleSubmit} className="relative w-full">
-          <div
-            className={cn(
-              'transition-all duration-500',
-              status === 'success'
-                ? 'pointer-events-none translate-y-3 opacity-0'
-                : 'translate-y-0 opacity-100'
-            )}
-          >
-            <div className="flex flex-col gap-5 md:flex-row md:items-end">
-              <label className="block flex-1">
-                <span className="mb-4 block text-sm font-semibold text-[#2A2623]">
-                  Your email address
-                </span>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  className="h-12 w-full border-0 border-b border-[#1A1A1A]/16 bg-transparent px-0 text-base text-[#1A1A1A] outline-none transition-colors placeholder:text-[#B6AEA4] focus:border-[#1A1A1A]/45"
-                  required
-                />
-              </label>
+        <form onSubmit={handleSubmit} className="w-full">
+          <div className="flex flex-col gap-5 md:flex-row md:items-end">
+            <label className="block flex-1">
+              <span className="mb-4 block text-sm font-semibold text-[#2A2623]">
+                Your email address
+              </span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => handleEmailChange(e.target.value)}
+                placeholder="name@company.com"
+                className="h-12 w-full border-0 border-b border-[#1A1A1A]/16 bg-transparent px-0 text-base text-[#1A1A1A] outline-none transition-colors placeholder:text-[#B6AEA4] focus:border-[#1A1A1A]/45"
+                required
+              />
+            </label>
 
-              <button
-                type="submit"
-                disabled={status === 'loading'}
-                className="group inline-flex h-14 items-center justify-center gap-3 rounded-[2px] bg-[#373332] px-8 text-sm font-bold text-white transition-colors hover:bg-[#1A1A1A] disabled:cursor-not-allowed disabled:opacity-70 md:min-w-[160px]"
-              >
-                {status === 'loading' ? 'Submitting' : 'Subscribe'}
+            <button
+              type="submit"
+              disabled={status === 'loading'}
+              className="group inline-flex h-14 items-center justify-center gap-3 rounded-[2px] bg-[#373332] px-8 text-sm font-bold text-white transition-colors hover:bg-[#1A1A1A] disabled:cursor-not-allowed disabled:opacity-70 md:min-w-[160px]"
+            >
+              {status === 'loading' ? 'Submitting...' : 'Subscribe'}
+              {status === 'loading' ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
                 <ArrowRight
                   className={cn(
                     'h-4 w-4 transition-transform duration-300',
-                    status !== 'loading' && 'group-hover:translate-x-1'
+                    'group-hover:translate-x-1'
                   )}
                 />
-              </button>
-            </div>
+              )}
+            </button>
           </div>
 
-          <div
-            className={cn(
-              'absolute inset-0 flex items-center justify-center transition-all duration-500 md:justify-start',
-              status === 'success'
-                ? 'translate-y-0 opacity-100'
-                : 'pointer-events-none -translate-y-3 opacity-0'
-            )}
-          >
-            <div className="flex items-center gap-3 text-[#1A1A1A]">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#1A1A1A]/10 bg-white/80">
-                <Check className="h-4 w-4" />
+          {message && (
+            <div
+              className={cn(
+                'mt-5 flex items-start gap-3 rounded-sm border px-4 py-3 text-sm',
+                status === 'success'
+                  ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                  : 'border-red-200 bg-red-50 text-red-900'
+              )}
+            >
+              <div className="mt-0.5 shrink-0">
+                {status === 'success' ? (
+                  <Check className="h-4 w-4" />
+                ) : (
+                  <AlertCircle className="h-4 w-4" />
+                )}
               </div>
-              <span className="text-sm font-semibold">You are subscribed.</span>
+              <p className="font-medium">{message}</p>
             </div>
-          </div>
+          )}
         </form>
       </div>
     </div>

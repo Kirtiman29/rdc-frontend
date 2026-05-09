@@ -6,6 +6,7 @@ import { cartApi } from './apiClient';
 export interface CartItem {
   id: number;           // Primary Key in Cart DB
   designId: number;     // Design ID from Admin Service
+  slug?: string;
   assetUuid: string;    // Used for Port 8090 Media
   designTitle: string;  
   quantity: number;     

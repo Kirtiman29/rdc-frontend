@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 // Importing your actual layout components
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { getPublishedBlogs, type PublicBlog } from "@/api/blogApi";
 import { getAssetUrl } from "@/api/apiClient";
+import { getBlogPath } from "@/utils/routes";
 
 // Assets
 import pattern1 from "@/assets/sample-pattern-1.jpg";
@@ -180,11 +182,13 @@ export default function Blog() {
                 >
                   <div className="grid md:grid-cols-2 gap-10 items-start">
                     <div className="relative overflow-hidden rounded-2xl aspect-[4/3] bg-white border border-neutral-100 shadow-sm">
-                      <img 
-                        src={post.image} 
-                        alt={post.title}
-                        className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                      />
+                      <Link to={getBlogPath(post)} className="block h-full">
+                        <img 
+                          src={post.image} 
+                          alt={post.title}
+                          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                        />
+                      </Link>
                       <div className="absolute top-6 left-6">
                         <span className="bg-white/95 backdrop-blur px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-sm border border-neutral-100">
                           {post.category}
@@ -197,16 +201,18 @@ export default function Blog() {
                         <span className="flex items-center gap-2"><Calendar size={14} /> {post.date}</span>
                         <span className="flex items-center gap-2"><User size={14} /> {post.author}</span>
                       </div>
-                      <h2 className="font-serif text-3xl text-[#2A2623] leading-[1.1] group-hover:text-black transition-colors">
-                        {post.title}
-                      </h2>
+                      <Link to={getBlogPath(post)}>
+                        <h2 className="font-serif text-3xl text-[#2A2623] leading-[1.1] group-hover:text-black transition-colors">
+                          {post.title}
+                        </h2>
+                      </Link>
                       <p className="text-neutral-600 text-sm leading-relaxed line-clamp-3">
                         {post.excerpt}
                       </p>
                       <div className="pt-2">
-                        <button className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.2em] text-[#2A2623] group-hover:translate-x-2 transition-all">
+                        <Link to={getBlogPath(post)} className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.2em] text-[#2A2623] group-hover:translate-x-2 transition-all">
                           Read Full Story <ArrowRight size={16} className="text-[#ff1a1a]" />
-                        </button>
+                        </Link>
                       </div>
                     </div>
                   </div>

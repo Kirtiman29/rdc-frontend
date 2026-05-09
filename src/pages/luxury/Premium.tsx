@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Design, ProductFilter } from '@/types/product';
 import { formatPrice } from '@/utils/price';
 import { LuxuryFilterContent } from '@/components/products/LuxuryFilters';
+import { getEntityPath } from '@/utils/routes';
 
 const Premium = () => {
   const [luxuryProducts, setPremiumProducts] = useState<Design[]>([]);
@@ -109,7 +110,7 @@ const Premium = () => {
                   <div key={product.id} className="group flex flex-col">
                     {/* Professional Image Container */}
                     <div className="relative aspect-[3/4] bg-[#1a1a1a] overflow-hidden">
-                      <Link to={`/luxury/design/${product.id}`}>
+                      <Link to={getEntityPath('/luxury/design', product)}>
                         <img
                           src={getAssetUrl(product.assetUuid)}
                           alt={product.title}

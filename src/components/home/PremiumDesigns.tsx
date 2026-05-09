@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
 import { formatPrice } from '@/utils/price';
 import { cn } from '@/lib/utils';
+import { getProductPath } from '@/utils/routes';
 
 const PremiumDesigns = () => {
   const navigate = useNavigate();
@@ -123,7 +124,7 @@ const PremiumDesigns = () => {
               key={product.id}
               className="flex-none w-[320px] sm:w-[380px] md:w-[420px] snap-start group relative"
             >
-              <Link to={`/product/${product.id}`} className="block relative aspect-[4/5] overflow-hidden">
+              <Link to={getProductPath(product)} className="block relative aspect-[4/5] overflow-hidden">
                 {/* Visual Content - No Watermark */}
                 <img
                   src={getAssetUrl(product.media?.find(m => m.role === "COVER")?.url || product.assetUuid)}

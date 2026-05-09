@@ -96,6 +96,21 @@ export const getFeaturedBlogs = async (): Promise<PublicBlog[]> => {
 };
 
 export const getPublishedBlogBySlug = async (slug: string): Promise<PublicBlog> => {
-  const response = await publicApi.get(`/public/blogs/${slug}`);
+  const response = await publicApi.get(`/public/blogs/slug/${slug}`);
   return mapBlog(unwrapResponse(response) as BlogApiResponse);
+};
+
+export const getPublishedBlogBySlugOrId = async (slugOrId: string): Promise<PublicBlog> => {
+  try {
+    return await getPublishedBlogBySlug(slugOrId);
+  } catch (error) {
+    const blogs = await getPublishedBlogs();
+    const matchedBlog = blogs.find((blog) => blog.slug === slugOrId || String(blog.id) === slugOrId);
+
+    if (matchedBlog) {
+      return matchedBlog;
+    }
+
+    throw error;
+  }
 };

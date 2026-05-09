@@ -8,6 +8,7 @@ import { getAssetUrl } from '@/api/apiClient';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
 import type { Design } from '@/types/product';
+import { getEntityPath } from '@/utils/routes';
 // ✅ Import the price utility
 import { formatPrice } from '@/utils/price';
 
@@ -29,6 +30,7 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
   const categoryLabel = product.category?.name || product.segment?.replace('_', ' ') || 'Textile';
   const isSubscriptionDesign = Boolean(product.subscriptionOnly);
   const cardPrice = product.finalPriceCents ?? product.basePriceCents;
+  const productPath = getEntityPath(redirectPath || '/products', product);
 
   useEffect(() => {
     let isMounted = true;
@@ -81,7 +83,7 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
 
   return (
     <div className="group animate-fade-in relative font-sans" onContextMenu={handleContextMenu}>
-      <Link to={`${redirectPath || "/product"}/${product.id}`}>
+      <Link to={productPath}>
         <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-sm bg-secondary select-none shadow-sm">
           
           {/* RDC WATERMARK OVERLAY */}
@@ -170,7 +172,7 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
         <span className="mb-1 block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
           {categoryLabel}
         </span>
-        <Link to={`${redirectPath || "/product"}/${product.id}`}>
+        <Link to={productPath}>
           <h3 className="mb-1 font-serif text-lg font-medium transition-colors hover:text-muted-foreground line-clamp-1 text-[#2A2623]">
             {product.title}
           </h3>

@@ -16,6 +16,7 @@ import { getAssetUrl } from '@/api/apiClient';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
 import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
+import { getProductPath } from '@/utils/routes';
 import { formatPrice } from '@/utils/price';
 import specialOfferBanner from "@/assets/special-offer-banner.png";
 
@@ -166,7 +167,7 @@ const ExploreOffers = () => {
                       </div>
                     </div>
                   </div>
-                  <Link to={`/product/${product.id}`} className="mt-6 flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Link to={getProductPath(product)} className="mt-6 flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
                     Acquire for Production <ArrowUpRight size={12} />
                   </Link>
                 </div>
@@ -211,7 +212,7 @@ const ExploreOffers = () => {
 const OfferCard = ({ product, toggleWishlist, wishlistState }: { product: Design, toggleWishlist: any, wishlistState: any }) => (
   <div className="group block">
     <div className="aspect-[3/4] overflow-hidden bg-white mb-4 relative">
-      <Link to={`/product/${product.id}`}>
+      <Link to={getProductPath(product)}>
         <img 
           src={getAssetUrl(product.assetUuid)} 
           className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover:scale-110" 
@@ -233,7 +234,7 @@ const OfferCard = ({ product, toggleWishlist, wishlistState }: { product: Design
         <Heart size={12} className={wishlistState[product.id] ? "fill-current" : ""} />
       </button>
 
-      <Link to={`/product/${product.id}`} className="absolute inset-0 bg-[#2A2623]/0 group-hover:bg-[#2A2623]/5 transition-colors duration-700" />
+      <Link to={getProductPath(product)} className="absolute inset-0 bg-[#2A2623]/0 group-hover:bg-[#2A2623]/5 transition-colors duration-700" />
     </div>
     
     <div className="flex justify-between items-start">
@@ -244,7 +245,7 @@ const OfferCard = ({ product, toggleWishlist, wishlistState }: { product: Design
           <span className="text-[9px] text-neutral-300 line-through">{formatPrice(product.basePriceCents)}</span>
         </div>
       </div>
-      <Link to={`/product/${product.id}`} className="p-1 hover:text-[#D22C2C] transition-colors">
+      <Link to={getProductPath(product)} className="p-1 hover:text-[#D22C2C] transition-colors">
         <Eye size={14} strokeWidth={1.5} />
       </Link>
     </div>

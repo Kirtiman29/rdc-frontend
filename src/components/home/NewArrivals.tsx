@@ -4,6 +4,7 @@ import { Loader2, ArrowRight } from 'lucide-react';
 import { getNewArrivals } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import type { Design } from '@/types/product';
+import { getProductPath } from '@/utils/routes';
 import { formatPrice } from '@/utils/price';
 
 const NewArrivals = () => {
@@ -94,7 +95,7 @@ const NewArrivals = () => {
           {products.map((product) => (
             <div key={product.id} className="group flex flex-col">
               <Link
-                to={`/product/${product.id}`}
+                to={getProductPath(product)}
                 className="relative aspect-[3/4] overflow-hidden bg-neutral-200 mb-6 select-none"
               >
                 {/* NEW TAG UPGRADE */}
@@ -127,7 +128,7 @@ const NewArrivals = () => {
 
               {/* CLEAN CARD DETAILS */}
               <div className="space-y-1">
-                <Link to={`/product/${product.id}`}>
+                <Link to={getProductPath(product)}>
                   <h3 className="font-serif text-lg text-[#1A1A1A] group-hover:opacity-60 transition-opacity line-clamp-1">
                     {product.title}
                   </h3>

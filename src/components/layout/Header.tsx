@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Search, Heart, ShoppingBag,
-  Menu, Sparkles, X
+  Menu, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MegaMenu from './MegaMenu';
@@ -94,18 +94,18 @@ const Header = () => {
         "sticky top-0 z-50 w-full bg-white/80 transition-all duration-500 ease-in-out border-b border-transparent",
         scrolled ? "py-2 backdrop-blur-xl border-black/5 shadow-[0_4px_30px_rgba(0,0,0,0.03)]" : "py-6 backdrop-blur-none"
       )}>
-        <div className="w-full px-16 px-6 lg:px-12">
-          <div className="flex items-center justify-between gap-8">
+        <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-12">
+          <div className="flex items-center justify-between gap-4 lg:gap-8">
 
             {/* LEFT: Logo Section */}
-            <div className="flex items-center gap-4 lg:flex-1">
+            <div className="flex items-center gap-3 lg:flex-1">
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
                 className="lg:hidden p-2 -ml-2 text-[#2A2623] transition-transform active:scale-90"
               >
                 <Menu className="h-5 w-5 stroke-[1.5px]" />
               </button>
-              <Link to="/" className="flex items-center gap-3 group select-none">
+              <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group select-none">
                 <img
                   src="/rdc-logo.png"
                   alt="RDC"
@@ -116,13 +116,13 @@ const Header = () => {
                 />
                 <span className={cn(
                   "font-serif tracking-[0.1em] font-medium text-[#2A2623] transition-all duration-500",
-                  scrolled ? "text-lg" : "text-2xl"
+                  scrolled ? "text-lg" : "text-xl sm:text-2xl"
                 )}>RDC</span>
               </Link>
             </div>
 
             {/* CENTER: Navigation Section */}
-            <nav className="hidden lg:flex items-center gap-10" ref={dropdownRef}>
+            <nav className="hidden lg:flex items-center gap-6 xl:gap-10" ref={dropdownRef}>
               {navItems.map((item) => (
                 <div
                   key={item.label}
@@ -198,15 +198,7 @@ const Header = () => {
             </nav>
 
             {/* RIGHT: Icons Section */}
-            <div className="flex items-center justify-end gap-2 sm:gap-5 lg:flex-1">
-              <Link
-                to="/subscription"
-                className="hidden md:inline-flex items-center gap-2 rounded-full border border-[#2A2623]/10 bg-white px-4 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#2A2623] transition-all hover:-translate-y-0.5 hover:border-[#2A2623]/20 hover:bg-[#f8f4ee]"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Plans
-              </Link>
-
+            <div className="flex items-center justify-end gap-1 sm:gap-3 lg:gap-4 lg:flex-1">
               <button
                 onClick={() => setShowSearch(true)}
                 className="p-2 text-[#2A2623]/70 hover:text-[#2A2623] transition-all hover:scale-110 active:scale-95"
@@ -274,28 +266,28 @@ const Header = () => {
       )} onClick={() => setIsMobileMenuOpen(false)} />
 
       <div className={cn(
-        "fixed top-0 left-0 bottom-0 w-[80%] max-w-[360px] bg-white z-[101] shadow-2xl transition-transform duration-500 ease-expo lg:hidden flex flex-col",
+        "fixed top-0 left-0 bottom-0 w-[86%] max-w-[340px] sm:w-[80%] sm:max-w-[360px] bg-white z-[101] shadow-2xl transition-transform duration-500 ease-expo lg:hidden flex flex-col",
         isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="p-8 border-b border-[#2A2623]/5 flex justify-between items-center">
+        <div className="px-5 py-6 sm:p-8 border-b border-[#2A2623]/5 flex justify-between items-center">
           <span className="font-serif text-2xl tracking-widest text-[#2A2623]">RDC</span>
           <button onClick={() => setIsMobileMenuOpen(false)}><X className="h-6 w-6 stroke-[1.5px]" /></button>
         </div>
 
-        <nav className="flex flex-col p-8 gap-6">
+        <nav className="flex-1 overflow-y-auto overscroll-contain px-5 py-6 sm:px-8 sm:py-8">
           {navItems.map((item, index) => (
             <Link
               key={item.label}
               to={item.href}
               onClick={() => setIsMobileMenuOpen(false)}
-              className="text-xl font-light tracking-tight text-[#2A2623] border-b border-[#2A2623]/5 pb-4 last:border-0"
+              className="block border-b border-[#2A2623]/5 py-4 text-lg font-light tracking-tight text-[#2A2623] sm:text-xl"
               style={{ transitionDelay: `${index * 50}ms` }}
             >
               {item.label}
             </Link>
           ))}
 
-          <div className="border-t border-[#2A2623]/5 pt-6">
+          <div className="border-t border-[#2A2623]/5 pt-6 pb-8">
             {isAuthenticated ? (
               <div className="flex flex-col gap-4">
                 <div>

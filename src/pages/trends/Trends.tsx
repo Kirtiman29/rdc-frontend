@@ -18,6 +18,7 @@ import { addToCart } from '@/api/cartApi';
 import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
 import { useToast } from '@/hooks/use-toast';
 import type { Design, ProductFilter } from '@/types/product';
+import { getProductPath } from '@/utils/routes';
 import { formatPrice } from '@/utils/price';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -200,7 +201,7 @@ const TrendsShop = () => {
                         <div key={product.id} className="group relative bg-white border border-neutral-100 hover:border-[#2A2623]/20 transition-all duration-500 shadow-sm hover:shadow-xl">
                           {/* Design Image Container */}
                           <div className="relative aspect-[3/4] overflow-hidden bg-neutral-50">
-                            <Link to={`/product/${product.id}`}>
+                            <Link to={getProductPath(product)}>
                                <div className="absolute inset-0 z-10 pointer-events-none opacity-[0.15]"
                                     style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='16' font-weight='900' fill='none' stroke='white' stroke-width='0.5' text-anchor='middle' transform='rotate(-35 60 60)'%3ERDC%3C/text%3E%3C/svg%3E")` }} />
                               <img
@@ -220,7 +221,7 @@ const TrendsShop = () => {
                               >
                                 <Heart size={16} className={wishlistState[product.id] ? 'fill-current' : ''} />
                               </button>
-                              <Link to={`/product/${product.id}`} className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-[#2A2623] hover:bg-white shadow-md">
+                              <Link to={getProductPath(product)} className="w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-[#2A2623] hover:bg-white shadow-md">
                                 <Eye size={16} />
                               </Link>
                             </div>

@@ -376,17 +376,18 @@ export interface EnhanceResponse {
   remainingCredits?: number | null;
 }
 
-export type UpscaleMode = "normal" | "double" | "textile";
+export type UpscaleMode = "smart" | "double" | "textile";
 
 const mapUpscaleModeToModel = (mode: UpscaleMode) => {
   switch (mode) {
+    case "smart":
+      return "smart";
     case "textile":
       return "textile";
     case "double":
-      return "double_upscale";
-    case "normal":
+      return "double";
     default:
-      return "standard";
+      return "smart";
   }
 };
 
@@ -564,14 +565,23 @@ export const generateDesign = async (formData: FormData): Promise<GenerateRespon
 export const upscaleImage = async (
   file: File,
   mode: UpscaleMode,
-  _userId?: number
+  options?: {
+    scale?: number;
+    sizeMode?: "increase_pixels" | "same_dimensions";
+    prompt?: string;
+    batch?: boolean;
+  }
 ): Promise<UpscaleResponse> => {
   const inputUrl = await uploadAiInputAsset(file);
   const response = await invokeAiTool({
     toolName: "UPSCALE",
     inputUrl,
     params: {
-      model: mapUpscaleModeToModel(mode),
+      mode: mapUpscaleModeToModel(mode),
+      scale: options?.scale || (mode === "double" ? 8 : 4),
+      size_mode: options?.sizeMode || "increase_pixels",
+      prompt: options?.prompt || "",
+      ...(options?.batch ? { batch: true } : {}),
     },
   });
 

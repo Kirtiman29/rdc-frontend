@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { getCart, removeCartItem, CartSummary } from '@/api/cartApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { useToast } from '@/hooks/use-toast';
+import { getProductPath } from '@/utils/routes';
 // ✅ Import the utility
 import { formatPrice } from '@/utils/price';
 
@@ -97,7 +98,7 @@ const Cart = () => {
                     className="bg-background border border-border p-6 flex gap-6 animate-fade-in shadow-sm rounded-sm"
                   >
                     <Link 
-                      to={`/product/${item.designId}`} 
+                      to={getProductPath({ id: item.designId, slug: item.slug })} 
                       className="relative w-24 h-24 flex-shrink-0 overflow-hidden bg-secondary/30 select-none"
                     >
                       <div 
@@ -118,7 +119,7 @@ const Cart = () => {
 
                     <div className="flex-1 flex flex-col justify-between min-w-0">
                       <div>
-                        <Link to={`/product/${item.designId}`}>
+                        <Link to={getProductPath({ id: item.designId, slug: item.slug })}>
                           <h3 className="font-serif text-lg hover:text-muted-foreground transition-colors truncate">
                             {item.designTitle}
                           </h3>

@@ -9,6 +9,7 @@ export interface FabricApiMedia {
 
 export interface FabricApiResponse {
   id: number;
+  slug?: string;
   fabricIdentifier?: string;
   title: string;
   description?: string;
@@ -86,7 +87,7 @@ export const mapFabricToDesign = (fabric: FabricApiResponse): Design => {
     id: fabric.id,
     title: fabric.title,
     description: fabric.description || '',
-    slug: `fabric-${fabric.id}`,
+    slug: fabric.slug || `fabric-${fabric.id}`,
     designIdentifier: fabric.fabricIdentifier || `FAB-${fabric.id}`,
     assetUuid: getCoverAsset(fabric),
     basePriceCents: priceCents,
@@ -180,4 +181,21 @@ export const getFabrics = async (filters?: DesignFilters): Promise<DesignsRespon
 export const getFabricById = async (id: string | number): Promise<Design> => {
   const response = await publicApi.get(`/public/fabrics/${id}`);
   return mapFabricToDesign(unwrapResponse(response) as FabricApiResponse);
+};
+
+export const getFabricBySlug = async (slug: string): Promise<Design> => {
+  const response = await publicApi.get(`/public/fabrics/slug/${slug}`);
+  return mapFabricToDesign(unwrapResponse(response) as FabricApiResponse);
+};
+
+export const getFabricBySlugOrId = async (slugOrId: string): Promise<Design> => {
+  try {
+    return await getFabricBySlug(slugOrId);
+  } catch (error) {
+    if (/^\d+$/.test(slugOrId)) {
+      return await getFabricById(slugOrId);
+    }
+
+    throw error;
+  }
 };

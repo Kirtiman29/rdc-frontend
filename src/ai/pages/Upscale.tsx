@@ -16,10 +16,12 @@ import {
 import AiCreditCost from "@/ai/components/AiCreditCost";
 
 const upscaleCreditMap = {
-  normal: 5,
+  smart: 20,
   textile: 10,
   double: 15,
 } as const;
+
+const BATCH_UPSCALE_COST = 50;
 
 export default function Upscale() {
   const [file, setFile] = useState<File | null>(null);
@@ -52,15 +54,24 @@ export default function Upscale() {
     }
   };
   const [sliderPosition, setSliderPosition] = useState(50);
-  const [upscaleType, setUpscaleType] = useState<UpscaleMode>("textile");
+  const [upscaleType, setUpscaleType] = useState<UpscaleMode>("smart");
   const [showPreview, setShowPreview] = useState(false); // Modal state
   const [isDragging, setIsDragging] = useState(false);
 
   const upscaleOptions: Array<{ id: UpscaleMode; label: string; desc: string }> = [
-    { id: "normal", label: "Standard Upscale", desc: "General purpose enhancement" },
-    { id: "textile", label: "Textile Fiber AI", desc: "Preserves thread detail & weave texture" },
-    { id: "double", label: "Double Scale Ultra", desc: "Maximum smoothness for prints" },
+    { id: "smart", label: "Smart Upscale", desc: "AI reconstruction + upscale (20 credits)" },
+    { id: "textile", label: "Textile Fiber AI", desc: "Preserves thread detail & weave texture (10 credits)" },
+    { id: "double", label: "Double Scale Ultra", desc: "Maximum smoothness for prints (15 credits)" },
   ];
+
+  // Batch upscale factors
+  const batchFactors = [2, 4, 8];
+  const [batchFactor, setBatchFactor] = useState(2);
+  const showOutputDimensionOptions =
+    mode === "single" && (upscaleType === "smart" || upscaleType === "textile");
+  const [smartUpscaleOutputMode, setSmartUpscaleOutputMode] = useState<"original" | "increased">("increased");
+  const getSizeMode = () =>
+    smartUpscaleOutputMode === "original" ? "same_dimensions" : "increase_pixels";
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!resultUrl) return;
@@ -119,12 +130,14 @@ export default function Upscale() {
 
       setFiles(extractedFiles);
       if (extractedFiles.length > 0) {
-        setPreview(URL.createObjectURL(extractedFiles[0]));
+        const url = URL.createObjectURL(extractedFiles[0]);
+        setPreview(url);
       }
     } else {
       const selected = selectedFiles[0];
       setFile(selected);
-      setPreview(URL.createObjectURL(selected));
+      const url = URL.createObjectURL(selected);
+      setPreview(url);
       setResultUrl(null);
     }
   };
@@ -144,7 +157,10 @@ export default function Upscale() {
       setIsProcessing(true);
 
       if (mode === "single") {
-        const res = await upscaleImage(file!, upscaleType);
+        const res = await upscaleImage(file!, upscaleType, {
+          scale: batchFactor,
+          sizeMode: getSizeMode(),
+        });
         setRemainingCredits(res.remainingCredits ?? null);
         if (res && res.image) {
           setResultUrl(res.image);
@@ -156,7 +172,11 @@ export default function Upscale() {
 
         for (let i = 0; i < files.length; i++) {
           const sourceFile = files[i];
-          const response = await upscaleImage(sourceFile, upscaleType);
+          const response = await upscaleImage(sourceFile, "textile", {
+            scale: batchFactor,
+            sizeMode: "increase_pixels",
+            batch: i === 0,
+          });
           setRemainingCredits(response.remainingCredits ?? null);
 
           if (!response.image) {
@@ -223,13 +243,18 @@ export default function Upscale() {
             <p className="text-gray-500 text-xs uppercase tracking-widest font-bold">
               Textile Fidelity: <span className="text-white">Enhanced</span>
             </p>
-            <AiCreditCost credits={upscaleCreditMap[upscaleType]} label="This Model" />
+            <AiCreditCost
+              credits={mode === "batch" ? BATCH_UPSCALE_COST : upscaleCreditMap[upscaleType]}
+              label={mode === "batch" ? "Batch Upscale" : "This Model"}
+            />
           </div>
         </div>
 
         <div className="grid lg:grid-cols-12 gap-10">
           {/* LEFT COLUMN: PREVIEW AREA */}
+
           <div className="lg:col-span-7">
+            {/* Upload/preview area */}
             {!preview ? (
               <label 
                 onDragOver={handleDragOver}
@@ -355,6 +380,39 @@ export default function Upscale() {
               </div>
             )}
 
+            {/* Output dimension mode below upload area */}
+            {showOutputDimensionOptions && (
+              <div className="mt-4 rounded-[24px] border border-[#ff1a1a]/20 bg-[#ff1a1a]/8 px-5 py-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#ff1a1a] text-center sm:text-left">
+                  Output Dimension
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setSmartUpscaleOutputMode("original")}
+                    className={`rounded-2xl border px-4 py-4 text-sm font-bold uppercase tracking-[0.18em] transition-all ${
+                      smartUpscaleOutputMode === "original"
+                        ? "border-[#ff1a1a]/50 bg-[#ff1a1a] text-white shadow-[0_0_20px_rgba(255,26,26,0.2)]"
+                        : "border-white/10 bg-black/20 text-gray-300 hover:bg-white/10"
+                    }`}
+                  >
+                    Original Dimension
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSmartUpscaleOutputMode("increased")}
+                    className={`rounded-2xl border px-4 py-4 text-sm font-bold uppercase tracking-[0.18em] transition-all ${
+                      smartUpscaleOutputMode === "increased"
+                        ? "border-[#ff1a1a]/50 bg-[#ff1a1a] text-white shadow-[0_0_20px_rgba(255,26,26,0.2)]"
+                        : "border-white/10 bg-black/20 text-gray-300 hover:bg-white/10"
+                    }`}
+                  >
+                    Increased Pixels
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* GPU processing banner */}
             <div className="mt-8 flex items-center gap-5 p-6 rounded-[24px] bg-white/[0.02] border border-white/5 backdrop-blur-md">
               <div className="p-3.5 rounded-2xl bg-[#ff1a1a]/10 shrink-0 border border-[#ff1a1a]/20 shadow-[0_0_20px_rgba(255,26,26,0.15)] flex items-center justify-center">
@@ -378,6 +436,7 @@ export default function Upscale() {
           <div className="lg:col-span-5 flex flex-col gap-6">
 
             {/* NEW: Mode Switch */}
+
             <div className="p-6 rounded-[24px] bg-white/[0.03] border border-white/10">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 block">Process Mode</label>
               <div className="flex gap-3">
@@ -385,7 +444,11 @@ export default function Upscale() {
                   <button
                     key={m}
                     onClick={() => {
-                      setMode(m as "single" | "batch");
+                      const nextMode = m as "single" | "batch";
+                      setMode(nextMode);
+                      if (nextMode === "batch") {
+                        setSmartUpscaleOutputMode("increased");
+                      }
                       resetUpload();
                     }}
                     className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${mode === m
@@ -399,33 +462,81 @@ export default function Upscale() {
               </div>
             </div>
 
+            {/* Upscale factor options (for both single and batch modes) */}
             <div className="p-6 rounded-[24px] bg-white/[0.03] border border-white/10">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 block">Optimization Model</label>
-              <div className="flex flex-col gap-3">
-                {upscaleOptions.map((type) => (
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 block">Upscale Factor</label>
+              <div className="flex gap-3">
+                {batchFactors.map((factor) => (
                   <button
-                    key={type.id}
-                    onClick={() => setUpscaleType(type.id)}
-                    className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all ${upscaleType === type.id
-                      ? "bg-white/10 border-[#ff1a1a]/50"
-                      : "bg-white/5 border-transparent opacity-60 hover:opacity-100"
+                    key={factor}
+                    onClick={() => setBatchFactor(factor)}
+                    className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${batchFactor === factor
+                      ? "bg-[#ff1a1a] text-white shadow-[0_0_20px_rgba(255,26,26,0.2)]"
+                      : "bg-white/5 text-gray-400 hover:bg-white/10"
                       }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${upscaleType === type.id ? "bg-[#ff1a1a] text-white" : "bg-white/10"}`}>
-                        <Layers className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold uppercase">{type.label}</p>
-                        <p className="text-[10px] text-gray-500">
-                          {type.desc} · {upscaleCreditMap[type.id]} credits
-                        </p>
-                      </div>
-                    </div>
-                    {upscaleType === type.id && <CheckCircle2 className="w-4 h-4 text-[#ff1a1a]" />}
+                    {factor}x
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="p-6 rounded-[24px] bg-white/[0.03] border border-white/10">
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4 block">Optimization Model</label>
+              <div className="flex flex-col gap-3">
+                {mode === "batch"
+                  ? (
+                    <button
+                      key="textile"
+                      onClick={() => setUpscaleType("textile")}
+                      className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all ${upscaleType === "textile"
+                        ? "bg-white/10 border-[#ff1a1a]/50"
+                        : "bg-white/5 border-transparent opacity-60 hover:opacity-100"
+                        }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${upscaleType === "textile" ? "bg-[#ff1a1a] text-white" : "bg-white/10"}`}>
+                          <Layers className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold uppercase">Textile Fiber AI</p>
+                          <p className="text-[10px] text-gray-500">Preserves thread detail & weave texture · 10 credits</p>
+                        </div>
+                      </div>
+                      {upscaleType === "textile" && <CheckCircle2 className="w-4 h-4 text-[#ff1a1a]" />}
+                    </button>
+                  )
+                  : (
+                    upscaleOptions.map((type) => (
+                      <button
+                        key={type.id}
+                        onClick={() => {
+                          setUpscaleType(type.id);
+                          if (type.id === "double") {
+                            setSmartUpscaleOutputMode("increased");
+                          }
+                        }}
+                        className={`flex items-center justify-between p-4 rounded-xl border text-left transition-all ${upscaleType === type.id
+                          ? "bg-white/10 border-[#ff1a1a]/50"
+                          : "bg-white/5 border-transparent opacity-60 hover:opacity-100"
+                          }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${upscaleType === type.id ? "bg-[#ff1a1a] text-white" : "bg-white/10"}`}>
+                            <Layers className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold uppercase">{type.label}</p>
+                            <p className="text-[10px] text-gray-500">{type.desc}</p>
+                          </div>
+                        </div>
+                        {upscaleType === type.id && <CheckCircle2 className="w-4 h-4 text-[#ff1a1a]" />}
+                      </button>
+                    ))
+                  )
+                }
+              </div>
+
             </div>
 
             <button

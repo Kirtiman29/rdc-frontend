@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { getDesignById, getDesigns } from "@/api/designApi";
+import { getDesignBySlugOrId, getDesigns } from "@/api/designApi";
 import { getAssetUrl } from "@/api/apiClient";
 import { addToCart } from "@/api/cartApi";
 import {
@@ -12,9 +12,11 @@ import {
 } from "@/api/wishlistApi";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
+import { getEntityPath } from "@/utils/routes";
+import { formatPrice } from "@/utils/price";
 
 const LuxuryDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
 
   const [product, setProduct] = useState<any>(null);
@@ -24,9 +26,9 @@ const LuxuryDetail = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!id) return;
+      if (!slug) return;
 
-      const data = await getDesignById(Number(id));
+      const data = await getDesignBySlugOrId(slug);
       setProduct(data);
 
       const cover = data.media?.find((m: any) => m.role === "COVER");
@@ -57,8 +59,8 @@ const LuxuryDetail = () => {
       }
     };
 
-    fetchData();
-  }, [id]);
+    void fetchData();
+  }, [slug]);
 
   const handleAddToCart = async () => {
     try {
@@ -131,7 +133,7 @@ const LuxuryDetail = () => {
               <div className="mb-8">
                 <p className="text-sm text-white/60">Price</p>
                 <p className="text-2xl text-[#c9a96e] font-semibold">
-                  ₹{Math.round(product.basePriceCents / 100)}
+                  {formatPrice(product.basePriceCents)}
                 </p>
               </div>
 
@@ -221,7 +223,7 @@ const LuxuryDetail = () => {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {relatedProducts.map((item) => (
-                <Link key={item.id} to={`/luxury/design/${item.id}`}>
+                <Link key={item.id} to={getEntityPath('/luxury/design', item)}>
                   <div className="border border-[#c9a96e]/40 hover:border-[#c9a96e] hover:shadow-md transition">
 
                     <img
@@ -235,7 +237,7 @@ const LuxuryDetail = () => {
                       </p>
 
                       <p className="text-xs text-gray-200 mt-1">
-                        ₹{Math.round(item.basePriceCents / 100)}
+                        {formatPrice(item.basePriceCents)}
                       </p>
                     </div>
 

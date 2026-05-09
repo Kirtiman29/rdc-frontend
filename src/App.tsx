@@ -40,7 +40,10 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import Fabrics from "./pages/fabrics/Fabrics";
 import Blog from "./pages/Blog";
+import BlogDetail from "./pages/BlogDetail";
+import CategoryPage from "./pages/CategoryPage";
 import Subscription from "./pages/Subscription";
+import Unsubscribe from "./pages/Unsubscribe";
 
 // AI Studio Imports
 import Home from "./ai/pages/Home";
@@ -95,12 +98,14 @@ const App = () => (
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
               <Route path="/gallery" element={<Gallery />} />
-              <Route path="/product/:id" element={<ProductDetail />} />
+              <Route path="/products/:slug" element={<ProductDetail />} />
+              <Route path="/designs/:slug" element={<ProductDetail />} />
+              <Route path="/product/:slug" element={<ProductDetail />} />
 
               {/* LUXURY ROUTES */}
               <Route path="/luxury/shop" element={<Premium />} />
               <Route path="/luxury/explore" element={<ExploreLuxury />} />
-              <Route path="/luxury/design/:id" element={<InDetailedLuxury />} />
+              <Route path="/luxury/design/:slug" element={<InDetailedLuxury />} />
 
               <Route path="/trends/shop" element={<Trends />} />
               <Route path="/trends/explore" element={<ExploreTrends />} />
@@ -109,7 +114,10 @@ const App = () => (
               <Route path="/special-offers/explore" element={<ExploreOffers />} />
               
               <Route path="/blogs" element={<Blog />} />
+              <Route path="/blogs/:slug" element={<BlogDetail />} />
+              <Route path="/categories/:slug" element={<CategoryPage />} />
               <Route path="/subscription" element={<Subscription />} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
               {/* Auth Routes */}
               <Route path="/signup" element={<Signup />} />
               <Route path="/login" element={<Login />} />
@@ -184,7 +192,8 @@ const App = () => (
 
               <Route path="/fabrics/shop" element={<Fabrics />} />
               <Route path="/fabrics/explore" element={<ExploreFabrics />} />
-              <Route path="/fabrics/design/:id" element={<IndetailFabrics />} />
+              <Route path="/fabrics/:slug" element={<IndetailFabrics />} />
+              <Route path="/fabrics/design/:slug" element={<IndetailFabrics />} />
 
 
               {/* Fallback */}

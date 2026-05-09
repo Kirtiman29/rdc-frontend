@@ -5,6 +5,7 @@ import { getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
+import { getProductPath } from '@/utils/routes';
 import { formatPrice } from '@/utils/price';
 
 const SpecialOffers = () => {
@@ -86,7 +87,7 @@ const SpecialOffers = () => {
           {products.map((product) => (
             <div key={product.id} className="group flex flex-col space-y-4">
               <Link
-                to={`/product/${product.id}`}
+                to={getProductPath(product)}
                 className="relative aspect-[3/4] overflow-hidden bg-neutral-200 select-none"
               >
                 {/* SUBTLE LUXURY DISCOUNT BADGE */}
@@ -114,7 +115,7 @@ const SpecialOffers = () => {
 
               {/* CARD DETAILS */}
               <div className="space-y-1.5 px-1">
-                <Link to={`/product/${product.id}`}>
+                <Link to={getProductPath(product)}>
                   <h3 className="font-serif text-lg text-[#1A1A1A] group-hover:opacity-60 transition-opacity line-clamp-1">
                     {product.title}
                   </h3>

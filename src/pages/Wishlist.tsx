@@ -8,6 +8,7 @@ import { getAssetUrl } from '@/api/apiClient';
 import { getWishlist, removeFromWishlist, type WishlistItem } from '@/api/wishlistApi'; 
 import { addToCart } from '@/api/cartApi';
 import { useToast } from '@/hooks/use-toast';
+import { getProductPath } from '@/utils/routes';
 
 const Wishlist = () => {
   const [items, setItems] = useState<WishlistItem[]>([]);
@@ -106,7 +107,7 @@ const Wishlist = () => {
                       }}
                     />
 
-                    <Link to={`/product/${item.designId}`} className="block h-full">
+                    <Link to={getProductPath({ id: item.designId, slug: item.slug })} className="block h-full">
                       <img
                         src={getAssetUrl(item.assetUuid)}
                         alt={item.title}
@@ -126,7 +127,7 @@ const Wishlist = () => {
                   </div>
 
                   <div className="p-4">
-                    <Link to={`/product/${item.designId}`}>
+                    <Link to={getProductPath({ id: item.designId, slug: item.slug })}>
                       <h3 className="font-serif text-base group-hover:text-muted-foreground transition-colors truncate text-[#2A2623]">{item.title}</h3>
                     </Link>
                     <p className="text-sm font-bold mt-1 text-[#2A2623]">₹{(item.finalPriceCents / 100).toLocaleString('en-IN')}</p>

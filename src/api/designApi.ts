@@ -96,6 +96,43 @@ export const getDesignById = async (id: string | number): Promise<Design> => {
   return await userApi.get(`/public/designs/${id}`);
 };
 
+export const getDesignBySlug = async (slug: string): Promise<Design> => {
+  return await userApi.get(`/public/designs/slug/${slug}`);
+};
+
+export const getDesignBySlugOrId = async (slugOrId: string): Promise<Design> => {
+  try {
+    return await getDesignBySlug(slugOrId);
+  } catch (error) {
+    if (/^\d+$/.test(slugOrId)) {
+      return await getDesignById(slugOrId);
+    }
+
+    throw error;
+  }
+};
+
+export const getCategoryBySlug = async (slug: string): Promise<Category> => {
+  return await userApi.get(`/public/categories/slug/${slug}`);
+};
+
+export const getCategoryBySlugOrId = async (slugOrId: string): Promise<Category> => {
+  try {
+    return await getCategoryBySlug(slugOrId);
+  } catch (error) {
+    const categories = await getCategories();
+    const matchedCategory = categories.find(
+      (category) => category.slug === slugOrId || String(category.id) === slugOrId
+    );
+
+    if (matchedCategory) {
+      return matchedCategory;
+    }
+
+    throw error;
+  }
+};
+
 export const getRelatedDesigns = async (designId: string | number, limit: number = 4): Promise<Design[]> => {
   const data = await userApi.get(`/public/designs/${designId}/related?limit=${limit}`);
   return extractArray(data);

@@ -14,6 +14,7 @@ import { getFabrics } from "@/api/fabricApi";
 import { getAssetUrl } from "@/api/apiClient";
 import { formatPrice } from "@/utils/price";
 import type { Design } from "@/types/product";
+import { getFabricPath } from "@/utils/routes";
 
 const fallbackCollections = [
   { image: pattern1, title: "Field & Feather" },
@@ -268,7 +269,7 @@ const ExploreFabrics = () => {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
               {collectionFabrics.length > 0
                 ? collectionFabrics.map((fabric) => (
-                    <Link key={fabric.id} to={`/fabrics/design/${fabric.id}`} className="group">
+                    <Link key={fabric.id} to={getFabricPath(fabric)} className="group">
                       <div className="aspect-square bg-white p-4 rounded-xl border border-neutral-100 shadow-sm group-hover:border-neutral-200 group-hover:shadow-md transition">
                         <img
                           src={getFabricImage(fabric)}
@@ -322,7 +323,7 @@ const ExploreFabrics = () => {
                 ? favoriteFabrics.map((fabric) => (
                     <Link
                       key={fabric.id}
-                      to={`/fabrics/design/${fabric.id}`}
+                      to={getFabricPath(fabric)}
                       className="flex flex-col group border border-neutral-100 rounded-xl overflow-hidden hover:border-neutral-200 hover:shadow-lg transition"
                     >
                       <img

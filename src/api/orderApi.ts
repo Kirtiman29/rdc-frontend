@@ -1,12 +1,8 @@
-import { orderApi } from './apiClient';
+import { orderApi, orderCouponApi } from './apiClient';
 import type { ApiDataEnvelope, OrderResponse } from '@/types/order';
 
-export interface OrderItemRequest {
-  designId: number;
-  quantity: number;
-  priceCents: number;
-  designTitle?: string;
-}
+export type CouponScope = 'ORDER' | 'SUBSCRIPTION' | 'DESIGN' | 'ALL';
+export type CouponDiscountType = 'PERCENTAGE' | 'FIXED';
 
 export interface CreateOrderRequest {
   userId: number;
@@ -21,13 +17,30 @@ export interface CreateOrderRequest {
   country?: string;
   billingState: string;
   customerGstin: string | null;
-  totalPriceCents: number;
-  items: OrderItemRequest[];
+  couponCode?: string;
+}
+
+export interface CouponValidationRequest {
+  code: string;
+  amount: number;
+  scope: CouponScope;
+}
+
+export interface CouponValidationResponse {
+  valid: boolean;
+  available: boolean | null;
+  couponCode: string | null;
+  discountType: CouponDiscountType | null;
+  discountValue: number | null;
+  discountAmount: number | null;
+  finalAmount: number | null;
+  message: string;
 }
 
 type OrderPayload = OrderResponse | ApiDataEnvelope<OrderResponse>;
 type OrderListPayload = OrderResponse[] | ApiDataEnvelope<OrderResponse[]>;
 type OrderDownloadPayload = { downloadUrl: string } | ApiDataEnvelope<{ downloadUrl: string }>;
+type CouponPayload = CouponValidationResponse | ApiDataEnvelope<CouponValidationResponse>;
 
 const unwrapApiData = <T>(payload: T | ApiDataEnvelope<T>): T => {
   if (payload && typeof payload === 'object' && 'data' in payload) {
@@ -45,6 +58,26 @@ const normalizeOrder = (order: OrderResponse): OrderResponse => ({
 export const createOrder = async (orderPayload: CreateOrderRequest): Promise<OrderResponse> => {
   const response = await orderApi.post<OrderPayload, OrderPayload>('/', orderPayload);
   return normalizeOrder(unwrapApiData(response));
+};
+
+export const validateUserCoupon = async (
+  payload: CouponValidationRequest
+): Promise<CouponValidationResponse> => {
+  const response = await orderCouponApi.post<CouponPayload, CouponPayload>('/validate', payload);
+  return unwrapApiData(response);
+};
+
+export const getBestAutoApplyCoupon = async ({
+  amount,
+  scope,
+}: Pick<CouponValidationRequest, 'amount' | 'scope'>): Promise<CouponValidationResponse> => {
+  const response = await orderCouponApi.get<CouponPayload, CouponPayload>('/auto-apply', {
+    params: {
+      amount,
+      scope,
+    },
+  });
+  return unwrapApiData(response);
 };
 
 export const getOrderDetails = async (orderId: string | number): Promise<OrderResponse> => {

@@ -200,6 +200,10 @@ export const orderApi = axios.create({
   baseURL: serviceApiUrls.order
 });
 
+export const orderCouponApi = axios.create({
+  baseURL: serviceApiUrls.orderCoupons
+});
+
 export const wishlistApi = axios.create({
   baseURL: serviceApiUrls.wishlist
 });
@@ -217,7 +221,7 @@ export const subscriptionApi = axios.create({
 });
 
 /* APPLY INTERCEPTORS ONLY TO SECURE APIS */
-[userApi, cartApi, orderApi, wishlistApi, paymentApi, subscriptionApi]
+[userApi, cartApi, orderApi, orderCouponApi, wishlistApi, paymentApi, subscriptionApi]
   .forEach(applyIndustrialInterceptors);
 
 /* =========================================

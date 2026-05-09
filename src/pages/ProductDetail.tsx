@@ -7,6 +7,7 @@ import {
   Heart,
   Loader2,
   PlayCircle,
+  Share2,
   ShieldCheck,
   ShoppingBag,
 } from 'lucide-react';
@@ -17,7 +18,7 @@ import ProductCard from '@/components/products/ProductCard';
 import { Button } from '@/components/ui/button';
 import { addToCart } from '@/api/cartApi';
 import {
-  getDesignById,
+  getDesignBySlugOrId,
   getDesigns,
   requestSubscriptionDesignDownload,
 } from '@/api/designApi';
@@ -33,7 +34,9 @@ import {
   removeFromWishlist,
 } from '@/api/wishlistApi';
 import { useToast } from '@/hooks/use-toast';
+import { useCanonicalLink } from '@/hooks/useCanonicalLink';
 import type { Design } from '@/types/product';
+import { getProductPath } from '@/utils/routes';
 import { formatPrice } from '@/utils/price';
 
 type ApiErrorLike = {
@@ -60,7 +63,7 @@ const getApiMessage = (error: unknown, fallback: string) => {
 };
 
 const ProductDetail = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -77,11 +80,17 @@ const ProductDetail = () => {
   const [activeMediaUrl, setActiveMediaUrl] = useState('');
   const [activeMediaType, setActiveMediaType] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
 
+  const canonicalPath = product ? getProductPath(product) : undefined;
+  const canonicalUrl =
+    canonicalPath && typeof window !== 'undefined' ? `${window.location.origin}${canonicalPath}` : undefined;
+
+  useCanonicalLink(canonicalUrl);
+
   const handleContextMenu = (event: React.MouseEvent) => event.preventDefault();
 
   useEffect(() => {
     const fetchFullData = async () => {
-      if (!id) return;
+      if (!slug) return;
 
       setLoading(true);
       setPageError(null);
@@ -91,8 +100,12 @@ const ProductDetail = () => {
       setDownloadRequestState('idle');
 
       try {
-        const designData = await getDesignById(Number(id));
+        const designData = await getDesignBySlugOrId(slug);
         setProduct(designData);
+
+        if (designData.slug && slug !== designData.slug) {
+          navigate(getProductPath(designData), { replace: true });
+        }
 
         const cover = designData.media?.find((media) => media.role === 'COVER');
         setActiveMediaUrl(cover ? getAssetUrl(cover.url) : getAssetUrl(designData.assetUuid));
@@ -165,10 +178,10 @@ const ProductDetail = () => {
     };
 
     void fetchFullData();
-  }, [id]);
+  }, [navigate, slug]);
 
-  const goToLogin = (designId: number) => {
-    navigate('/login', { state: { from: `/product/${designId}` } });
+  const goToLogin = (design: Pick<Design, 'id' | 'slug'>) => {
+    navigate('/login', { state: { from: getProductPath(design) } });
   };
 
   const handleAddToCart = async () => {
@@ -196,7 +209,7 @@ const ProductDetail = () => {
       }
 
       if (status === 401) {
-        goToLogin(product.id);
+        goToLogin(product);
         return;
       }
 
@@ -225,7 +238,7 @@ const ProductDetail = () => {
       toast({ title: isWished ? 'Removed from Selection' : 'Saved to Archive' });
     } catch (error) {
       if ((error as ApiErrorLike)?.response?.status === 401) {
-        goToLogin(product.id);
+        goToLogin(product);
         return;
       }
 
@@ -269,7 +282,7 @@ const ProductDetail = () => {
           title: 'Authentication required',
           description: 'Please log in to request this design.',
         });
-        goToLogin(product.id);
+        goToLogin(product);
         return;
       }
 
@@ -325,7 +338,7 @@ const ProductDetail = () => {
                   className="h-12 rounded-sm bg-[#2A2623] px-6 text-[10px] font-bold uppercase tracking-[0.24em] hover:bg-black"
                   onClick={() =>
                     navigate(getToken() ? '/subscription' : '/login', {
-                      state: !getToken() && id ? { from: `/product/${id}` } : undefined,
+                      state: !getToken() && slug ? { from: getProductPath(product) } : undefined,
                     })
                   }
                 >
@@ -366,6 +379,34 @@ const ProductDetail = () => {
         : isQuotaExhausted
           ? 'Quota Exhausted'
           : 'Request TIFF Download';
+
+  const shareCurrentPage = async () => {
+    const shareUrl = canonicalUrl || window.location.href;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: product.title || document.title,
+          url: shareUrl,
+        });
+      } catch (error) {
+        console.log('Share cancelled or failed', error);
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({ title: 'Link copied', description: 'Product link copied to your clipboard.' });
+    } catch (error) {
+      console.log('Clipboard copy failed', error);
+      toast({
+        variant: 'destructive',
+        title: 'Share unavailable',
+        description: 'We could not copy the product link right now.',
+      });
+    }
+  };
 
   return (
     <div
@@ -698,6 +739,14 @@ const ProductDetail = () => {
                       size={14}
                     />
                     {isWished ? 'Saved to Archive' : 'Add to Wishlist'}
+                  </button>
+
+                  <button
+                    onClick={shareCurrentPage}
+                    className="flex h-14 w-full items-center justify-center gap-3 rounded-sm border border-zinc-200 text-[10px] font-bold uppercase tracking-[0.3em] text-[#1A1A1A] transition-colors hover:bg-zinc-50"
+                  >
+                    <Share2 size={14} />
+                    Share
                   </button>
                 </div>
               </div>

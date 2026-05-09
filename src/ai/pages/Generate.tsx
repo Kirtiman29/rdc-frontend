@@ -347,7 +347,7 @@ export default function Generate() {
       const file = new File([blob], `generated-${imgId}.png`, { type: blob.type });
 
       // Call Upscale API
-      const res = await upscaleImage(file, "normal", 1);
+      const res = await upscaleImage(file, "smart");
       setRemainingCredits(res.remainingCredits ?? null);
 
       // Download the result automatically

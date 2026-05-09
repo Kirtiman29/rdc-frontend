@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import type { Design } from '@/types/product';
-import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { getProductPath } from '@/utils/routes';
 
 const HeroEditorial = () => {
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ const HeroEditorial = () => {
   );
 
   return (
-    <section className="relative w-full min-h-[85vh] bg-[#FDFCFB] overflow-hidden flex items-center">
+    <section className="relative w-full overflow-hidden bg-[#FDFCFB] flex items-center lg:min-h-[85vh]">
       {/* Abstract Animated Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <motion.div 
@@ -53,34 +53,34 @@ const HeroEditorial = () => {
         <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'radial-gradient(#BA1B1C 1px, transparent 1px)', backgroundSize: '32px 32px' }} />
       </div>
 
-      <div className="container mx-auto px-4 md:px-8 xl:px-12 relative z-10 py-12 lg:py-0">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+      <div className="container relative z-10 mx-auto px-4 py-10 sm:px-6 sm:py-12 md:px-8 lg:py-14 xl:px-12">
+        <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-8">
           
           {/* Left Content */}
-          <div className="lg:col-span-6 flex flex-col items-start space-y-8">
+          <div className="lg:col-span-6 flex flex-col items-center space-y-6 text-center sm:items-start sm:text-left sm:space-y-8">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               whileHover={{ scale: 1.05 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-md border border-[#BA1B1C]/10 text-[#BA1B1C] text-xs md:text-sm font-medium rounded-full shadow-sm hover:shadow-md hover:bg-white cursor-pointer transition-all duration-300"
+              className="inline-flex max-w-full items-center gap-2 rounded-full border border-[#BA1B1C]/10 bg-white/60 px-3 py-2 text-xs font-medium text-[#BA1B1C] shadow-sm backdrop-blur-md transition-all duration-300 hover:bg-white hover:shadow-md sm:px-4 md:text-sm"
             >
               <Sparkles className="w-4 h-4 animate-pulse" />
-              <span className="tracking-wide uppercase text-xs font-semibold">India's Premier Design Platform</span>
+              <span className="text-[11px] font-semibold uppercase tracking-wide sm:text-xs">India's Premier Design Platform</span>
             </motion.div>
 
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-4xl md:text-6xl lg:text-7xl font-serif text-slate-900 leading-[1.1] tracking-tight group"
+              className="group text-3xl font-serif leading-[1.1] tracking-tight text-slate-900 sm:text-5xl md:text-6xl lg:text-7xl"
             >
-              Crafting <br className="hidden md:block" />
+              Crafting <br className="hidden sm:block" />
               <span className="relative inline-block mt-2">
                 <span className="relative z-10 italic font-light text-[#BA1B1C] transition-colors duration-500 group-hover:text-[#8E1415] hover:text-[#8E1415]">Tomorrow's</span>
-                <span className="absolute bottom-2 left-0 w-full h-3 bg-[#BA1B1C]/10 -z-10 transition-all duration-500 ease-out group-hover:h-6 group-hover:bg-[#BA1B1C]/20" />
+                <span className="absolute bottom-1 left-0 h-2 w-full bg-[#BA1B1C]/10 transition-all duration-500 ease-out group-hover:h-6 group-hover:bg-[#BA1B1C]/20 sm:bottom-2 sm:h-3" />
               </span>
-              <br className="hidden md:block" />
+              <br className="hidden sm:block" />
               <span className="font-semibold">Textile Heritage</span>
             </motion.h1>
 
@@ -88,7 +88,7 @@ const HeroEditorial = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-base md:text-lg text-slate-600 leading-relaxed max-w-lg font-light"
+              className="max-w-xl text-sm font-light leading-relaxed text-slate-600 sm:text-base md:text-lg"
             >
               Discover an exclusive collection of premium textile designs. Bridge traditional artistry with next-generation AI infrastructure to elevate your creative vision.
             </motion.p>
@@ -97,14 +97,14 @@ const HeroEditorial = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-wrap gap-4 pt-4"
+              className="flex w-full flex-col gap-3 pt-2 sm:flex-row sm:flex-wrap sm:gap-4 sm:pt-4"
             >
               <Button
                 onClick={() => navigate('/gallery')}
-                className="group relative overflow-hidden bg-[#BA1B1C] hover:bg-[#8E1415] text-white px-8 py-6 text-base font-medium rounded-full shadow-xl shadow-[#BA1B1C]/20 transition-all duration-300 hover:shadow-2xl hover:shadow-[#BA1B1C]/40 hover:-translate-y-1"
+                className="group relative w-full overflow-hidden rounded-full bg-[#BA1B1C] px-6 py-5 text-sm font-medium text-white shadow-xl shadow-[#BA1B1C]/20 transition-all duration-300 hover:-translate-y-1 hover:bg-[#8E1415] hover:shadow-2xl hover:shadow-[#BA1B1C]/40 sm:w-auto sm:px-8 sm:py-6 sm:text-base"
               >
                 <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
-                <span className="relative z-10 flex items-center">
+                <span className="relative z-10 flex items-center justify-center">
                   Explore Collection
                   <ChevronRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
                 </span>
@@ -112,7 +112,7 @@ const HeroEditorial = () => {
               <Button
                 onClick={() => navigate('/ai-studio')}
                 variant="outline"
-                className="group border-2 border-slate-200 hover:border-[#BA1B1C] bg-white/50 backdrop-blur hover:bg-[#BA1B1C] text-slate-700 hover:text-white px-8 py-6 text-base font-medium rounded-full transition-all duration-300 hover:shadow-lg hover:shadow-[#BA1B1C]/20 hover:-translate-y-1"
+                className="group w-full rounded-full border-2 border-slate-200 bg-white/50 px-6 py-5 text-sm font-medium text-slate-700 backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:border-[#BA1B1C] hover:bg-[#BA1B1C] hover:text-white hover:shadow-lg hover:shadow-[#BA1B1C]/20 sm:w-auto sm:px-8 sm:py-6 sm:text-base"
               >
                 Try AI Studio
               </Button>
@@ -122,36 +122,38 @@ const HeroEditorial = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 0.6 }}
-              className="grid grid-cols-3 gap-6 pt-8 border-t border-slate-200/60 w-full max-w-md"
+              className="hidden w-full max-w-xl grid-cols-1 gap-3 border-t border-slate-200/60 pt-6 sm:grid sm:grid-cols-3 sm:gap-4 sm:pt-8"
             >
               {[
                 { icon: Palette, label: "10k+ Designs", sub: "Curated" },
                 { icon: Zap, label: "AI Powered", sub: "Tools" },
                 { icon: Sparkles, label: "Premium", sub: "Quality" }
               ].map((stat, i) => (
-                <div key={i} className="group flex flex-col items-start space-y-1 p-3 -m-3 rounded-xl hover:bg-white hover:shadow-md hover:shadow-slate-200/50 transition-all duration-300 cursor-pointer border border-transparent hover:border-slate-100">
+                <div key={i} className="group flex flex-row items-center gap-3 rounded-xl border border-transparent p-3 transition-all duration-300 hover:border-slate-100 hover:bg-white hover:shadow-md hover:shadow-slate-200/50 sm:-m-3 sm:flex-col sm:items-start sm:gap-0 sm:space-y-1">
                   <div className="p-2 bg-slate-100 group-hover:bg-[#BA1B1C]/10 rounded-lg text-[#BA1B1C] mb-1 transition-colors duration-300 transform group-hover:scale-110">
                     <stat.icon className="w-5 h-5" />
                   </div>
-                  <span className="text-sm font-semibold text-slate-900 group-hover:text-[#BA1B1C] transition-colors duration-300">{stat.label}</span>
-                  <span className="text-xs text-slate-500">{stat.sub}</span>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-slate-900 transition-colors duration-300 group-hover:text-[#BA1B1C]">{stat.label}</span>
+                    <span className="text-xs text-slate-500">{stat.sub}</span>
+                  </div>
                 </div>
               ))}
             </motion.div>
           </div>
 
           {/* Right Content - Elegant Masonry / Floating Cards */}
-          <div className="lg:col-span-6 relative h-[500px] sm:h-[600px] lg:h-[700px] w-full mt-12 lg:mt-0 group/masonry">
+          <div className="group/masonry relative mt-2 hidden h-auto min-h-[320px] w-full sm:block sm:min-h-[420px] lg:col-span-6 lg:mt-0 lg:h-[700px]">
             {featuredDesigns.length >= 3 && (
-              <div className="absolute inset-0 w-full h-full">
+              <div className="grid w-full grid-cols-2 auto-rows-[150px] gap-3 sm:auto-rows-[200px] sm:gap-4 lg:absolute lg:inset-0 lg:block lg:h-full">
                 {/* Main large image */}
-                <Link to={`/product/${featuredDesigns[0].id}`}>
+                <Link to={getProductPath(featuredDesigns[0])}>
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.9, rotate: -5 }}
                     animate={{ opacity: 1, scale: 1, rotate: [-2, 0, -2] }}
                     whileHover={{ scale: 1.05, rotate: 0, zIndex: 50 }}
                     transition={{ duration: 0.8, rotate: { repeat: Infinity, duration: 8, ease: "easeInOut" } }}
-                    className="absolute top-[10%] right-[10%] w-[55%] h-[65%] rounded-2xl overflow-hidden shadow-2xl z-20 border-4 border-white cursor-pointer group-hover/masonry:opacity-75 hover:!opacity-100 transition-opacity duration-300"
+                    className="relative col-span-2 row-span-2 overflow-hidden rounded-2xl border-4 border-white shadow-2xl transition-opacity duration-300 cursor-pointer group-hover/masonry:opacity-75 hover:!opacity-100 lg:absolute lg:top-[10%] lg:right-[10%] lg:h-[65%] lg:w-[55%] lg:z-20"
                   >
                     <img src={getAssetUrl(featuredDesigns[0].assetUuid)} alt={featuredDesigns[0].title} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent opacity-60 hover:opacity-100 transition-opacity duration-300" />
@@ -162,13 +164,13 @@ const HeroEditorial = () => {
                 </Link>
 
                 {/* Secondary image left */}
-                <Link to={`/product/${featuredDesigns[1].id}`}>
+                <Link to={getProductPath(featuredDesigns[1])}>
                   <motion.div 
                     initial={{ opacity: 0, x: -50, y: 50 }}
                     animate={{ opacity: 1, x: 0, y: 0, rotate: [5, 2, 5] }}
                     whileHover={{ scale: 1.1, rotate: 0, zIndex: 50 }}
                     transition={{ duration: 0.8, delay: 0.2, rotate: { repeat: Infinity, duration: 6, ease: "easeInOut", delay: 1 } }}
-                    className="absolute bottom-[10%] left-[5%] w-[45%] h-[45%] rounded-2xl overflow-hidden shadow-xl z-30 border-4 border-white cursor-pointer group-hover/masonry:opacity-75 hover:!opacity-100 transition-opacity duration-300"
+                    className="relative col-span-1 row-span-1 overflow-hidden rounded-2xl border-4 border-white shadow-xl transition-opacity duration-300 cursor-pointer group-hover/masonry:opacity-75 hover:!opacity-100 lg:absolute lg:bottom-[10%] lg:left-[5%] lg:h-[45%] lg:w-[45%] lg:z-30"
                   >
                     <img src={getAssetUrl(featuredDesigns[1].assetUuid)} alt={featuredDesigns[1].title} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-40 hover:opacity-0 transition-opacity duration-300" />
@@ -176,13 +178,13 @@ const HeroEditorial = () => {
                 </Link>
 
                 {/* Tertiary image top right behind */}
-                <Link to={`/product/${featuredDesigns[2].id}`}>
+                <Link to={getProductPath(featuredDesigns[2])}>
                   <motion.div 
                     initial={{ opacity: 0, y: -50 }}
                     animate={{ opacity: 1, y: 0, rotate: [10, 12, 10] }}
                     whileHover={{ scale: 1.1, rotate: 0, zIndex: 50 }}
                     transition={{ duration: 0.8, delay: 0.4, rotate: { repeat: Infinity, duration: 7, ease: "easeInOut", delay: 2 } }}
-                    className="absolute top-[0%] right-[5%] w-[40%] h-[40%] rounded-2xl overflow-hidden shadow-lg z-10 border-4 border-white opacity-90 cursor-pointer group-hover/masonry:opacity-75 hover:!opacity-100 transition-opacity duration-300"
+                    className="relative col-span-1 row-span-1 overflow-hidden rounded-2xl border-4 border-white opacity-90 shadow-lg transition-opacity duration-300 cursor-pointer group-hover/masonry:opacity-75 hover:!opacity-100 lg:absolute lg:top-[0%] lg:right-[5%] lg:h-[40%] lg:w-[40%] lg:z-10"
                   >
                     <img src={getAssetUrl(featuredDesigns[2].assetUuid)} alt={featuredDesigns[2].title} className="w-full h-full object-cover" />
                     <div className="absolute inset-0 bg-black/20 hover:bg-transparent transition-colors duration-300" />
@@ -191,13 +193,13 @@ const HeroEditorial = () => {
                 
                 {/* 4th image small floating bottom right */}
                 {featuredDesigns[3] && (
-                  <Link to={`/product/${featuredDesigns[3].id}`}>
+                  <Link to={getProductPath(featuredDesigns[3])}>
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.5 }}
                       animate={{ opacity: 1, scale: 1, y: [0, -15, 0] }}
                       whileHover={{ scale: 1.15, zIndex: 50 }}
                       transition={{ duration: 0.8, delay: 0.5, y: { repeat: Infinity, duration: 5, ease: "easeInOut" } }}
-                      className="absolute bottom-[20%] right-[-5%] w-[25%] h-[25%] rounded-xl overflow-hidden shadow-2xl z-40 border-[3px] border-white cursor-pointer group-hover/masonry:opacity-75 hover:!opacity-100 transition-opacity duration-300"
+                      className="relative col-span-2 row-span-1 overflow-hidden rounded-xl border-[3px] border-white shadow-2xl transition-opacity duration-300 cursor-pointer group-hover/masonry:opacity-75 hover:!opacity-100 lg:absolute lg:right-[-5%] lg:bottom-[20%] lg:h-[25%] lg:w-[25%] lg:z-40"
                     >
                       <img src={getAssetUrl(featuredDesigns[3].assetUuid)} alt={featuredDesigns[3].title} className="w-full h-full object-cover" />
                     </motion.div>
@@ -208,7 +210,7 @@ const HeroEditorial = () => {
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                  className="absolute top-[20%] left-[20%] w-24 h-24 border border-[#BA1B1C]/20 rounded-full border-dashed z-0"
+                  className="absolute top-[20%] left-[20%] hidden h-24 w-24 rounded-full border border-[#BA1B1C]/20 border-dashed z-0 lg:block"
                 />
               </div>
             )}
@@ -216,7 +218,7 @@ const HeroEditorial = () => {
             {featuredDesigns.length < 3 && featuredDesigns.length > 0 && (
               <div className="flex justify-center items-center h-full gap-4 group/masonry">
                 {featuredDesigns.map((design) => (
-                  <Link key={design.id} to={`/product/${design.id}`} className="w-1/2 aspect-[3/4]">
+                  <Link key={design.id} to={getProductPath(design)} className="w-1/2 aspect-[3/4]">
                     <motion.div 
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}

@@ -9,12 +9,15 @@ import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/products/ProductCard';
-import { getFabricById, getFabrics } from '@/api/fabricApi';
+import { getFabricBySlugOrId, getFabrics } from '@/api/fabricApi';
 import { getAssetUrl } from '@/api/apiClient';
 import { addToCart } from '@/api/cartApi';
 import { checkWishlistStatus } from '@/api/wishlistApi';
+import { useCanonicalLink } from '@/hooks/useCanonicalLink';
 import { useToast } from '@/hooks/use-toast';
 import type { Design } from '@/types/product';
+import { getFabricPath } from '@/utils/routes';
+import { formatPrice } from '@/utils/price';
 
 const isUnauthorizedError = (error: unknown) => {
   return (
@@ -26,7 +29,7 @@ const isUnauthorizedError = (error: unknown) => {
 };
 
 const IndetailFabrics = () => {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -39,15 +42,24 @@ const IndetailFabrics = () => {
   const [activeMediaUrl, setActiveMediaUrl] = useState<string>('');
   const [activeMediaType, setActiveMediaType] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
 
+  const canonicalPath = product ? getFabricPath(product) : undefined;
+  const canonicalUrl =
+    canonicalPath && typeof window !== 'undefined' ? `${window.location.origin}${canonicalPath}` : undefined;
+
+  useCanonicalLink(canonicalUrl);
+
   const handleContextMenu = (e: React.MouseEvent) => e.preventDefault();
 
   useEffect(() => {
     const fetchFullData = async () => {
-      if (!id) return;
+      if (!slug) return;
       setLoading(true);
       try {
-        const designData = await getFabricById(Number(id)); 
+        const designData = await getFabricBySlugOrId(slug);
         setProduct(designData);
+        if (designData.slug && slug !== designData.slug) {
+          navigate(getFabricPath(designData), { replace: true });
+        }
         const cover = designData.media?.find((m) => m.role === "COVER");
 
         setActiveMediaUrl(
@@ -74,8 +86,8 @@ const IndetailFabrics = () => {
         setLoading(false);
       }
     };
-    fetchFullData();
-  }, [id]);
+    void fetchFullData();
+  }, [navigate, slug]);
 
   const handleAddToCart = async () => {
     if (!product) return;
@@ -85,7 +97,7 @@ const IndetailFabrics = () => {
       toast({ title: "Added to Bag", description: `${product.title} has been added.` });
     } catch (error: unknown) {
       if (isUnauthorizedError(error)) {
-        navigate('/login', { state: { redirectTo: `/fabrics/design/${product.id}` } });
+        navigate('/login', { state: { redirectTo: getFabricPath(product) } });
       }
     } finally { setIsAdding(false); }
   };
@@ -182,11 +194,15 @@ const IndetailFabrics = () => {
 
                 <div className="mb-8 flex items-baseline gap-4 border-b border-zinc-100 pb-8">
                   <span className="text-3xl font-light text-zinc-900">
-                    ₹{((product.specialOffer ? product.basePriceCents * (1 - product.discountPercent / 100) : product.basePriceCents) / 100).toLocaleString('en-IN')}
+                    {formatPrice(
+                      product.specialOffer
+                        ? product.basePriceCents * (1 - product.discountPercent / 100)
+                        : product.basePriceCents
+                    )}
                   </span>
                   {product.discountPercent > 0 && (
                     <span className="text-lg text-zinc-300 line-through">
-                      ₹{(product.basePriceCents / 100).toLocaleString('en-IN')}
+                      {formatPrice(product.basePriceCents)}
                     </span>
                   )}
                 </div>
@@ -248,11 +264,11 @@ const IndetailFabrics = () => {
                   <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-zinc-400">Curated Collection</h4>
                   <h3 className="mt-2 text-2xl font-semibold text-zinc-900">Complementary Textures</h3>
                 </div>
-                <Link to="/fabrics" className="border-b border-black pb-1 text-[10px] font-bold uppercase tracking-widest">Explore All</Link>
+                <Link to="/fabrics/shop" className="border-b border-black pb-1 text-[10px] font-bold uppercase tracking-widest">Explore All</Link>
               </div>
               <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
                 {relatedProducts.map(item => (
-                  <ProductCard key={item.id} product={item} />
+                  <ProductCard key={item.id} product={item} redirectPath="/fabrics" />
                 ))}
               </div>
             </div>

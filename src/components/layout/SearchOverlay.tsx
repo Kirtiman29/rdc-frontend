@@ -4,6 +4,7 @@ import { Search, X, Loader2 } from 'lucide-react';
 import { getDesigns } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import type { Design } from '@/types/product';
+import { getProductPath } from '@/utils/routes';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -114,7 +115,7 @@ const SearchOverlay = ({ isOpen, onClose }: SearchOverlayProps) => {
                 {results.map((product) => (
                   <Link
                     key={product.id}
-                    to={`/product/${product.id}`}
+                    to={getProductPath(product)}
                     onClick={() => {
                       onClose();
                       setQuery('');

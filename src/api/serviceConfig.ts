@@ -28,6 +28,7 @@ export const serviceApiUrls = {
   authRefresh: createApiUrl(serviceOrigins.auth, "auth/refresh"),
   cart: createApiUrl(serviceOrigins.cart, "cart"),
   order: createApiUrl(serviceOrigins.order, "orders"),
+  orderCoupons: createApiUrl(serviceOrigins.order, "coupons"),
   payment: createApiUrl(serviceOrigins.payment, "payments"),
   subscription: createApiUrl(serviceOrigins.subscription, "subscriptions"),
   publicSubscription: createApiUrl(serviceOrigins.subscription, "public/subscriptions"),

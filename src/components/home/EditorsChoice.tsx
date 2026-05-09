@@ -4,6 +4,7 @@ import { Loader2, ArrowRight } from 'lucide-react';
 import { getEditorsPick } from '@/api/designApi';
 import { getAssetUrl } from '@/api/apiClient';
 import type { Design } from '@/types/product';
+import { getProductPath } from '@/utils/routes';
 
 const EditorsChoice = () => {
   const [products, setProducts] = useState<Design[]>([]);
@@ -69,7 +70,7 @@ const EditorsChoice = () => {
             return (
               <Link
                 key={product.id}
-                to={`/product/${product.id}`}
+                to={getProductPath(product)}
                 className={`group relative overflow-hidden bg-neutral-100 transition-all duration-700 ${isPrimaryHero ? "md:col-span-2 md:row-span-2 col-span-2" :
                   isWideHero ? "md:col-span-2 col-span-2" :
                     "col-span-1"
