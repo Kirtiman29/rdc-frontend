@@ -2,27 +2,23 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 
-// Importing your actual layout components
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { getPublishedBlogs, type PublicBlog } from "@/api/blogApi";
 import { getAssetUrl } from "@/api/apiClient";
 import { getBlogPath } from "@/utils/routes";
 
-// Assets
 import pattern1 from "@/assets/sample-pattern-1.jpg";
 import pattern2 from "@/assets/sample-pattern-2.jpg";
 import pattern3 from "@/assets/sample-pattern-3.jpg";
 import pattern4 from "@/assets/sample-pattern-4.jpg";
 
-import { 
-  ArrowRight, 
-  Calendar, 
-  User, 
+import {
+  ArrowRight,
+  Calendar,
   ChevronRight,
-  Sparkles,
-  Zap,
-  BookOpen
+  Loader2,
+  User,
 } from "lucide-react";
 
 const fallbackImages = [pattern1, pattern2, pattern3, pattern4];
@@ -50,75 +46,86 @@ const formatBlogDate = (date: string | undefined) => {
   }).format(parsed);
 };
 
+const estimateReadTime = (value: string | undefined) => {
+  const text = (value || "").replace(/<[^>]*>/g, " ").trim();
+  const words = text ? text.split(/\s+/).length : 120;
+  return `${Math.max(2, Math.ceil(words / 180))} min read`;
+};
+
 const mapPublicBlogToArticle = (blog: PublicBlog, index: number) => ({
   id: blog.id,
   slug: blog.slug,
+  featured: blog.featured,
   category: blog.category || "Editorial",
   title: blog.title,
   excerpt: blog.excerpt,
   image: getBlogImage(blog.image, index),
   author: blog.author || "RDC Editorial",
   date: formatBlogDate(blog.publishedAt),
+  readTime: estimateReadTime(blog.content || blog.excerpt),
 });
 
 const BLOG_ARTICLES_DATA = [
   {
     id: 1,
     slug: "counterintuitive-networking-strategies-for-designers",
+    featured: true,
     category: "Creative Entrepreneurship",
     title: "Counterintuitive Networking Strategies for Designers",
-    excerpt: "Malko Sakai is the founder of Airtight Concepts, a business consulting firm that specializes in eliminating business stagnation...",
+    excerpt:
+      "Malko Sakai is the founder of Airtight Concepts, a business consulting firm that specializes in eliminating business stagnation and helping creative studios move with more intention.",
     image: pattern1,
     author: "Malko Sakai",
-    date: "April 2, 2026"
+    date: "April 2, 2026",
+    readTime: "4 min read",
   },
   {
     id: 2,
     slug: "painting-murals-sculpture-and-more-with-hello-kirsten",
     category: "Artistic Style",
-    title: "Painting, Murals, Sculpture and more with Hello Kirsten",
-    excerpt: "Hello Kirsten is a muralist and fine artist working in Toronto, Canada. She mixes patterns and interesting color palettes...",
+    title: "Painting, Murals, Sculpture and More with Hello Kirsten",
+    excerpt:
+      "Hello Kirsten is a muralist and fine artist working in Toronto, Canada. She mixes patterns, rich palettes, and tactile mark-making into work that feels instantly collectible.",
     image: pattern2,
     author: "Kirsten",
-    date: "March 28, 2026"
+    date: "March 28, 2026",
+    readTime: "3 min read",
   },
   {
     id: 3,
     slug: "mixing-analog-digital-printing-techniques-for-fabric",
     category: "Textile History",
-    title: "Mixing Analog + Digital Printing Techniques for Fabric",
-    excerpt: "Kineret Enoch is a textile and surface pattern designer with over 15 years of experience developing prints and textile collections...",
+    title: "Mixing Analog and Digital Printing Techniques for Fabric",
+    excerpt:
+      "Kineret Enoch is a textile and surface pattern designer with deep experience developing prints and collections that bridge hand processes with production-ready systems.",
     image: pattern3,
     author: "Kineret Enoch",
-    date: "March 15, 2026"
+    date: "March 15, 2026",
+    readTime: "5 min read",
   },
   {
     id: 4,
     slug: "joy-patterned-filled-homes-from-megan-kelso",
     category: "Home Decor",
-    title: "Joy & Patterned Filled Homes From Megan Kelso",
-    excerpt: "Megan Kelso creates hand-painted artwork for interior textiles and wallpaper in the high desert of Oregon. In college, Megan majored...",
+    title: "Joy and Pattern-Filled Homes from Megan Kelso",
+    excerpt:
+      "Megan Kelso creates hand-painted artwork for interior textiles and wallpaper in the high desert of Oregon, translating warmth and personality into repeatable decorative stories.",
     image: pattern4,
     author: "Megan Kelso",
-    date: "March 10, 2026"
-  }
-];
-
-const SIDEBAR_TOPICS = [
-  "Textile Design Lab",
-  "Trend Certification",
-  "Pattern Directory",
-  "AI in Textile Design",
-  "Creative Business"
+    date: "March 10, 2026",
+    readTime: "3 min read",
+  },
 ];
 
 export default function Blog() {
   const [blogs, setBlogs] = useState<PublicBlog[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchBlogs = async () => {
+      setLoading(true);
       try {
         const publishedBlogs = await getPublishedBlogs();
         if (isMounted) {
@@ -126,6 +133,10 @@ export default function Blog() {
         }
       } catch (error) {
         console.error("Failed to load public blogs:", error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -136,158 +147,181 @@ export default function Blog() {
     };
   }, []);
 
-  const articles = blogs.length > 0
-    ? blogs.map(mapPublicBlogToArticle)
-    : BLOG_ARTICLES_DATA;
+  const articles = blogs.length > 0 ? blogs.map(mapPublicBlogToArticle) : BLOG_ARTICLES_DATA;
+  const featuredArticle =
+    articles.find((article) => article.featured) || articles[0];
+  const supportingArticles = featuredArticle
+    ? articles.filter((article) => article.id !== featuredArticle.id)
+    : [];
+
+  if (loading && blogs.length === 0) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#FBFAF9]">
+        <Loader2 className="h-10 w-10 animate-spin text-[#C5A059]" />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-white text-black font-sans flex flex-col">
-      {/* 1. YOUR HEADER */}
+    <div className="flex min-h-screen flex-col bg-[#FBFAF9] text-[#2A2623]">
       <Header />
 
       <main className="flex-1">
-        {/* --- HERO BANNER --- */}
-        <div className="bg-[#F5F4F0] border-b border-neutral-100 py-16">
-          <div className="container mx-auto px-4 md:px-8 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#212328] text-white text-[10px] font-bold tracking-[0.2em] uppercase mb-6"
-            >
-              <Zap size={12} className="fill-current" /> Editorial Feed
-            </motion.div>
-            <h1 className="font-serif text-5xl md:text-6xl font-medium tracking-tight text-[#2A2623] uppercase">
-              Pattern <span className="text-neutral-400 font-light italic">Observer</span>
-            </h1>
-            <p className="mt-4 text-neutral-500 text-xs uppercase tracking-[0.4em] font-semibold">
-              Insight for the <span className="text-[#2A2623]">Modern Textile Designer</span>
-            </p>
+        <section className="relative overflow-hidden border-b border-[#E8E1D4] bg-[radial-gradient(circle_at_top_left,_rgba(197,160,89,0.16),_transparent_38%),linear-gradient(180deg,#FBFAF9_0%,#F3EEE4_100%)]">
+          <div className="container mx-auto px-4 py-10 md:px-8 md:py-12">
+            <div className="max-w-3xl">
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#C5A059]">
+                RDC Journal
+              </p>
+              <h1 className="mt-3 font-serif text-3xl leading-tight text-[#2A2623] md:text-5xl">
+                Stories, insights, and visual direction from the world of textile design.
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-[#2A2623]/68">
+                A cleaner editorial space focused on the latest published articles, with the imagery and content taking the lead.
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* --- MAIN CONTENT GRID --- */}
-        <div className="container mx-auto px-4 md:px-8 py-20">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
-            
-            {/* LEFT: ARTICLES */}
-            <div className="lg:col-span-8 space-y-20">
-              {articles.map((post, index) => (
-                <motion.article 
-                  key={post.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="group cursor-pointer"
+        {featuredArticle && (
+          <section className="container mx-auto px-4 py-8 md:px-8 md:py-10">
+            <motion.article
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mx-auto max-w-4xl overflow-hidden border border-[#E8E1D4] bg-white shadow-[0_18px_60px_rgba(42,38,35,0.07)]"
+            >
+              <div className="grid items-start lg:grid-cols-[320px_minmax(0,1fr)]">
+                <Link
+                  to={getBlogPath(featuredArticle)}
+                  className="group block h-[180px] overflow-hidden bg-[#EFE9DE] md:h-[220px] lg:h-[260px]"
                 >
-                  <div className="grid md:grid-cols-2 gap-10 items-start">
-                    <div className="relative overflow-hidden rounded-2xl aspect-[4/3] bg-white border border-neutral-100 shadow-sm">
-                      <Link to={getBlogPath(post)} className="block h-full">
-                        <img 
-                          src={post.image} 
-                          alt={post.title}
-                          className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                        />
-                      </Link>
-                      <div className="absolute top-6 left-6">
-                        <span className="bg-white/95 backdrop-blur px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-sm border border-neutral-100">
-                          {post.category}
-                        </span>
-                      </div>
+                  <img
+                    src={featuredArticle.image}
+                    alt={featuredArticle.title}
+                    className="h-full w-full object-cover transition-transform duration-1000 group-hover:scale-[1.04]"
+                  />
+                </Link>
+
+                <div className="flex flex-col justify-between p-5 md:p-7 lg:p-8">
+                  <div>
+                    <div className="mb-3 flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-[0.24em] text-[#2A2623]/55">
+                      <span>{featuredArticle.category}</span>
                     </div>
-                    
-                    <div className="flex flex-col justify-center h-full space-y-5">
-                      <div className="flex items-center gap-5 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-                        <span className="flex items-center gap-2"><Calendar size={14} /> {post.date}</span>
-                        <span className="flex items-center gap-2"><User size={14} /> {post.author}</span>
-                      </div>
-                      <Link to={getBlogPath(post)}>
-                        <h2 className="font-serif text-3xl text-[#2A2623] leading-[1.1] group-hover:text-black transition-colors">
-                          {post.title}
-                        </h2>
-                      </Link>
-                      <p className="text-neutral-600 text-sm leading-relaxed line-clamp-3">
-                        {post.excerpt}
-                      </p>
-                      <div className="pt-2">
-                        <Link to={getBlogPath(post)} className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.2em] text-[#2A2623] group-hover:translate-x-2 transition-all">
-                          Read Full Story <ArrowRight size={16} className="text-[#ff1a1a]" />
-                        </Link>
-                      </div>
+
+                    <Link to={getBlogPath(featuredArticle)}>
+                      <h2 className="max-w-2xl font-serif text-xl leading-tight text-[#2A2623] transition-colors hover:text-black md:text-2xl">
+                        {featuredArticle.title}
+                      </h2>
+                    </Link>
+
+                    <p className="mt-3 max-w-xl text-sm leading-6 text-[#2A2623]/68">
+                      {featuredArticle.excerpt}
+                    </p>
+                  </div>
+
+                  <div className="mt-5">
+                    <div className="mb-4 flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase tracking-[0.2em] text-[#2A2623]/50">
+                      <span className="flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5" />
+                        {featuredArticle.date}
+                      </span>
+                      <span className="flex items-center gap-2">
+                        <User className="h-3.5 w-3.5" />
+                        {featuredArticle.author}
+                      </span>
+                      <span>{featuredArticle.readTime}</span>
+                    </div>
+
+                    <Link
+                      to={getBlogPath(featuredArticle)}
+                      className="inline-flex items-center gap-3 border-b border-[#2A2623]/20 pb-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#2A2623] transition-all hover:gap-4"
+                    >
+                      Read Featured Story
+                      <ArrowRight className="h-4 w-4 text-[#C5A059]" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </motion.article>
+          </section>
+        )}
+
+        <section className="container mx-auto px-4 pb-20 md:px-8 md:pb-24">
+          <div className="mb-10 flex flex-col gap-4 border-b border-[#E8E1D4] pb-8 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#C5A059]">
+                Latest Articles
+              </p>
+              <h2 className="mt-3 font-serif text-3xl text-[#2A2623] md:text-4xl">
+                Recent stories
+              </h2>
+            </div>
+            <div className="max-w-xl text-sm leading-7 text-[#2A2623]/62">
+              A focused feed of published blog content with a more refined, image-led layout.
+            </div>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+            {supportingArticles.map((post, index) => (
+              <motion.article
+                key={post.id}
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.06 }}
+                className="group overflow-hidden border border-[#E8E1D4] bg-white shadow-[0_14px_50px_rgba(42,38,35,0.05)]"
+              >
+                <Link to={getBlogPath(post)} className="block">
+                  <div className="relative aspect-[4/3] overflow-hidden bg-[#EFE9DE]">
+                    <img
+                      src={post.image}
+                      alt={post.title}
+                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                    />
+                    <div className="absolute left-5 top-5 bg-white/92 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-[#2A2623]">
+                      {post.category}
                     </div>
                   </div>
-                </motion.article>
-              ))}
+                </Link>
 
-              <div className="pt-12 flex justify-center border-t border-neutral-100">
-                <button className="group relative px-12 py-4 bg-[#212328] text-white rounded-md font-bold text-xs uppercase tracking-[0.3em] overflow-hidden transition-all hover:bg-black active:scale-95">
-                  <span className="relative z-10 flex items-center gap-3">
-                    Older Posts <BookOpen size={16} />
-                  </span>
-                </button>
-              </div>
-            </div>
+                <div className="p-6 md:p-7">
+                  <div className="mb-4 flex flex-wrap items-center gap-4 text-[10px] font-bold uppercase tracking-[0.18em] text-[#2A2623]/45">
+                    <span className="flex items-center gap-2">
+                      <Calendar className="h-3.5 w-3.5" />
+                      {post.date}
+                    </span>
+                    <span>{post.readTime}</span>
+                  </div>
 
-            {/* RIGHT: SIDEBAR */}
-            <aside className="lg:col-span-4 space-y-14">
-              
-              {/* Call to Action: The Lab */}
-              <div className="p-10 bg-[#212328] rounded-2xl text-white space-y-8 relative overflow-hidden group shadow-xl">
-                <div className="w-14 h-14 rounded-full bg-[#E5F7F6]/10 flex items-center justify-center text-[#E5F7F6]">
-                  <Sparkles size={28} />
-                </div>
-                
-                <div className="space-y-3">
-                  <h3 className="font-serif text-2xl leading-tight">Textile Design <span className="text-neutral-400 italic">Lab</span></h3>
-                  <p className="text-xs text-neutral-300 font-medium leading-relaxed">
-                    Join our professional community to transform your artwork into marketable patterns.
+                  <Link to={getBlogPath(post)}>
+                    <h3 className="font-serif text-2xl leading-tight text-[#2A2623] transition-colors group-hover:text-black">
+                      {post.title}
+                    </h3>
+                  </Link>
+
+                  <p className="mt-4 text-sm leading-7 text-[#2A2623]/64 line-clamp-4">
+                    {post.excerpt}
                   </p>
+
+                  <div className="mt-6 flex items-center justify-between gap-4 border-t border-[#E8E1D4] pt-5">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#2A2623]/45">
+                      {post.author}
+                    </span>
+                    <Link
+                      to={getBlogPath(post)}
+                      className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-[#2A2623] transition-all hover:gap-3"
+                    >
+                      Read More
+                      <ChevronRight className="h-4 w-4 text-[#C5A059]" />
+                    </Link>
+                  </div>
                 </div>
-                
-                <button className="w-full py-4 bg-white text-[#212328] rounded-md font-bold text-[10px] uppercase tracking-widest hover:bg-[#E5F7F6] transition-all">
-                  Start Learning Now
-                </button>
-              </div>
-
-              {/* Topics */}
-              <div className="px-4">
-                <h4 className="text-[10px] font-bold uppercase tracking-[0.4em] text-neutral-400 mb-8 flex items-center gap-4">
-                  Topics <div className="h-[1px] flex-1 bg-neutral-100" />
-                </h4>
-                <ul className="space-y-6">
-                  {SIDEBAR_TOPICS.map((topic) => (
-                    <li key={topic} className="flex items-center justify-between group cursor-pointer">
-                      <span className="text-xs font-bold text-neutral-500 group-hover:text-black transition-colors uppercase tracking-widest">{topic}</span>
-                      <ChevronRight size={16} className="text-neutral-200 group-hover:text-black group-hover:translate-x-1 transition-all" />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              {/* Newsletter */}
-              <div className="p-10 border border-neutral-200 rounded-2xl bg-white space-y-6 shadow-sm">
-                <h4 className="font-serif text-lg text-[#2A2623]">The Weekly <span className="text-neutral-400 italic">Feed</span></h4>
-                <p className="text-[11px] text-neutral-500 font-medium leading-relaxed uppercase tracking-widest">
-                  Trends and business strategies for designers.
-                </p>
-                <div className="space-y-3">
-                  <input 
-                    type="email" 
-                    placeholder="Email Address" 
-                    className="w-full bg-neutral-50 border border-neutral-100 rounded-md px-4 py-3 text-xs focus:outline-none focus:border-neutral-300 transition-all"
-                  />
-                  <button className="w-full py-4 bg-[#2A2623] text-white rounded-md font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-black transition-all">
-                    Subscribe
-                  </button>
-                </div>
-              </div>
-
-            </aside>
+              </motion.article>
+            ))}
           </div>
-        </div>
+        </section>
       </main>
 
-      {/* 2. SITE FOOTER */}
       <Footer />
     </div>
   );

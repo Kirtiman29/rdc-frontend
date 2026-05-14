@@ -44,6 +44,7 @@ import BlogDetail from "./pages/BlogDetail";
 import CategoryPage from "./pages/CategoryPage";
 import Subscription from "./pages/Subscription";
 import Unsubscribe from "./pages/Unsubscribe";
+import Notifications from "./pages/Notifications";
 
 // AI Studio Imports
 import Home from "./ai/pages/Home";
@@ -141,6 +142,10 @@ const App = () => (
               <Route 
                 path="/profile" 
                 element={<ProtectedRoute><Profile /></ProtectedRoute>} 
+              />
+              <Route
+                path="/notifications"
+                element={<ProtectedRoute><Notifications /></ProtectedRoute>}
               />
               <Route 
                 path="/wishlist" 

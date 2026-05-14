@@ -1,7 +1,7 @@
 // src/pages/luxury/Premium.tsx
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Heart, Eye, Loader2, ShoppingBag } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Heart, Loader2, ShoppingBag } from 'lucide-react';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import { getDesigns } from '@/api/designApi';
@@ -14,19 +14,33 @@ import { formatPrice } from '@/utils/price';
 import { LuxuryFilterContent } from '@/components/products/LuxuryFilters';
 import { getEntityPath } from '@/utils/routes';
 
+const getFiltersFromSearchParams = (searchParams: URLSearchParams): ProductFilter => ({
+  luxury: searchParams.get('luxury') !== 'false',
+  segment: searchParams.get('segment') || undefined,
+  categoryId: searchParams.get('categoryId')
+    ? Number(searchParams.get('categoryId'))
+    : undefined,
+  trending: searchParams.get('trending') === 'true',
+  editorsPick: searchParams.get('editorsPick') === 'true',
+  newArrival: searchParams.get('newArrival') === 'true',
+  sortBy: searchParams.get('sortBy') || 'createdAt,desc',
+  page: 0,
+  size: 24,
+});
+
 const Premium = () => {
+  const [searchParams] = useSearchParams();
   const [luxuryProducts, setPremiumProducts] = useState<Design[]>([]);
   const [loading, setLoading] = useState(true);
   const [addingToCart, setAddingToCart] = useState<number | null>(null);
   const [wishlistState, setWishlistState] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
-  const [filters, setFilters] = useState<ProductFilter>({
-    luxury: true,
-    sortBy: 'createdAt,desc',
-    page: 0,
-    size: 24
-  });
+  const [filters, setFilters] = useState<ProductFilter>(() => getFiltersFromSearchParams(searchParams));
+
+  useEffect(() => {
+    setFilters(getFiltersFromSearchParams(searchParams));
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchPremiumData = async () => {

@@ -9,6 +9,7 @@ import MegaMenu from './MegaMenu';
 import SearchOverlay from './SearchOverlay';
 import { getCart } from '@/api/cartApi';
 import { useAuth } from '@/hooks/useAuth';
+import NotificationBell from '@/components/notifications/NotificationBell';
 
 let hoverTimeout: ReturnType<typeof setTimeout> | undefined;
 
@@ -210,6 +211,8 @@ const Header = () => {
                 <Heart className="h-[18px] w-[18px] stroke-[1.5px]" />
               </Link>
 
+              {isAuthenticated && <NotificationBell enabled={isAuthenticated} />}
+
               <Link to="/cart" className="relative p-2 text-[#2A2623]/70 hover:text-[#2A2623] transition-all hover:scale-110">
                 <ShoppingBag className="h-[18px] w-[18px] stroke-[1.5px]" />
                 {cartCount > 0 && (
@@ -233,6 +236,7 @@ const Header = () => {
                       </div>
                       <Link to="/profile" className="text-[10px] uppercase tracking-widest font-bold hover:text-red-500">Account</Link>
                       <Link to="/orders" className="text-[10px] uppercase tracking-widest font-bold hover:text-red-500">Orders</Link>
+                      <Link to="/notifications" className="text-[10px] uppercase tracking-widest font-bold hover:text-red-500">Notifications</Link>
                       <div className="h-[1px] bg-[#2A2623]/5" />
                       <button onClick={handleLogout} className="text-[10px] uppercase tracking-widest font-bold text-red-500 text-left">Logout</button>
                     </div>
@@ -299,6 +303,9 @@ const Header = () => {
                 </Link>
                 <Link to="/orders" onClick={() => setIsMobileMenuOpen(false)} className="text-sm font-medium text-[#2A2623]">
                   Orders
+                </Link>
+                <Link to="/notifications" onClick={() => setIsMobileMenuOpen(false)} className="text-sm font-medium text-[#2A2623]">
+                  Notifications
                 </Link>
                 <button
                   onClick={() => {
