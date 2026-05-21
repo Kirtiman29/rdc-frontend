@@ -23,9 +23,10 @@ const Fabrics = () => {
   const PAGE_SIZE = 24;
 
   const [filters, setFilters] = useState<ProductFilter>({
-    segment: searchParams.get("segment") || undefined,
-    color: searchParams.get("color") || undefined,
-    style: searchParams.get("style") || undefined,
+    categoryId: searchParams.get("categoryId")
+      ? Number(searchParams.get("categoryId"))
+      : undefined,
+    specialOffer: searchParams.get("specialOffer") === "true" ? true : undefined,
     sortBy: searchParams.get("sortBy") || "createdAt,desc",
   });
 
@@ -59,10 +60,8 @@ const Fabrics = () => {
     const params: Record<string, string> = {};
     if (page > 0) params.page = page.toString();
     if (filters.sortBy) params.sortBy = filters.sortBy;
-    if (typeof filters.segment === "string") params.segment = filters.segment;
-    if (Array.isArray(filters.segment)) params.segment = filters.segment.join(",");
-    if (filters.color) params.color = filters.color;
-    if (filters.style) params.style = filters.style;
+    if (filters.categoryId !== undefined) params.categoryId = String(filters.categoryId);
+    if (filters.specialOffer !== undefined) params.specialOffer = String(filters.specialOffer);
 
     setSearchParams(params);
   }, [filters, page, setSearchParams, fetchFabrics]);
@@ -81,7 +80,7 @@ const Fabrics = () => {
               All Fabrics
             </h1>
             <p className="text-sm font-medium text-neutral-400 uppercase tracking-widest">
-              {totalElements.toLocaleString()} Designs Found
+              {totalElements.toLocaleString()} Fabrics Found
             </p>
           </div>
         </section>
@@ -124,7 +123,7 @@ const Fabrics = () => {
                       <option value="createdAt,desc">Newest</option>
                       <option value="price,asc">Price: Low to High</option>
                       <option value="price,desc">Price: High to Low</option>
-                      <option value="popularity,desc">Best Selling</option>
+                      <option value="title,asc">Alphabetical</option>
                     </select>
                   </div>
                 </div>
@@ -133,7 +132,7 @@ const Fabrics = () => {
                 {loading ? (
                   <div className="flex flex-col items-center justify-center py-32 space-y-4">
                     <Loader2 className="animate-spin w-10 h-10 text-neutral-300" />
-                    <p className="text-sm text-neutral-400 font-medium">Loading premium fabrics...</p>
+                    <p className="text-sm text-neutral-400 font-medium">Loading fabrics...</p>
                   </div>
                 ) : designs.length > 0 ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-10">
@@ -143,7 +142,7 @@ const Fabrics = () => {
                   </div>
                 ) : (
                   <div className="text-center py-32 bg-white/30 rounded-xl border border-dashed border-neutral-200">
-                    <p className="text-neutral-500 font-serif text-xl">No designs found matching these filters.</p>
+                    <p className="text-neutral-500 font-serif text-xl">No fabrics found matching these filters.</p>
                     <Button 
                       variant="link" 
                       onClick={() => setFilters({ sortBy: "createdAt,desc" })}

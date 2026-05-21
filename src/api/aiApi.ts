@@ -33,6 +33,25 @@ const LEGACY_SEAMLESS_PATTERN_ENDPOINT = (
 ).trim();
 
 export const AI_CREDITS_UPDATED_EVENT = "ai-credits-updated";
+export const GEMINI_GENERATION_ASPECT_RATIOS = [
+  "1:1",
+  "2:3",
+  "3:2",
+  "3:4",
+  "4:3",
+  "4:5",
+  "5:4",
+  "9:16",
+  "16:9",
+  "21:9",
+] as const;
+export const GEMINI_IMAGE_MIX_ASPECT_RATIOS = [
+  "1:1",
+  "3:4",
+  "4:3",
+  "9:16",
+  "16:9",
+] as const;
 
 export const aiStudioApi = axios.create({
   baseURL: AI_USE_BASE_URL,
@@ -336,12 +355,18 @@ export type BuiltInAiToolName =
   | "TEXTILE_GENERATOR"
   | "IMAGE_TO_IMAGE"
   | "GEMINI_TEXT_TO_IMAGE"
+  | "GEMINI_IMAGE_TO_IMAGE"
+  | "GEMINI_IMAGE_MIX"
   | "IMAGE_MIX"
   | "COLORWAY"
   | "COLOR_SEPARATION"
   | "SEAMLESS_PATTERN";
 
 export type AiToolName = BuiltInAiToolName | (string & {});
+export type GeminiGenerationAspectRatio =
+  (typeof GEMINI_GENERATION_ASPECT_RATIOS)[number];
+export type GeminiImageMixAspectRatio =
+  (typeof GEMINI_IMAGE_MIX_ASPECT_RATIOS)[number];
 
 export interface AiToolPayload {
   toolName: AiToolName;
@@ -374,6 +399,26 @@ export interface EnhanceResponse {
   enhanced_prompt: string;
   final_style?: string | null;
   remainingCredits?: number | null;
+}
+
+interface GeminiGenerateOptions {
+  prompt: string;
+  style?: string;
+  numImages?: number;
+  aspectRatio?: GeminiGenerationAspectRatio;
+  enhancePrompt?: boolean;
+}
+
+interface GeminiImageToImageOptions extends Omit<GeminiGenerateOptions, "prompt"> {
+  file: File;
+  prompt?: string;
+}
+
+interface GeminiImageMixOptions {
+  files: File[];
+  prompt: string;
+  numImages?: number;
+  aspectRatio?: GeminiImageMixAspectRatio;
 }
 
 export type UpscaleMode = "smart" | "double" | "textile";
@@ -409,6 +454,38 @@ export const normalizeAiOutputUrl = (url?: string | null) => {
 };
 
 export const getAIImageUrl = (url: string) => normalizeAiOutputUrl(url);
+
+const assertAllowedAspectRatio = <TAspectRatio extends string>(
+  aspectRatio: string,
+  allowedAspectRatios: readonly TAspectRatio[],
+  errorMessage: string
+): TAspectRatio => {
+  if (allowedAspectRatios.includes(aspectRatio as TAspectRatio)) {
+    return aspectRatio as TAspectRatio;
+  }
+
+  throw new Error(errorMessage);
+};
+
+const mapAiResponseToGenerateResponse = (
+  response: AiToolResponse,
+  inputUrl: string | null,
+  styleValue: string
+): GenerateResponse => {
+  const urls = extractOutputUrls(response);
+
+  return {
+    status: response.success ? "success" : "error",
+    remainingCredits: response.remainingCredits,
+    images: urls.map((url, index) => ({
+      id: index + 1,
+      filename: `generated-${index + 1}.png`,
+      url,
+      input_image: inputUrl || "",
+      style: styleValue,
+    })),
+  };
+};
 
 const shouldFallbackToLegacySeamlessPattern = (error: unknown) => {
   if (!axios.isAxiosError(error)) {
@@ -547,19 +624,105 @@ export const generateDesign = async (formData: FormData): Promise<GenerateRespon
     },
   });
 
-  const urls = extractOutputUrls(response);
+  return mapAiResponseToGenerateResponse(response, inputUrl, styleValue);
+};
 
-  return {
-    status: response.success ? "success" : "error",
-    remainingCredits: response.remainingCredits,
-    images: urls.map((url, index) => ({
-      id: index + 1,
-      filename: `generated-${index + 1}.png`,
-      url,
-      input_image: inputUrl || "",
-      style: styleValue,
-    })),
-  };
+export const generateGeminiTextToImage = async ({
+  prompt,
+  style = "floral",
+  numImages = 1,
+  aspectRatio = "1:1",
+  enhancePrompt = true,
+}: GeminiGenerateOptions): Promise<GenerateResponse> => {
+  const trimmedPrompt = prompt.trim();
+
+  if (!trimmedPrompt) {
+    throw new Error("user_prompt is required for Gemini text to image.");
+  }
+
+  const response = await invokeAiTool({
+    toolName: "GEMINI_TEXT_TO_IMAGE",
+    inputUrl: null,
+    params: {
+      user_prompt: trimmedPrompt,
+      style,
+      aspect_ratio: assertAllowedAspectRatio(
+        aspectRatio,
+        GEMINI_GENERATION_ASPECT_RATIOS,
+        "Invalid aspect_ratio for Gemini text to image."
+      ),
+      enhance_prompt: enhancePrompt,
+      num_images: numImages,
+    },
+  });
+
+  return mapAiResponseToGenerateResponse(response, null, style);
+};
+
+export const generateGeminiImageToImage = async ({
+  file,
+  prompt = "",
+  style = "floral",
+  numImages = 1,
+  aspectRatio = "1:1",
+  enhancePrompt = true,
+}: GeminiImageToImageOptions): Promise<GenerateResponse> => {
+  const inputUrl = await uploadAiInputAsset(file);
+  const trimmedPrompt = prompt.trim();
+
+  const response = await invokeAiTool({
+    toolName: "GEMINI_IMAGE_TO_IMAGE",
+    inputUrl,
+    params: {
+      ...(trimmedPrompt ? { prompt: trimmedPrompt } : {}),
+      style,
+      aspect_ratio: assertAllowedAspectRatio(
+        aspectRatio,
+        GEMINI_GENERATION_ASPECT_RATIOS,
+        "Invalid aspect_ratio for Gemini image to image."
+      ),
+      enhance_prompt: enhancePrompt,
+      num_images: numImages,
+    },
+  });
+
+  return mapAiResponseToGenerateResponse(response, inputUrl, style);
+};
+
+export const generateGeminiImageMix = async ({
+  files,
+  prompt,
+  numImages = 1,
+  aspectRatio = "1:1",
+}: GeminiImageMixOptions): Promise<GenerateResponse> => {
+  if (files.length < 2 || files.length > 3) {
+    throw new Error("Gemini image mix requires 2 or 3 input images.");
+  }
+
+  const trimmedPrompt = prompt.trim();
+
+  if (!trimmedPrompt) {
+    throw new Error("prompt is required for Gemini image mix.");
+  }
+
+  const inputUrls = await Promise.all(files.map((file) => uploadAiInputAsset(file)));
+
+  const response = await invokeAiTool({
+    toolName: "GEMINI_IMAGE_MIX",
+    inputUrl: null,
+    params: {
+      inputUrls,
+      prompt: trimmedPrompt,
+      num_images: numImages,
+      aspect_ratio: assertAllowedAspectRatio(
+        aspectRatio,
+        GEMINI_IMAGE_MIX_ASPECT_RATIOS,
+        "Invalid aspect_ratio for Gemini image mix."
+      ),
+    },
+  });
+
+  return mapAiResponseToGenerateResponse(response, null, "mix");
 };
 
 export const upscaleImage = async (
@@ -642,21 +805,18 @@ export const useImageMixTool = async ({
   files,
   prompt,
   numImages,
+  aspectRatio = "1:1",
 }: {
   files: File[];
   prompt: string;
   numImages: number;
+  aspectRatio?: GeminiImageMixAspectRatio;
 }) => {
-  const inputUrls = await Promise.all(files.map((file) => uploadAiInputAsset(file)));
-
-  return invokeAiTool({
-    toolName: "IMAGE_MIX",
-    inputUrl: null,
-    params: {
-      inputUrls,
-      prompt,
-      num_images: numImages,
-    },
+  return generateGeminiImageMix({
+    files,
+    prompt,
+    numImages,
+    aspectRatio,
   });
 };
 

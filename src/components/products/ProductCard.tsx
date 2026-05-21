@@ -1,16 +1,23 @@
-// src/components/products/ProductCard.tsx
-import { Link } from 'react-router-dom';
-import { ShoppingBag, Heart, Loader2, Eye } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { addToCart as cartApiService } from '@/api/cartApi';
-import { addToWishlist, removeFromWishlist, checkWishlistStatus } from '@/api/wishlistApi';
-import { getAssetUrl } from '@/api/apiClient';
-import { useToast } from '@/hooks/use-toast';
-import { useState, useEffect } from 'react';
-import type { Design } from '@/types/product';
-import { getEntityPath } from '@/utils/routes';
-// ✅ Import the price utility
-import { formatPrice } from '@/utils/price';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { ShoppingBag, Heart, Loader2, Eye } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { addToCart as cartApiService } from "@/api/cartApi";
+import {
+  addToWishlist,
+  removeFromWishlist,
+  checkWishlistStatus,
+} from "@/api/wishlistApi";
+import { getAssetUrl } from "@/api/apiClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Design } from "@/types/product";
+import { getEntityPath } from "@/utils/routes";
+import { formatPrice } from "@/utils/price";
+import {
+  getFabricPriceEntries,
+  getFabricPrimaryOriginalPriceCents,
+  hasFabricPricing,
+} from "@/utils/fabrics";
 
 interface ProductCardProps {
   product: Design;
@@ -21,40 +28,55 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
   const { toast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
   const [isWished, setIsWished] = useState(false);
-  const [isWishloading, setIsWishloading] = useState(false);
+  const [isWishLoading, setIsWishLoading] = useState(false);
+
+  const categoryLabel = product.category?.name || product.segment?.replace("_", " ") || "Textile";
+  const isSubscriptionDesign = Boolean(product.subscriptionOnly);
+  const cardPrice = product.finalPriceCents ?? product.basePriceCents;
+  const hasUnitPricing = hasFabricPricing(product);
+  const fabricPrices = getFabricPriceEntries(product);
+  const primaryOriginalPrice = getFabricPrimaryOriginalPriceCents(product);
+  const productPath = getEntityPath(redirectPath || "/products", product);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkStatus = async () => {
+      try {
+        const wished = await checkWishlistStatus(product.id);
+        if (isMounted) {
+          setIsWished(wished);
+        }
+      } catch {
+        console.warn("Wishlist sync unavailable");
+      }
+    };
+
+    void checkStatus();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [product.id]);
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
   };
 
-  const categoryLabel = product.category?.name || product.segment?.replace('_', ' ') || 'Textile';
-  const isSubscriptionDesign = Boolean(product.subscriptionOnly);
-  const cardPrice = product.finalPriceCents ?? product.basePriceCents;
-  const productPath = getEntityPath(redirectPath || '/products', product);
-
-  useEffect(() => {
-    let isMounted = true;
-    const checkStatus = async () => {
-      try {
-        const wished = await checkWishlistStatus(product.id);
-        if (isMounted) setIsWished(wished);
-      } catch (error) {
-        console.warn('Wishlist sync unavailable');
-      }
-    };
-    checkStatus();
-    return () => { isMounted = false; };
-  }, [product.id]);
-
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsAdding(true);
+
     try {
       await cartApiService(product.id, 1);
       toast({ title: "Added to Cart", description: `${product.title} added.` });
-    } catch (error) {
-      toast({ variant: "destructive", title: "Cart Error", description: "Please login to add items." });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Cart Error",
+        description: "Please login to add items.",
+      });
     } finally {
       setIsAdding(false);
     }
@@ -63,7 +85,8 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
   const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsWishloading(true);
+    setIsWishLoading(true);
+
     try {
       if (isWished) {
         await removeFromWishlist(product.id);
@@ -74,24 +97,27 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
         setIsWished(true);
         toast({ title: "Saved", description: "Design added to wishlist." });
       }
-    } catch (error) {
-      toast({ variant: "destructive", title: "Wishlist Error", description: "Authentication required." });
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Wishlist Error",
+        description: "Authentication required.",
+      });
     } finally {
-      setIsWishloading(false);
+      setIsWishLoading(false);
     }
   };
 
   return (
-    <div className="group animate-fade-in relative font-sans" onContextMenu={handleContextMenu}>
+    <div className="group relative animate-fade-in font-sans" onContextMenu={handleContextMenu}>
       <Link to={productPath}>
-        <div className="relative mb-4 aspect-[3/4] overflow-hidden rounded-sm bg-secondary select-none shadow-sm">
-          
-          {/* RDC WATERMARK OVERLAY */}
-          <div 
+        <div className="relative mb-4 aspect-[3/4] select-none overflow-hidden rounded-sm bg-secondary shadow-sm">
+          <div
             className="absolute inset-0 z-10 pointer-events-none opacity-[0.20]"
             style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.7' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E")`,
-              backgroundRepeat: 'repeat'
+              backgroundImage:
+                "url(\"data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='50%25' y='50%25' font-family='sans-serif' font-size='18' font-weight='900' fill='none' stroke='white' stroke-width='0.7' text-anchor='middle' transform='rotate(-35 50 50)'%3ERDC%3C/text%3E%3C/svg%3E\")",
+              backgroundRepeat: "repeat",
             }}
           />
 
@@ -113,39 +139,45 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
                 Subscription Only
               </span>
             )}
-            {product.discountPercent > 0 && (
+            {(product.specialOffer || product.discountPercent > 0) && (
               <span className="rounded-sm bg-destructive px-2 py-1 text-[10px] font-bold uppercase text-white shadow-sm">
-                {product.discountPercent}% OFF
+                {product.discountPercent > 0 ? `${product.discountPercent}% OFF` : "Special Offer"}
               </span>
             )}
           </div>
 
-          <div className="absolute right-3 top-3 z-30 flex flex-col gap-2 translate-x-2 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
+          <div className="absolute right-3 top-3 z-30 flex translate-x-2 flex-col gap-2 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
             <button
               onClick={handleToggleWishlist}
-              disabled={isWishloading}
+              disabled={isWishLoading}
               className={`flex h-9 w-9 items-center justify-center rounded-full shadow-lg transition-all backdrop-blur-md ${
-                isWished ? 'bg-destructive text-white' : 'bg-white/90 text-[#2A2623] hover:bg-white'
+                isWished ? "bg-destructive text-white" : "bg-white/90 text-[#2A2623] hover:bg-white"
               }`}
             >
-              {isWishloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Heart className={`h-4 w-4 ${isWished ? 'fill-current' : ''}`} />}
+              {isWishLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Heart className={`h-4 w-4 ${isWished ? "fill-current" : ""}`} />
+              )}
             </button>
-            
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#2A2623] shadow-lg backdrop-blur-md hover:bg-white transition-all">
+
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-[#2A2623] shadow-lg backdrop-blur-md transition-all hover:bg-white">
               <Eye className="h-4 w-4" />
             </div>
           </div>
 
           {!product.active && (
             <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/80">
-              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Unavailable</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Unavailable
+              </span>
             </div>
           )}
 
           {product.active && !isSubscriptionDesign && (
             <div className="absolute bottom-3 left-3 right-3 z-30 translate-y-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
               <Button
-                className="w-full gap-2 shadow-xl bg-[#2A2623] hover:bg-black uppercase text-[10px] font-bold tracking-widest h-10 rounded-sm"
+                className="h-10 w-full gap-2 rounded-sm bg-[#2A2623] text-[10px] font-bold uppercase tracking-widest shadow-xl hover:bg-black"
                 size="sm"
                 disabled={isAdding}
                 onClick={handleAddToCart}
@@ -163,8 +195,8 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
               </div>
             </div>
           )}
-          
-          <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+
+          <div className="pointer-events-none absolute inset-0 bg-black/5 opacity-0 transition-opacity group-hover:opacity-100" />
         </div>
       </Link>
 
@@ -173,22 +205,32 @@ const ProductCard = ({ product, redirectPath }: ProductCardProps) => {
           {categoryLabel}
         </span>
         <Link to={productPath}>
-          <h3 className="mb-1 font-serif text-lg font-medium transition-colors hover:text-muted-foreground line-clamp-1 text-[#2A2623]">
+          <h3 className="mb-1 line-clamp-1 font-serif text-lg font-medium text-[#2A2623] transition-colors hover:text-muted-foreground">
             {product.title}
           </h3>
         </Link>
-        
-        {/* ✅ Price Display Refactored for Whole Rupees */}
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-[#2A2623]">
-            {isSubscriptionDesign ? 'Included in subscription' : formatPrice(cardPrice)}
-          </span>
-          {!isSubscriptionDesign && product.discountPercent > 0 && (
-            <span className="text-xs text-muted-foreground line-through font-light">
-              {formatPrice(product.basePriceCents)}
+
+        {hasUnitPricing && !isSubscriptionDesign ? (
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-1">
+            {fabricPrices.map((entry) => (
+              <div key={entry.unit} className="text-xs">
+                <span className="block uppercase tracking-wide text-muted-foreground">{entry.label}</span>
+                <span className="font-bold text-[#2A2623]">{formatPrice(entry.priceCents)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-[#2A2623]">
+              {isSubscriptionDesign ? "Included in subscription" : formatPrice(cardPrice)}
             </span>
-          )}
-        </div>
+            {!isSubscriptionDesign && product.discountPercent > 0 && (
+              <span className="text-xs font-light text-muted-foreground line-through">
+                {formatPrice(primaryOriginalPrice)}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

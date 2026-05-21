@@ -83,7 +83,14 @@ export function TopNav() {
       {/* 2. Interactive Navigation */}
       <nav className="flex items-center gap-1">
         {navItems.map((item) => {
-          const isActive = location.pathname === item.path;
+          const isGenerateGroup = item.path === "/ai-studio/generate";
+          const isActive = isGenerateGroup
+            ? [
+                "/ai-studio/generate",
+                "/ai-studio/gemini-text-to-image",
+                "/ai-studio/gemini-image-mix",
+              ].includes(location.pathname)
+            : location.pathname === item.path;
 
           return (
             <Link

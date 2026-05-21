@@ -10,6 +10,8 @@ import { motion, AnimatePresence } from "framer-motion";
 const navSection = [
   { label: "Dashboard", path: "/ai-studio/dashboard", icon: LayoutDashboard },
   { label: "Generate Design", path: "/ai-studio/generate", icon: Wand2 },
+  { label: "Gemini Text", path: "/ai-studio/gemini-text-to-image", icon: Sparkles },
+  { label: "Gemini Mix", path: "/ai-studio/gemini-image-mix", icon: Image },
   { label: "Upscale", path: "/ai-studio/upscale", icon: Maximize },
   { label: "Pattern Finder", path: "/ai-studio/finder", icon: Search },
   { label: "Recolor Studio", path: "/ai-studio/recolor", icon: Palette },

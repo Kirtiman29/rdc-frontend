@@ -50,6 +50,8 @@ import Notifications from "./pages/Notifications";
 import Home from "./ai/pages/Home";
 import DashboardLayout from "@/ai/components/layout/DashboardLayout";
 import Generate from "@/ai/pages/Generate";
+import GeminiTextToImage from "@/ai/pages/GeminiTextToImage";
+import GeminiImageMix from "@/ai/pages/GeminiImageMix";
 import MyDesigns from "@/ai/pages/MyDesigns";
 import AiNotFound from "@/ai/pages/NotFound";
 import Upscale from "@/ai/pages/Upscale";
@@ -183,6 +185,8 @@ const App = () => (
                 <Route path="dashboard" element={<Home />} />
                 <Route path="gallery" element={<MyDesigns />} />
                 <Route path="generate" element={<Generate />} />
+                <Route path="gemini-text-to-image" element={<GeminiTextToImage />} />
+                <Route path="gemini-image-mix" element={<GeminiImageMix />} />
                 <Route path="upscale" element={<Upscale />} />
                 <Route path="finder" element={<PatternFinder />} />
                 <Route path="recolor" element={<TextileRecolorStudio />} />

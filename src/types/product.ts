@@ -6,6 +6,9 @@ export interface Category {
   slug: string;
   description?: string;
   imageUrl?: string;
+  scope?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /**
@@ -63,8 +66,25 @@ export interface Design {
   // Relationships & Collections
   categories?: Category[]; // Multi-category support
   category?: Category;     // Legacy single category support
+  categoryId?: number;
   tags: string[];
   media: DesignMedia[]; 
+
+  // Fabric-specific merchandising fields
+  pricePerMeterCents?: number;
+  pricePerSwatchCents?: number;
+  pricePerQuarterCents?: number;
+  pricePerYardCents?: number;
+  finalPricePerMeterCents?: number;
+  finalPricePerSwatchCents?: number;
+  finalPricePerQuarterCents?: number;
+  finalPricePerYardCents?: number;
+  stockMeters?: number;
+  stockQuantity?: number;
+  material?: string;
+  width?: number | string;
+  gsm?: number | string;
+  length?: string;
   
   createdAt: string;
   updatedAt?: string;
