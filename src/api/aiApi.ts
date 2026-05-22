@@ -31,6 +31,7 @@ const SEAMLESS_PATTERN_TOOL_NAME = (import.meta.env.VITE_SEAMLESS_PATTERN_TOOL_N
 const LEGACY_SEAMLESS_PATTERN_ENDPOINT = (
   import.meta.env.VITE_SEAMLESS_PATTERN_ENDPOINT || "/pattern/generate-seamless"
 ).trim();
+const IS_DEV = import.meta.env.DEV;
 
 export const AI_CREDITS_UPDATED_EVENT = "ai-credits-updated";
 export const GEMINI_GENERATION_ASPECT_RATIOS = [
@@ -69,6 +70,30 @@ const isRecord = (value: unknown): value is UnknownRecord =>
 
 const isLikelyUrl = (value: string) =>
   /^(https?:\/\/|data:|blob:|\/)/i.test(value) || value.includes(".");
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+const tryParseJsonRecord = (value: unknown): UnknownRecord | null => {
+  if (!isNonEmptyString(value)) {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  if (
+    (!trimmedValue.startsWith("{") || !trimmedValue.endsWith("}")) &&
+    (!trimmedValue.startsWith("[") || !trimmedValue.endsWith("]"))
+  ) {
+    return null;
+  }
+
+  try {
+    const parsedValue = JSON.parse(trimmedValue);
+    return isRecord(parsedValue) ? parsedValue : null;
+  } catch {
+    return null;
+  }
+};
 
 const joinUrl = (baseUrl: string, path: string) => {
   const cleanBase = baseUrl.replace(/\/+$/, "");
@@ -117,6 +142,12 @@ const readUrlsFromValue = (value: unknown, urls: string[]) => {
   if (!value) return;
 
   if (typeof value === "string") {
+    const parsedJson = tryParseJsonRecord(value);
+    if (parsedJson) {
+      readUrlsFromValue(parsedJson, urls);
+      return;
+    }
+
     if (isLikelyUrl(value)) {
       urls.push(value);
     }
@@ -144,6 +175,10 @@ const readUrlsFromValue = (value: unknown, urls: string[]) => {
   ];
 
   const nestedKeys = [
+    "generated_images",
+    "generatedImages",
+    "image_urls",
+    "imageUrls",
     "outputUrls",
     "output_urls",
     "images",
@@ -222,16 +257,124 @@ const extractUploadedAssetUrl = (payload: unknown): string => {
   );
 };
 
-const extractOutputUrls = (response: AiToolResponse) => {
+type GeneratedImagePayload = {
+  filename?: string;
+  image_url?: string;
+  imageUrl?: string;
+  url?: string;
+};
+
+type ExtractedGeneratedImage = {
+  filename: string;
+  url: string;
+};
+
+const normalizeStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter(isNonEmptyString)
+    .map((item) => item.trim());
+};
+
+const extractGeneratedImagesFromOutputData = (outputData: unknown): ExtractedGeneratedImage[] => {
+  const normalizedOutputData = isRecord(outputData) ? outputData : tryParseJsonRecord(outputData);
+
+  if (!normalizedOutputData) {
+    return [];
+  }
+
+  const generatedImages = Array.isArray(normalizedOutputData.generated_images)
+    ? normalizedOutputData.generated_images
+    : Array.isArray(normalizedOutputData.generatedImages)
+      ? normalizedOutputData.generatedImages
+      : [];
+
+  const urlsFromObjects = generatedImages
+    .map((item, index) => {
+      if (!isRecord(item)) {
+        return null;
+      }
+
+      const generatedImage = item as GeneratedImagePayload;
+      const rawUrl = generatedImage.image_url || generatedImage.imageUrl || generatedImage.url;
+
+      if (!isNonEmptyString(rawUrl)) {
+        return null;
+      }
+
+      return {
+        filename:
+          isNonEmptyString(generatedImage.filename) ?
+            generatedImage.filename.trim()
+          : `generated-${index + 1}.png`,
+        url: normalizeAiOutputUrl(rawUrl.trim()),
+      };
+    })
+    .filter((item): item is ExtractedGeneratedImage => Boolean(item));
+
+  if (urlsFromObjects.length > 0) {
+    return urlsFromObjects;
+  }
+
+  const normalizedUrlsFromArray = normalizeStringArray(
+    Array.isArray(normalizedOutputData.image_urls) ?
+      normalizedOutputData.image_urls
+    : normalizedOutputData.imageUrls
+  );
+
+  return normalizedUrlsFromArray.map((url, index) => ({
+    filename: `generated-${index + 1}.png`,
+    url: normalizeAiOutputUrl(url),
+  }));
+};
+
+const dedupeGeneratedImages = (images: ExtractedGeneratedImage[]) => {
+  const seenUrls = new Set<string>();
+  return images.filter((image) => {
+    if (!image.url || seenUrls.has(image.url)) {
+      return false;
+    }
+
+    seenUrls.add(image.url);
+    return true;
+  });
+};
+
+const extractGeneratedImages = (
+  response: Pick<AiToolResponse, "outputUrl" | "outputData">
+): ExtractedGeneratedImage[] => {
+  const preferredImages = dedupeGeneratedImages(
+    extractGeneratedImagesFromOutputData(response.outputData)
+  );
+
+  if (preferredImages.length > 0) {
+    return preferredImages;
+  }
+
   const urls: string[] = [];
+  readUrlsFromValue(response.outputData, urls);
 
   if (response.outputUrl) {
     urls.push(response.outputUrl);
   }
 
-  readUrlsFromValue(response.outputData, urls);
+  return [...new Set(urls.map((url) => normalizeAiOutputUrl(url)).filter(Boolean))].map(
+    (url, index) => ({
+      filename: `generated-${index + 1}.png`,
+      url,
+    })
+  );
+};
 
-  return [...new Set(urls.map((url) => normalizeAiOutputUrl(url)).filter(Boolean))];
+export const extractGeneratedImageUrls = (
+  response: Pick<AiToolResponse, "outputUrl" | "outputData">
+) => extractGeneratedImages(response).map((image) => image.url);
+
+const extractOutputUrls = (response: AiToolResponse) => {
+  return extractGeneratedImageUrls(response);
 };
 
 const readErrorMessage = (value: unknown): string | null => {
@@ -441,6 +584,38 @@ export interface UpscaleResponse {
   image: string;
   generation_id: number;
   remainingCredits?: number | null;
+  outputData?: {
+    status?: string;
+    message?: string;
+    mode?: string;
+    scale?: number;
+    scale_label?: string;
+    size_mode?: string;
+    input?: {
+      path?: string;
+      url?: string;
+      width?: number;
+      height?: number;
+    };
+    output?: {
+      filename?: string;
+      path?: string;
+      url?: string;
+      media_type?: string;
+      width?: number;
+      height?: number;
+    };
+    artifacts?: {
+      enhanced?: {
+        path?: string;
+        url?: string;
+      };
+      final?: {
+        path?: string;
+        url?: string;
+      };
+    };
+  } | null;
 }
 
 export interface GenerateSeamlessResponse {
@@ -472,15 +647,24 @@ const mapAiResponseToGenerateResponse = (
   inputUrl: string | null,
   styleValue: string
 ): GenerateResponse => {
-  const urls = extractOutputUrls(response);
+  const images = extractGeneratedImages(response);
+
+  if (IS_DEV) {
+    console.debug("[aiApi] Extracted generated images", {
+      extractedCount: images.length,
+      extractedImages: images,
+      outputUrl: response.outputUrl,
+      outputData: response.outputData,
+    });
+  }
 
   return {
     status: response.success ? "success" : "error",
     remainingCredits: response.remainingCredits,
-    images: urls.map((url, index) => ({
+    images: images.map((image, index) => ({
       id: index + 1,
-      filename: `generated-${index + 1}.png`,
-      url,
+      filename: image.filename,
+      url: image.url,
       input_image: inputUrl || "",
       style: styleValue,
     })),
@@ -571,6 +755,15 @@ export const invokeAiTool = async <TData = unknown>(
   );
 
   dispatchCreditsUpdated(response.remainingCredits);
+
+  if (IS_DEV) {
+    console.debug("[aiApi] Raw /api/ai/use response", {
+      toolName: payload.toolName,
+      requestedParams: payload.params,
+      response,
+    });
+  }
+
   return {
     ...response,
     outputUrl: normalizeAiOutputUrl(response.outputUrl),
@@ -736,7 +929,7 @@ export const upscaleImage = async (
   }
 ): Promise<UpscaleResponse> => {
   const inputUrl = await uploadAiInputAsset(file);
-  const response = await invokeAiTool({
+  const response = await invokeAiTool<UpscaleResponse["outputData"]>({
     toolName: "UPSCALE",
     inputUrl,
     params: {
@@ -748,11 +941,17 @@ export const upscaleImage = async (
     },
   });
 
+  const finalImageUrl =
+    normalizeAiOutputUrl(response.outputUrl) ||
+    normalizeAiOutputUrl(response.outputData?.output?.url) ||
+    normalizeAiOutputUrl(response.outputData?.artifacts?.final?.url);
+
   return {
     status: response.success ? "success" : "error",
-    image: normalizeAiOutputUrl(response.outputUrl),
+    image: finalImageUrl,
     generation_id: Date.now(),
     remainingCredits: response.remainingCredits,
+    outputData: response.outputData,
   };
 };
 

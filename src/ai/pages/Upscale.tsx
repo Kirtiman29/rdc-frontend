@@ -13,15 +13,13 @@ import {
   Download,
   X,
 } from "lucide-react";
-import AiCreditCost from "@/ai/components/AiCreditCost";
+import AiCreditEstimate from "@/ai/components/AiCreditEstimate";
 
 const upscaleCreditMap = {
   smart: 20,
   textile: 10,
   double: 15,
 } as const;
-
-const BATCH_UPSCALE_COST = 50;
 
 export default function Upscale() {
   const [file, setFile] = useState<File | null>(null);
@@ -31,7 +29,7 @@ export default function Upscale() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
+  const [, setRemainingCredits] = useState<number | null>(null);
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -72,6 +70,9 @@ export default function Upscale() {
   const [smartUpscaleOutputMode, setSmartUpscaleOutputMode] = useState<"original" | "increased">("increased");
   const getSizeMode = () =>
     smartUpscaleOutputMode === "original" ? "same_dimensions" : "increase_pixels";
+  const estimatedUpscaleCost = upscaleCreditMap[upscaleType];
+  const selectedUpscaleLabel =
+    upscaleOptions.find((option) => option.id === upscaleType)?.label || "Upscale";
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!resultUrl) return;
@@ -172,7 +173,7 @@ export default function Upscale() {
 
         for (let i = 0; i < files.length; i++) {
           const sourceFile = files[i];
-          const response = await upscaleImage(sourceFile, "textile", {
+          const response = await upscaleImage(sourceFile, upscaleType, {
             scale: batchFactor,
             sizeMode: "increase_pixels",
             batch: i === 0,
@@ -243,10 +244,6 @@ export default function Upscale() {
             <p className="text-gray-500 text-xs uppercase tracking-widest font-bold">
               Textile Fidelity: <span className="text-white">Enhanced</span>
             </p>
-            <AiCreditCost
-              credits={mode === "batch" ? BATCH_UPSCALE_COST : upscaleCreditMap[upscaleType]}
-              label={mode === "batch" ? "Batch Upscale" : "This Model"}
-            />
           </div>
         </div>
 
@@ -539,6 +536,16 @@ export default function Upscale() {
 
             </div>
 
+            <AiCreditEstimate
+              breakdown={
+                mode === "batch" ?
+                  `${selectedUpscaleLabel} x ${estimatedUpscaleCost} Credits Per Image`
+                : `${selectedUpscaleLabel} x ${estimatedUpscaleCost} Credits`
+              }
+              totalCredits={estimatedUpscaleCost}
+              title={mode === "batch" ? "Per Image Estimate" : "Estimated Usage"}
+            />
+
             <button
               disabled={(!file && files.length === 0) || isProcessing}
               onClick={handleGenerate}
@@ -560,13 +567,6 @@ export default function Upscale() {
                 {mode === "batch" ? "Download ZIP" : "Download Result"}
               </div>
             </button>
-
-            {typeof remainingCredits === "number" && (
-              <div className="rounded-[18px] border border-white/10 bg-white/[0.03] px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">
-                Credits Left: <span className="text-white">{remainingCredits}</span>
-              </div>
-            )}
-
 
           </div>
         </div>

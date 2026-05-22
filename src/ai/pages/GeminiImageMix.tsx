@@ -19,7 +19,7 @@ import {
   type GenerateResponse,
   type GeminiImageMixAspectRatio,
 } from "@/api/aiApi";
-import AiCreditCost from "@/ai/components/AiCreditCost";
+import AiCreditEstimate from "@/ai/components/AiCreditEstimate";
 
 type GeneratedImage = GenerateResponse["images"][number];
 
@@ -34,7 +34,7 @@ export default function GeminiImageMix() {
   const [error, setError] = useState("");
   const [numImages, setNumImages] = useState(1);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
+  const [, setRemainingCredits] = useState<number | null>(null);
   const [aspectRatio, setAspectRatio] =
     useState<GeminiImageMixAspectRatio>("1:1");
 
@@ -93,6 +93,12 @@ export default function GeminiImageMix() {
 
       setGeneratedImages(result.images);
       setRemainingCredits(result.remainingCredits ?? null);
+
+      if (result.images.length < numImages) {
+        setError(
+          `Requested ${numImages} outputs, but the backend returned ${result.images.length}. The missing outputs are not present in /api/ai/use response.`
+        );
+      }
     } catch (generationError) {
       console.error("Generation failed:", generationError);
       setError(getAiErrorMessage(generationError, "Generation failed."));
@@ -224,12 +230,10 @@ export default function GeminiImageMix() {
           </div>
 
           <div className="space-y-3">
-            <div className="flex justify-between gap-3">
-              <AiCreditCost credits={numImages * GEMINI_IMAGE_MIX_COST} label="This Run" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600">
-                15 Credits Per Output
-              </span>
-            </div>
+            <AiCreditEstimate
+              breakdown={`${numImages} Outputs x ${GEMINI_IMAGE_MIX_COST} Credits`}
+              totalCredits={numImages * GEMINI_IMAGE_MIX_COST}
+            />
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
@@ -245,12 +249,6 @@ export default function GeminiImageMix() {
               </div>
             </button>
           </div>
-
-          {typeof remainingCredits === "number" && (
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">
-              Credits Left: <span className="text-white">{remainingCredits}</span>
-            </p>
-          )}
           {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
       </div>

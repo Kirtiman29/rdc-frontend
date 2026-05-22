@@ -21,7 +21,7 @@ import {
   type GenerateResponse,
   type GeminiGenerationAspectRatio,
 } from "@/api/aiApi";
-import AiCreditCost from "@/ai/components/AiCreditCost";
+import AiCreditEstimate from "@/ai/components/AiCreditEstimate";
 
 type GeneratedImage = GenerateResponse["images"][number];
 
@@ -35,7 +35,7 @@ export default function GeminiTextToImage() {
   const [error, setError] = useState("");
   const [numImages, setNumImages] = useState(1);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
+  const [, setRemainingCredits] = useState<number | null>(null);
   const [activeStyle, setActiveStyle] = useState("floral");
   const [aspectRatio, setAspectRatio] =
     useState<GeminiGenerationAspectRatio>("1:1");
@@ -104,6 +104,12 @@ export default function GeminiTextToImage() {
 
       setGeneratedImages(result.images);
       setRemainingCredits(result.remainingCredits ?? null);
+
+      if (result.images.length < numImages) {
+        setError(
+          `Requested ${numImages} outputs, but the backend returned ${result.images.length}. The missing outputs are not present in /api/ai/use response.`
+        );
+      }
     } catch (generationError) {
       console.error("Generation failed:", generationError);
       setError(getAiErrorMessage(generationError, "Generation failed."));
@@ -213,18 +219,19 @@ export default function GeminiTextToImage() {
               <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">
                 Prompt
               </label>
-              <div className="flex items-center gap-2">
-                <AiCreditCost credits={2} label="Enhance" className="shrink-0" />
-                <motion.button
-                  onClick={handleEnhance}
-                  disabled={isEnhancing}
-                  whileHover={{ scale: 1.05, backgroundColor: "#ff1a1a", color: "#fff" }}
-                  whileTap={{ scale: 0.95 }}
-                  className="flex items-center gap-1.5 rounded-full border border-[#ff1a1a]/20 bg-[#ff1a1a]/10 px-3 py-1.5 text-[10px] font-bold text-[#ff1a1a] transition-all disabled:opacity-50"
-                >
-                  <Wand2 className="h-3 w-3" /> {isEnhancing ? "Enhancing..." : "Enhance"}
-                </motion.button>
-              </div>
+              <motion.button
+                onClick={handleEnhance}
+                disabled={isEnhancing}
+                whileHover={{ scale: 1.05, backgroundColor: "#ff1a1a", color: "#fff" }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-2 rounded-full border border-[#ff1a1a]/20 bg-[#ff1a1a]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#ff7a7a] transition-all disabled:opacity-50"
+              >
+                <Wand2 className="h-3 w-3" />
+                {isEnhancing ? "Enhancing..." : "Enhance"}
+                <span className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-[9px] tracking-[0.18em] text-white">
+                  2C
+                </span>
+              </motion.button>
             </div>
 
             <textarea
@@ -257,15 +264,10 @@ export default function GeminiTextToImage() {
           </div>
 
           <div className="space-y-3">
-            <div className="flex justify-between gap-3">
-              <AiCreditCost
-                credits={numImages * GEMINI_TEXT_TO_IMAGE_COST}
-                label="This Run"
-              />
-              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-gray-600">
-                10 Credits Per Output
-              </span>
-            </div>
+            <AiCreditEstimate
+              breakdown={`${numImages} Outputs x ${GEMINI_TEXT_TO_IMAGE_COST} Credits`}
+              totalCredits={numImages * GEMINI_TEXT_TO_IMAGE_COST}
+            />
             <button
               onClick={handleGenerate}
               disabled={isGenerating}
@@ -281,12 +283,6 @@ export default function GeminiTextToImage() {
               </div>
             </button>
           </div>
-
-          {typeof remainingCredits === "number" && (
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-500">
-              Credits Left: <span className="text-white">{remainingCredits}</span>
-            </p>
-          )}
           {error && <p className="text-sm text-red-500">{error}</p>}
         </div>
       </div>

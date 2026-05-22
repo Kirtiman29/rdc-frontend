@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { Search, Bell, User, LogOut, Settings } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Search, Bell, User, LogOut, Settings, Zap } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { getToken } from "@/api/apiClient";
 import { getMyCredits } from "@/api/subscriptionApi";
@@ -28,6 +28,9 @@ export function TopNav() {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const [credits, setCredits] = useState<number | null>(null);
+  const [creditDelta, setCreditDelta] = useState<number | null>(null);
+  const creditsRef = useRef<number | null>(null);
+  const deltaTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
     const loadCredits = async () => {
@@ -48,17 +51,56 @@ export function TopNav() {
   }, [user]);
 
   useEffect(() => {
+    creditsRef.current = credits;
+  }, [credits]);
+
+  useEffect(() => {
     const handleCreditsUpdate = (event: Event) => {
       const customEvent = event as CustomEvent<number>;
       if (typeof customEvent.detail === "number") {
+        if (
+          typeof creditsRef.current === "number" &&
+          customEvent.detail < creditsRef.current
+        ) {
+          setCreditDelta(creditsRef.current - customEvent.detail);
+
+          if (deltaTimeoutRef.current) {
+            window.clearTimeout(deltaTimeoutRef.current);
+          }
+
+          deltaTimeoutRef.current = window.setTimeout(() => {
+            setCreditDelta(null);
+            deltaTimeoutRef.current = null;
+          }, 2200);
+        }
+
         setCredits(customEvent.detail);
       }
     };
 
     window.addEventListener(AI_CREDITS_UPDATED_EVENT, handleCreditsUpdate as EventListener);
-    return () =>
+    return () => {
+      if (deltaTimeoutRef.current) {
+        window.clearTimeout(deltaTimeoutRef.current);
+      }
+
       window.removeEventListener(AI_CREDITS_UPDATED_EVENT, handleCreditsUpdate as EventListener);
+    };
   }, []);
+
+  const balanceTone =
+    credits !== null && credits < 20 ?
+      "border-[#ff1a1a]/35 bg-[#ff1a1a]/10 text-[#ffb3b3] hover:border-[#ff1a1a]/50"
+    : credits !== null && credits < 50 ?
+      "border-[#ff8a3d]/35 bg-[#ff8a3d]/10 text-[#ffd4ba] hover:border-[#ff8a3d]/50"
+    : "border-white/10 bg-white/[0.03] text-gray-300 hover:border-[#ff1a1a]/25";
+
+  const balanceIconTone =
+    credits !== null && credits < 20 ?
+      "border-[#ff1a1a]/25 bg-[#ff1a1a]/12 text-[#ff6b6b]"
+    : credits !== null && credits < 50 ?
+      "border-[#ff8a3d]/25 bg-[#ff8a3d]/12 text-[#ffae73]"
+    : "border-[#ff1a1a]/20 bg-[#ff1a1a]/10 text-[#ff4d4d]";
 
   return (
     <header className="h-16 border-b border-white/5 bg-[#0f0f0f]/60 backdrop-blur-xl flex items-center px-6 gap-8 shrink-0 sticky top-0 z-[100]">
@@ -145,13 +187,31 @@ export function TopNav() {
         </button>
 
         {credits !== null && (
-          <Link
-            to="/ai-studio/profile"
-            className="hidden sm:flex h-9 items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 text-xs font-semibold text-gray-300 hover:bg-white/[0.07] hover:text-white transition-colors"
-          >
-            <span className="h-1.5 w-1.5 rounded-full bg-[#ff1a1a]" />
-            {credits} credits
-          </Link>
+          <div className="relative hidden sm:block">
+            <AnimatePresence>
+              {creditDelta !== null && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: -10, scale: 1 }}
+                  exit={{ opacity: 0, y: -18, scale: 0.96 }}
+                  className="pointer-events-none absolute -top-8 right-0 rounded-full border border-[#ff1a1a]/20 bg-[#120808]/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#ff6b6b]"
+                >
+                  -{creditDelta} Credits
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <Link
+              to="/ai-studio/profile"
+              title={`${credits} credits available`}
+              className={`flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-all hover:text-white ${balanceTone}`}
+            >
+              <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${balanceIconTone}`}>
+                <Zap className="h-3 w-3" strokeWidth={2.3} />
+              </span>
+              <span className="text-white">{credits}</span>
+            </Link>
+          </div>
         )}
 
         <DropdownMenu>

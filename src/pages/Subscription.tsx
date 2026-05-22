@@ -37,52 +37,45 @@ const getApiErrorMessage = (error: unknown, fallback: string) => {
 
 const getPlanOrder = (planType: PlanType) => {
   switch (planType) {
-    case 'DESIGN':
-      return 0;
-    case 'COMBO':
-      return 1;
     case 'AI':
+      return 0;
+    case 'DESIGN':
+      return 1;
+    case 'COMBO':
       return 2;
     default:
       return 3;
   }
 };
 
-const getPlanHeading = (plan: SubscriptionPlan) => {
-  switch (plan.planType) {
-    case 'DESIGN':
-      return 'Premium design subscription';
-    case 'AI':
-      return 'AI studio subscription';
-    case 'COMBO':
-      return 'Complete RDC subscription';
-    default:
-      return plan.name;
-  }
-};
+const getPlanHeading = (plan: SubscriptionPlan) => plan.name;
 
 const getPlanDescription = (plan: SubscriptionPlan) => {
   switch (plan.planType) {
-    case 'DESIGN':
-      return 'Curated premium textile designs for sourcing and collection planning.';
     case 'AI':
-      return 'AI credits for generation, recoloring, upscale, and fast concept development.';
+      return `${plan.creditLimit} AI credits for generation, recoloring, color separation, upscale, and rapid experimentation.`;
+    case 'DESIGN':
+      return `${plan.designLimit} downloadable premium textile designs for sourcing, approvals, and collection planning.`;
     case 'COMBO':
-      return 'Premium design access and AI production tools in one workflow.';
+      return `${plan.designLimit} design usages and ${plan.creditLimit} AI credits in one connected workflow.`;
     default:
       return 'Flexible subscription access for your textile workflow.';
   }
 };
 
 const getPlanBenefits = (plan: SubscriptionPlan) => {
-  const benefits = [];
+  const benefits: string[] = [];
 
-  if (plan.planType === 'DESIGN' || plan.planType === 'COMBO') {
+  if (plan.designLimit > 0) {
     benefits.push(`${plan.designLimit} premium design usages included`);
   }
 
-  if (plan.planType === 'AI' || plan.planType === 'COMBO') {
+  if (plan.creditLimit > 0) {
     benefits.push(`${plan.creditLimit} AI credits included`);
+  }
+
+  if (plan.pricePerDesign !== null && plan.pricePerDesign > 0) {
+    benefits.push(`${formatPlanPrice(plan.pricePerDesign)} per design effective rate`);
   }
 
   if (plan.planType === 'COMBO') {
@@ -96,15 +89,146 @@ const getPlanBenefits = (plan: SubscriptionPlan) => {
 };
 
 const getPlanMetricLabel = (plan: SubscriptionPlan) => {
-  if (plan.planType === 'DESIGN') {
-    return 'Designs per cycle';
-  }
-
   if (plan.planType === 'AI') {
     return 'Credits per cycle';
   }
 
-  return 'Access level';
+  if (plan.planType === 'DESIGN') {
+    return 'Designs per cycle';
+  }
+
+  return 'Included usage';
+};
+
+const getPlanMetricValue = (plan: SubscriptionPlan) => {
+  if (plan.planType === 'AI') {
+    return `${plan.creditLimit} Credits`;
+  }
+
+  if (plan.planType === 'DESIGN') {
+    return `${plan.designLimit} Designs`;
+  }
+
+  return `${plan.designLimit} Designs + ${plan.creditLimit} Credits`;
+};
+
+const getPlanSelectorLabel = (planType: PlanType, plan: SubscriptionPlan) => {
+  if (planType === 'AI') {
+    return `${plan.creditLimit}`;
+  }
+
+  if (planType === 'DESIGN') {
+    return `${plan.designLimit}`;
+  }
+
+  if (plan.designLimit > 0 && plan.creditLimit > 0) {
+    return `${plan.designLimit}D / ${plan.creditLimit}C`;
+  }
+
+  return plan.name;
+};
+
+const getPlanSelectorHeading = (planType: PlanType, billingCycle: BillingCycle) => {
+  const cycleUnit = billingCycle === 'MONTHLY' ? 'month' : 'year';
+
+  if (planType === 'AI') {
+    return `AI credits per ${cycleUnit}`;
+  }
+
+  if (planType === 'DESIGN') {
+    return `Design downloads per ${cycleUnit}`;
+  }
+
+  return `Included usage per ${cycleUnit}`;
+};
+
+const getPlanRecordScore = (planType: PlanType, plan: SubscriptionPlan) => {
+  let score = 0;
+
+  if (plan.price > 0) {
+    score += 1;
+  }
+
+  if (plan.designLimit > 0) {
+    score += 1;
+  }
+
+  if (plan.creditLimit > 0) {
+    score += 1;
+  }
+
+  if (planType === 'DESIGN' && plan.pricePerDesign !== null && plan.pricePerDesign > 0) {
+    score += 4;
+  }
+
+  return score;
+};
+
+const dedupePlansBySelectorLabel = (planType: PlanType, plans: SubscriptionPlan[]) => {
+  const selectedPlans = new Map<string, SubscriptionPlan>();
+
+  for (const plan of plans) {
+    const label = getPlanSelectorLabel(planType, plan);
+    const existing = selectedPlans.get(label);
+
+    if (!existing) {
+      selectedPlans.set(label, plan);
+      continue;
+    }
+
+    const existingScore = getPlanRecordScore(planType, existing);
+    const nextScore = getPlanRecordScore(planType, plan);
+
+    if (nextScore > existingScore || (nextScore === existingScore && plan.id > existing.id)) {
+      selectedPlans.set(label, plan);
+    }
+  }
+
+  return Array.from(selectedPlans.values());
+};
+
+const getPlanTypeSectionCopy = (planType: PlanType) => {
+  switch (planType) {
+    case 'AI':
+      return {
+        title: 'AI Credit Plans',
+        description:
+          'Choose the monthly credit pack that fits your generation, recolor, color separation, and refinement workload.',
+        bullets: [
+          'Access generation, recolor, color separation, and upscale tools',
+          'Credits scale with the amount of studio work your team needs',
+          'Single seat access for one account',
+        ],
+      };
+    case 'DESIGN':
+      return {
+        title: 'Design Access Plans',
+        description:
+          'Choose the monthly design allowance that fits your download volume and sourcing workflow.',
+        bullets: [
+          'Download from the premium textile design library',
+          'Standard license for creative digital and print use',
+          'Single seat access for one account',
+        ],
+      };
+    case 'COMBO':
+      return {
+        title: 'Combo Plans',
+        description:
+          'Combined access for teams that need both premium designs and AI credits in one subscription.',
+        bullets: [
+          'Design library access and AI studio usage in one plan',
+          'Built for teams running sourcing and concept workflows together',
+          'Single seat access for one account',
+        ],
+      };
+    default:
+      return {
+        title: 'Plans',
+        description: 'Subscription options returned by the backend.',
+        bullets: ['Single account access'],
+      };
+  }
 };
 
 const cycleCopy: Record<
@@ -136,6 +260,7 @@ const Subscription = () => {
   const [subscription, setSubscription] = useState<UserSubscriptionSummary>(
     EMPTY_SUBSCRIPTION_SUMMARY
   );
+  const [selectedPlanIds, setSelectedPlanIds] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const loadPlans = async () => {
@@ -190,9 +315,40 @@ const Subscription = () => {
   const visiblePlans = [...plans.filter((plan) => plan.billingCycle === selectedCycle)].sort(
     (first, second) => getPlanOrder(first.planType) - getPlanOrder(second.planType)
   );
+  const visiblePlanGroups = (['AI', 'DESIGN', 'COMBO'] as PlanType[])
+    .map((planType) => ({
+      planType,
+      plans: dedupePlansBySelectorLabel(
+        planType,
+        visiblePlans.filter((plan) => plan.planType === planType)
+      ),
+    }))
+    .filter((group) => group.plans.length > 0);
   const activeSubscription = hasActiveSubscription(subscription);
   const remainingDesigns = getRemainingDesigns(subscription);
   const copy = cycleCopy[selectedCycle];
+
+  useEffect(() => {
+    setSelectedPlanIds((current) => {
+      let changed = false;
+      const next = { ...current };
+
+      for (const group of visiblePlanGroups) {
+        const key = `${selectedCycle}-${group.planType}`;
+        const selectedId = current[key];
+        const hasSelectedPlan = group.plans.some((plan) => plan.id === selectedId);
+        const activePlanInGroup = group.plans.find((plan) => plan.id === subscription.planId);
+        const fallbackPlan = activePlanInGroup || group.plans[0];
+
+        if (!hasSelectedPlan && fallbackPlan) {
+          next[key] = fallbackPlan.id;
+          changed = true;
+        }
+      }
+
+      return changed ? next : current;
+    });
+  }, [selectedCycle, subscription.planId, visiblePlanGroups]);
 
   const handleSubscribe = async (plan: SubscriptionPlan) => {
     if (!getToken()) {
@@ -320,138 +476,159 @@ const Subscription = () => {
               </div>
             ) : (
               <div className="grid gap-6 xl:grid-cols-3">
-                {visiblePlans.map((plan) => {
-                  const isFeatured = plan.planType === 'COMBO';
-                  const isActivePlan = activeSubscription && subscription.planId === plan.id;
+                {visiblePlanGroups.map((group) => {
+                  const section = getPlanTypeSectionCopy(group.planType);
+                  const selectionKey = `${selectedCycle}-${group.planType}`;
+                  const selectedPlan =
+                    group.plans.find((plan) => plan.id === selectedPlanIds[selectionKey]) ||
+                    group.plans[0];
+                  const isFeatured = group.planType === 'COMBO';
+                  const isActivePlan =
+                    activeSubscription && subscription.planId === selectedPlan?.id;
                   const cycleText = selectedCycle === 'MONTHLY' ? 'month' : 'year';
                   const cycleBillingCopy =
                     selectedCycle === 'MONTHLY'
                       ? 'Billed monthly. Cancel or upgrade anytime.'
                       : 'Billed yearly for uninterrupted access.';
 
+                  if (!selectedPlan) {
+                    return null;
+                  }
+
                   return (
-                    <article
-                      key={plan.id}
-                      className={`relative flex h-full flex-col overflow-hidden rounded-[24px] border bg-white p-5 shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-1 ${
-                        isFeatured
-                          ? 'border-[#FF6A4D] shadow-[0_20px_60px_rgba(186,27,28,0.12)]'
-                          : 'border-slate-200'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {isFeatured && (
-                            <span className="rounded-full bg-[#FFE3DE] px-3 py-1 text-[10px] font-bold text-[#BA1B1C]">
-                              New
+                    <section key={group.planType} className="h-full">
+                      <article
+                        className={`relative flex h-full flex-col rounded-[28px] border bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] md:p-8 ${
+                          isFeatured
+                            ? 'border-[#FF6A4D] shadow-[0_20px_60px_rgba(186,27,28,0.12)]'
+                            : 'border-slate-200'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-[#F7F1E9] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-700">
+                              {group.planType}
                             </span>
-                          )}
-                          {isActivePlan && (
-                            <span className="rounded-full bg-[#EEF7F1] px-3 py-1 text-[10px] font-bold text-[#2D7A46]">
-                              Active
-                            </span>
-                          )}
+                            {isFeatured && (
+                              <span className="rounded-full bg-[#FFE3DE] px-3 py-1 text-[10px] font-bold text-[#BA1B1C]">
+                                Best Value
+                              </span>
+                            )}
+                            {isActivePlan && (
+                              <span className="rounded-full bg-[#EEF7F1] px-3 py-1 text-[10px] font-bold text-[#2D7A46]">
+                                Active
+                              </span>
+                            )}
+                          </div>
+
+                          <Sparkles
+                            className={`h-5 w-5 ${
+                              isFeatured ? 'text-[#BA1B1C]' : 'text-slate-400'
+                            }`}
+                          />
                         </div>
 
-                        <Sparkles
-                          className={`h-4 w-4 ${isFeatured ? 'text-[#BA1B1C]' : 'text-slate-400'}`}
-                        />
-                      </div>
+                        <div className="mt-7">
+                          <h3 className="text-[30px] font-semibold leading-tight text-slate-950">
+                            {section.title}
+                          </h3>
+                          <p className="mt-3 max-w-2xl text-[17px] leading-7 text-slate-600">
+                            {section.description}
+                          </p>
+                        </div>
 
-                      <div className="mt-5">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
-                          {plan.planType}
-                        </p>
-                        <h3 className="mt-3 text-[28px] font-semibold leading-tight text-slate-950">
-                          {getPlanHeading(plan)}
-                        </h3>
-                        <p className="mt-3 text-[15px] leading-6 text-slate-600">
-                          {getPlanDescription(plan)}
-                        </p>
-                      </div>
+                        <ul className="mt-7 space-y-3">
+                          {section.bullets.map((bullet) => (
+                            <li
+                              key={bullet}
+                              className="flex items-start gap-3 text-base leading-6 text-slate-800"
+                            >
+                              <Check className="mt-1 h-4 w-4 shrink-0 text-slate-900" />
+                              <span>{bullet}</span>
+                            </li>
+                          ))}
+                        </ul>
 
-                      <ul className="mt-5 space-y-2.5">
-                        {getPlanBenefits(plan).map((benefit) => (
-                          <li
-                            key={benefit}
-                            className="flex items-start gap-3 text-sm leading-5 text-slate-700"
+                        <div className="mt-12">
+                          <p className="text-lg font-medium text-slate-900">
+                            {getPlanSelectorHeading(group.planType, selectedCycle)}
+                          </p>
+                          <div
+                            className="mt-4 grid rounded-2xl border border-slate-300 bg-white p-1"
+                            style={{
+                              gridTemplateColumns: `repeat(${group.plans.length}, minmax(0, 1fr))`,
+                            }}
                           >
-                            <Check
-                              className={`mt-1 h-4 w-4 shrink-0 ${
-                                isFeatured ? 'text-[#BA1B1C]' : 'text-slate-800'
-                              }`}
-                            />
-                            <span>{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
+                            {group.plans.map((plan) => {
+                              const isSelected = plan.id === selectedPlan.id;
 
-                      <div className="mt-6">
-                        <p className="text-sm font-medium text-slate-700">
-                          {selectedCycle === 'MONTHLY'
-                            ? 'Usage each month'
-                            : 'Usage each year'}
-                        </p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {plan.designLimit > 0 && (
-                            <span className="rounded-[10px] border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900">
-                              {plan.designLimit} designs
-                            </span>
-                          )}
-                          {plan.creditLimit > 0 && (
-                            <span className="rounded-[10px] border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-900">
-                              {plan.creditLimit} credits
-                            </span>
-                          )}
-                          {plan.planType === 'COMBO' && (
-                            <span className="rounded-[10px] border border-[#FFD0C7] bg-[#FFF4F1] px-3 py-2 text-sm font-semibold text-[#BA1B1C]">
-                              Best value
-                            </span>
-                          )}
+                              return (
+                                <button
+                                  key={plan.id}
+                                  type="button"
+                                  onClick={() =>
+                                    setSelectedPlanIds((current) => ({
+                                      ...current,
+                                      [selectionKey]: plan.id,
+                                    }))
+                                  }
+                                  className={`w-full min-w-0 rounded-[14px] px-2 py-2 text-sm font-medium transition-all md:px-3 md:text-base ${
+                                    isSelected
+                                      ? 'border border-slate-900 bg-white text-slate-950 shadow-sm'
+                                      : 'border border-transparent text-slate-600 hover:text-slate-950'
+                                  }`}
+                                >
+                                  {getPlanSelectorLabel(group.planType, plan)}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="mt-4 min-h-[20px]">
+                            {selectedPlan.pricePerDesign !== null &&
+                              selectedPlan.pricePerDesign > 0 && (
+                                <p className="text-sm text-slate-600">
+                                  Effective rate: {formatPlanPrice(selectedPlan.pricePerDesign)} per
+                                  design
+                                </p>
+                              )}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="mt-auto pt-7">
-                        <div className="rounded-[18px] bg-[#FCFAF7] p-3.5">
+                        <div className="mt-12 flex min-h-[116px] flex-col justify-center rounded-[20px] bg-[#FCFAF7] p-4">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                            {getPlanMetricLabel(plan)}
+                            {getPlanMetricLabel(selectedPlan)}
                           </p>
                           <p className="mt-2 text-2xl font-semibold text-slate-950">
-                            {plan.planType === 'COMBO'
-                              ? 'Design + AI'
-                              : plan.planType === 'DESIGN'
-                                ? plan.designLimit
-                                : plan.creditLimit}
+                            {getPlanMetricValue(selectedPlan)}
                           </p>
                         </div>
 
                         <div className="mt-8 flex items-end gap-1 text-slate-950">
                           <span className="text-5xl font-semibold">
-                            {formatPlanPrice(plan.price)}
+                            {formatPlanPrice(selectedPlan.price)}
                           </span>
                           <span className="mb-2 text-base font-medium text-slate-700">
                             /{cycleText}
                           </span>
                         </div>
-                        <p className="mt-2 text-sm leading-5 text-slate-600">{cycleBillingCopy}</p>
+                        <p className="mt-2 text-sm leading-5 text-slate-600">
+                          {cycleBillingCopy}
+                        </p>
 
                         <Button
                           type="button"
-                          onClick={() => void handleSubscribe(plan)}
-                          className={`mt-6 h-12 w-full rounded-[14px] text-[11px] font-black uppercase tracking-[0.18em] transition-colors ${
+                          onClick={() => void handleSubscribe(selectedPlan)}
+                          className={`mt-8 h-14 w-full rounded-[16px] text-base font-semibold transition-colors ${
                             isFeatured
                               ? 'bg-[#1A1A1A] text-white hover:bg-[#BA1B1C]'
                               : 'border border-slate-300 bg-white text-slate-950 hover:bg-slate-50'
                           }`}
                         >
                           <Wand2 className="mr-2 h-4 w-4" />
-                          {isActivePlan
-                            ? 'Subscribed'
-                            : isFeatured
-                              ? 'Subscribe & Save'
-                              : 'Subscribe'}
+                          {isActivePlan ? 'Subscribed' : 'Subscribe'}
                         </Button>
-                      </div>
-                    </article>
+                      </article>
+                    </section>
                   );
                 })}
               </div>

@@ -27,6 +27,7 @@ import {
   getFullImageUrl,
   separateColors,
 } from "@/api/colorSeparationApi";
+import AiCreditCost from "@/ai/components/AiCreditCost";
 
 type RequestMeta = {
   mode: string;
@@ -38,6 +39,7 @@ type ImageMetadata = { width: number; height: number; size: string };
 
 const SUPPORTED_IMAGE_TYPES = ["image/png", "image/jpeg"];
 const SUPPORTED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"];
+const COLOR_SEPARATION_CREDIT_COST = 4;
 
 const isSupportedImageFile = (file: File) => {
   const fileName = file.name.toLowerCase();
@@ -441,6 +443,11 @@ function ControlPanel({
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600">AI Processing</span>
           <strong className="mt-1 block text-sm text-white">Generate premium reconstructable color layers</strong>
         </div>
+        <AiCreditCost
+          credits={COLOR_SEPARATION_CREDIT_COST}
+          label="Separation Cost"
+          className="mb-5 w-fit"
+        />
         <button
           type="button"
           className={`group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-sm font-black uppercase tracking-widest text-white transition-colors ${

@@ -24,6 +24,9 @@ import {
   normalizeAiOutputUrl,
   uploadAiInputAsset,
 } from "@/api/aiApi";
+import AiCreditCost from "@/ai/components/AiCreditCost";
+
+const RECOLOR_CREDIT_COST = 4;
 
 type RecolorChange = {
   source_color_hex: string | null;
@@ -869,6 +872,12 @@ export default function TextileRecolorStudio() {
                   />
                   Preserve Lightness
                 </label>
+
+                <AiCreditCost
+                  credits={RECOLOR_CREDIT_COST}
+                  label="Recolor Cost"
+                  className="w-fit"
+                />
 
                 <button
                   type="button"
