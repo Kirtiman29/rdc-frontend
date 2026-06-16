@@ -63,8 +63,10 @@ export const profileApi = axios.create({
 applyIndustrialInterceptors(authApi);
 applyIndustrialInterceptors(profileApi);
 
+const publicAuthRequestConfig = { skipAuthToken: true } as any;
+
 export const registerUser = async (data: { email: string; password: string; displayName: string }) => {
-  return await authApi.post('/signup', data);
+  return await authApi.post('/signup', data, publicAuthRequestConfig);
 };
 
 export const loginUser = async (email: string, password: string, twoFactorCode?: string): Promise<AuthTokenResponse> => {
@@ -72,19 +74,19 @@ export const loginUser = async (email: string, password: string, twoFactorCode?:
     email,
     password,
     ...(twoFactorCode ? { twoFactorCode } : {}),
-  });
+  }, publicAuthRequestConfig);
 };
 
 export const requestUserOtp = async (email: string) => {
-  return await authApi.post('/login/otp/request', { email });
+  return await authApi.post('/login/otp/request', { email }, publicAuthRequestConfig);
 };
 
 export const verifyUserOtp = async (email: string, otp: string): Promise<AuthTokenResponse> => {
-  return await authApi.post<AuthTokenResponse, AuthTokenResponse>('/login/otp/verify', { email, otp });
+  return await authApi.post<AuthTokenResponse, AuthTokenResponse>('/login/otp/verify', { email, otp }, publicAuthRequestConfig);
 };
 
 export const loginWithGoogle = async (idToken: string): Promise<AuthTokenResponse> => {
-  return await authApi.post<AuthTokenResponse, AuthTokenResponse>('/google', { idToken });
+  return await authApi.post<AuthTokenResponse, AuthTokenResponse>('/google', { idToken }, publicAuthRequestConfig);
 };
 
 export const getCurrentUser = async (): Promise<AuthMeResponse> => {
@@ -117,11 +119,11 @@ export const logoutUser = () => {
 };
 
 export const requestPasswordReset = async (email: string) => {
-  return await authApi.post('/password/request-reset', { email });
+  return await authApi.post('/password/request-reset', { email }, publicAuthRequestConfig);
 };
 
 export const resetPassword = async (token: string, newPassword: string) => {
-  return await authApi.post('/password/reset', { token, newPassword });
+  return await authApi.post('/password/reset', { token, newPassword }, publicAuthRequestConfig);
 };
 
 export default authApi;

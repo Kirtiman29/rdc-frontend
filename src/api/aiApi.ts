@@ -112,7 +112,7 @@ const getUrlPath = (url: string) => {
 
 const shouldUseAiServiceForOutput = (url: string) =>
   Boolean(AI_SERVICE_URL) &&
-  /^(?:patterns|output|files(?:\/|$)|static(?:\/|$)|storage(?:\/|$))/i.test(
+  /^(?:patterns|output|files(?:\/|$)|static(?:\/|$)|storage(?:\/|$)|mixed-images(?:\/|$))/i.test(
     getUrlPath(url).replace(/^\/+/, "")
   );
 

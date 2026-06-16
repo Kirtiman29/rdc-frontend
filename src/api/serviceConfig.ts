@@ -1,9 +1,12 @@
 const DEFAULT_BASE_URL = "https://ruchitadesigncompany.in";
+const USE_RELATIVE_API_URLS = import.meta.env.DEV && import.meta.env.VITE_USE_RELATIVE_API !== "false";
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
 const resolveServiceOrigin = (envValue?: string) =>
-  trimTrailingSlash(envValue || import.meta.env.VITE_BASE_URL || DEFAULT_BASE_URL);
+  trimTrailingSlash(
+    USE_RELATIVE_API_URLS ? "" : (envValue || import.meta.env.VITE_BASE_URL || DEFAULT_BASE_URL)
+  );
 
 export const serviceOrigins = {
   admin: resolveServiceOrigin(import.meta.env.VITE_ADMIN_SERVICE_URL),

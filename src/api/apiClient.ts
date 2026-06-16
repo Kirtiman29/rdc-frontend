@@ -22,6 +22,10 @@ const TOKEN_KEY = "accessToken";
 const REFRESH_KEY = "refreshToken";
 export const AUTH_STATE_CHANGE_EVENT = "auth-state-change";
 
+type IndustrialRequestConfig = InternalAxiosRequestConfig & {
+  skipAuthToken?: boolean;
+};
+
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const getRefreshToken = () => localStorage.getItem(REFRESH_KEY);
@@ -64,7 +68,10 @@ export const applyIndustrialInterceptors = (instance: AxiosInstance) => {
 
   /* REQUEST INTERCEPTOR */
   instance.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
+    (config: IndustrialRequestConfig) => {
+      if (config.skipAuthToken) {
+        return config;
+      }
 
       const token = getToken();
 
@@ -85,7 +92,7 @@ export const applyIndustrialInterceptors = (instance: AxiosInstance) => {
 
     async error => {
 
-      const originalRequest = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined;
+      const originalRequest = error.config as (IndustrialRequestConfig & { _retry?: boolean }) | undefined;
 
       if (!originalRequest) {
         return Promise.reject(error);

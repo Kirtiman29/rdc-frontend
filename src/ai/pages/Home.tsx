@@ -67,64 +67,69 @@ export default function Home() {
   }, [subscription]);
 
   return (
-    <div className="h-full overflow-y-auto bg-[#050505] custom-scrollbar">
-      <div className="max-w-[1400px] mx-auto p-6 lg:p-10 space-y-12">
+    <div className="min-h-screen overflow-y-auto bg-[#050505] custom-scrollbar">
+      <div className="mx-auto max-w-[1400px] p-6 lg:p-10 space-y-12">
         
         {/* --- HERO SECTION --- */}
-        <section className="relative rounded-[2.5rem] overflow-hidden bg-[#0a0a0a] border border-white/5">
+        <section className="relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-[#0a0a0a]">
           <div className="absolute inset-0 bg-gradient-to-br from-[#ff1a1a]/10 via-transparent to-transparent opacity-50" />
-          
-          <div className="relative p-8 lg:p-16 flex flex-col md:flex-row items-center justify-between gap-10">
-            <div className="max-w-xl">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ff1a1a]/10 border border-[#ff1a1a]/20 text-[#ff1a1a] text-[10px] font-black uppercase tracking-widest mb-6">
+          <div className="relative z-10 grid gap-10 px-6 py-10 lg:grid-cols-[1.1fr_0.9fr] lg:px-12 lg:py-16">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[#ff1a1a]/20 bg-[#ff1a1a]/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#ff1a1a] mb-6">
                 <Sparkles className="w-3 h-3" /> Textile Engine v1.0
               </div>
-              <h1 className="text-5xl lg:text-7xl font-black text-white tracking-tighter leading-[0.85] mb-6">
+              <h1 className="text-5xl font-black tracking-tighter text-white leading-[0.92] sm:text-6xl lg:text-7xl xl:text-[5.5rem] mb-6">
                 DESIGN THE <br />
-                <span className="text-[#ff1a1a]">FUTURE</span> OF WEAVE
+                <span className="text-[#ff1a1a]">FUTURE</span> OF SURFACE PATTERN
+                <span className="block">POWERED BY AI</span>
               </h1>
-              <p className="text-gray-400 text-lg mb-8 leading-relaxed max-w-md">
+              <p className="max-w-xl text-lg leading-8 text-gray-400 mb-8">
                 Every great collection starts with a pattern no one has made yet. Textile gives designers, brands, and makers the power to generate original, culturally rich, studio-ready fabric designs at the speed of imagination.
               </p>
+
               {!hasActiveSubscription(subscription) && (
-                <p className="mb-5 rounded-lg border border-[#ff1a1a]/20 bg-[#ff1a1a]/10 px-4 py-3 text-sm text-[#ff8a8a]">
+                <div className="mb-6 rounded-3xl border border-[#ff1a1a]/20 bg-[#ff1a1a]/10 px-5 py-4 text-sm text-[#ff8a8a]">
                   Choose a plan to unlock AI generation credits and premium design usage.
-                </p>
+                </div>
               )}
-              <div className="flex flex-wrap gap-4">
+
+              <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap">
                 <Link
                   to="/ai-studio/generate"
-                  className="px-8 py-4 rounded-2xl bg-[#ff1a1a] text-white font-bold hover:bg-red-700 transition-all flex items-center gap-2 shadow-[0_0_30px_rgba(255,26,26,0.2)]"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#ff1a1a] px-8 py-4 text-sm font-bold text-white shadow-[0_18px_90px_rgba(255,26,26,0.18)] transition hover:bg-red-700"
                 >
                   <Play className="w-4 h-4 fill-current" /> Start Creating
                 </Link>
                 <Link
                   to="/ai-studio/gallery"
-                  className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all"
+                  className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-sm font-bold text-white transition hover:bg-white/10"
                 >
                   View Gallery
                 </Link>
               </div>
             </div>
 
-            {/* Hero Image Mosaic */}
-            <div className="hidden lg:grid grid-cols-2 gap-4 w-full max-w-sm rotate-3">
-                <img src={pattern1} className="rounded-2xl border border-white/10 shadow-2xl" alt="pattern" />
-                <img src={pattern3} className="rounded-2xl border border-white/10 shadow-2xl mt-8" alt="pattern" />
+            <div className="hidden lg:grid grid-cols-2 gap-4 self-start">
+              <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#111111] shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
+                <img src={pattern1} alt="Mughal Crimson pattern preview" className="h-full w-full object-cover" />
+              </div>
+              <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-[#111111] shadow-[0_30px_90px_rgba(0,0,0,0.35)]">
+                <img src={pattern3} alt="Desert Weave pattern preview" className="h-full w-full object-cover" />
+              </div>
             </div>
           </div>
         </section>
 
         {/* --- STATISTICS GRID --- */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((s) => (
-            <div key={s.label} className="p-6 rounded-3xl bg-[#0a0a0a] border border-white/5 flex flex-col justify-between hover:border-white/10 transition-colors">
-              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-gray-400 mb-4">
-                <s.icon className="w-5 h-5" />
+            <div key={s.label} className="flex flex-col justify-between gap-4 rounded-3xl border border-white/5 bg-[#0a0a0a] p-6 transition hover:border-white/10">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-3xl bg-white/5 text-[#ff1a1a] shadow-inner">
+                <s.icon className="h-5 w-5" />
               </div>
               <div>
                 <p className="text-2xl font-black text-white leading-none">{s.value}</p>
-                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-2">{s.label}</p>
+                <p className="mt-2 text-[10px] font-bold uppercase tracking-widest text-gray-500">{s.label}</p>
               </div>
             </div>
           ))}
@@ -132,17 +137,17 @@ export default function Home() {
 
         {/* --- RECENT PROJECTS --- */}
         <section>
-          <div className="flex justify-between items-end mb-8">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-black text-white tracking-tight">RECENT GENERATIONS</h2>
-              <p className="text-sm text-gray-500">Pick up where you left off</p>
+              <h2 className="text-2xl font-black tracking-tight text-white">RECENT GENERATIONS</h2>
+              <p className="mt-2 text-sm text-gray-500">Pick up where you left off</p>
             </div>
-            <Link to="/ai-studio/gallery" className="text-xs font-bold text-[#ff1a1a] flex items-center gap-1 hover:underline">
+            <Link to="/ai-studio/gallery" className="inline-flex items-center gap-1 text-xs font-bold text-[#ff1a1a] hover:underline">
               ALL PROJECTS <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
             {recentDesigns.map((d, i) => (
               <DesignCard key={i} image={d.image} title={d.title} />
             ))}
@@ -150,28 +155,27 @@ export default function Home() {
         </section>
 
         {/* --- INSPIRATION BOX --- */}
-        <section className="p-8 rounded-[2rem] bg-gradient-to-r from-[#0a0a0a] to-transparent border border-white/5">
-          <h2 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-             <Zap className="w-4 h-4 text-[#ff1a1a]" /> PROMPT INSPIRATION
+        <section className="rounded-[2rem] border border-white/5 bg-gradient-to-r from-[#0a0a0a] to-transparent p-8">
+          <h2 className="mb-6 flex items-center gap-2 text-lg font-bold text-white">
+             <Zap className="h-4 w-4 text-[#ff1a1a]" /> PROMPT INSPIRATION
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-4 md:grid-cols-2">
             {suggestedPrompts.map((p, i) => (
               <Link
                 key={i}
                 to="/ai-studio/generate"
-                className="p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-[#ff1a1a]/30 transition-all group"
+                className="group rounded-3xl border border-white/5 bg-white/5 p-5 transition hover:border-[#ff1a1a]/30 hover:bg-white/10"
               >
-                <span className={`text-[10px] font-black tracking-widest mb-2 block ${p.color}`}>
+                <span className={`block text-[10px] font-black uppercase tracking-[0.35em] ${p.color} mb-2`}>
                   {p.category}
                 </span>
-                <p className="text-sm text-gray-400 group-hover:text-white transition-colors leading-relaxed">
+                <p className="text-sm leading-7 text-gray-400 transition group-hover:text-white">
                   "{p.prompt}"
                 </p>
               </Link>
             ))}
           </div>
         </section>
-
       </div>
     </div>
   );

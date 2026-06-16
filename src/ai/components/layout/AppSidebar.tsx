@@ -9,12 +9,12 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const navSection = [
   { label: "Dashboard", path: "/ai-studio/dashboard", icon: LayoutDashboard },
-  { label: "Generate Design", path: "/ai-studio/generate", icon: Wand2 },
-  { label: "Gemini Text", path: "/ai-studio/gemini-text-to-image", icon: Sparkles },
-  { label: "Gemini Mix", path: "/ai-studio/gemini-image-mix", icon: Image },
+  { label: "Pattern Generator", path: "/ai-studio/generate", icon: Wand2 },
+  { label: "Text to Pattern", path: "/ai-studio/gemini-text-to-image", icon: Sparkles },
+  { label: "Pattern Mixer", path: "/ai-studio/gemini-image-mix", icon: Image },
   { label: "Upscale", path: "/ai-studio/upscale", icon: Maximize },
-  { label: "Pattern Finder", path: "/ai-studio/finder", icon: Search },
-  { label: "Recolor Studio", path: "/ai-studio/recolor", icon: Palette },
+  { label: "Pattern Extractor", path: "/ai-studio/finder", icon: Search },
+  { label: "Color Matching", path: "/ai-studio/recolor", icon: Palette },
   { label: "Color Separation", path: "/ai-studio/color-separation", icon: SwatchBook },
 ];
 
