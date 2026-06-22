@@ -6,6 +6,7 @@ import {
   Download,
   Image as ImageIcon,
   Layers,
+  Link,
   Loader2,
   Maximize,
   Palette,
@@ -18,13 +19,55 @@ import {
   Upload,
   X,
   Zap,
+  ChevronDown,
 } from "lucide-react";
 import {
   invokeAiTool,
   normalizeAiOutputUrl,
   uploadAiInputAsset,
 } from "@/api/aiApi";
-import AiCreditCost from "@/ai/components/AiCreditCost";
+
+import pattern1 from "@/assets/sample-pattern-1.jpg";
+import pattern2 from "@/assets/sample-pattern-2.jpg";
+import pattern3 from "@/assets/sample-pattern-3.jpg";
+import pattern4 from "@/assets/sample-pattern-4.jpg";
+
+import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
+import flamingoShowcase from "@/assets/flamingo-showcase.png";
+import colorfulCharacterShowcase from "@/assets/colorful-character-showcase.png";
+
+const slideshowImages = [pattern1, pattern2, pattern3, pattern4];
+
+const faqs = [
+  {
+    question: "Can I use these images for my personal or commercial project?",
+    answer: "Yes! All designs generated through RDC AI Studio are royalty-free. You hold full rights to use them for both personal and commercial projects, including marketing, product printing, social media, and digital publishing.",
+  },
+  {
+    question: "If I generate content, will it be made available for other customers?",
+    answer: "No. Your generated patterns and designs are private to your account and saved under 'My Designs'. They will not be displayed, shared, or made available to other customers unless you explicitly choose to publish them.",
+  },
+  {
+    question: "For content I generate, will it be mine exclusively?",
+    answer: "You have full commercial usage rights to your outputs. However, because AI models can generate similar results for similar prompts, the underlying imagery is not legally patentable or exclusively owned in terms of copyright protection, similar to standard generative AI terms.",
+  },
+  {
+    question: "Do you have any safeguards for inappropriate content?",
+    answer: "Yes, we employ robust automated safety filters. Any prompts or uploaded images that contain explicit, offensive, or inappropriate content are blocked automatically prior to generation. If a generated image bypasses the filters, please report it immediately.",
+  },
+  {
+    question: "Can I write a prompt in other languages besides English?",
+    answer: "Yes! Our AI systems support multi-lingual input and can interpret prompts written in Spanish, French, German, Hindi, and many other major languages. However, English prompts generally produce the most accurate and detailed patterns.",
+  },
+  {
+    question: "How do I report results that seem weird/offensive/illegal?",
+    answer: "If you encounter a generated result that is offensive or inappropriate, you can click on the support/report link in the page footer or contact our support team directly. We review reports and adjust safety guidelines constantly.",
+  },
+  {
+    question: "How do I start making AI generated images?",
+    answer: "It is simple! Just write a description of the design you want in the prompt textbox, select your style and aspect ratio, and click 'Generate Design'. Our studio will create your visuals in seconds.",
+  },
+];
 
 const RECOLOR_CREDIT_COST = 4;
 
@@ -389,6 +432,19 @@ export default function TextileRecolorStudio() {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
+  // Slideshow state
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slideshowImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const localObjectUrlRef = useRef<string | null>(null);
@@ -715,396 +771,411 @@ export default function TextileRecolorStudio() {
     : "4 / 3";
 
   return (
-    <div className="min-h-screen bg-[#050505] text-white p-4 md:p-10 font-sans selection:bg-[#ff1a1a]/30">
+    <div className="bg-[#111315] text-[#F5F7FA] relative pb-6">
       <style>{`
         .slider-thumb::-webkit-slider-thumb {
           appearance: none;
-          height: 20px;
-          width: 20px;
+          height: 18px;
+          width: 18px;
           border-radius: 50%;
-          background: #ff1a1a;
+          background: #E11D2E;
           cursor: pointer;
           border: 2px solid white;
-          box-shadow: 0 0 10px rgba(255, 26, 26, 0.5);
+          box-shadow: 0 0 10px rgba(225, 29, 46, 0.5);
         }
         .slider-thumb::-moz-range-thumb {
-          height: 20px;
-          width: 20px;
+          height: 18px;
+          width: 18px;
           border-radius: 50%;
-          background: #ff1a1a;
+          background: #E11D2E;
           cursor: pointer;
           border: 2px solid white;
-          box-shadow: 0 0 10px rgba(255, 26, 26, 0.5);
+          box-shadow: 0 0 10px rgba(225, 29, 46, 0.5);
         }
       `}</style>
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] bg-[#ff1a1a]/5 blur-[120px] pointer-events-none" />
 
-      <div className="max-w-[1600px] mx-auto relative z-10">
-        <motion.header
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-12 flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between"
-        >
+      {/* Top Wrapper to limit Background Slideshow to Header and Generator Card */}
+      <div className="relative w-full">
+        {/* Background Slideshow */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={activeSlide}
+              src={slideshowImages[activeSlide]}
+              initial={{ opacity: 0, scale: 1.05 }}
+              animate={{ opacity: 0.45, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.5 }}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          </AnimatePresence>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-[#111315]/85 to-[#111315]" />
+        </div>
+
+        <div className="relative z-10 mx-auto flex max-w-[1480px] flex-col gap-8 p-5 md:p-7 xl:p-8">
+        
+        {/* Header Section */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[#2B3138]/60 pb-6 mt-4">
           <div>
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#ff1a1a]/30 bg-[#ff1a1a]/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#ff1a1a]">
-              <Sparkles className="h-4 w-4" /> Textile Recolor Engine v2.0
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#2B3138] bg-[#1C2025] px-3 py-1 text-xs font-semibold text-[#A1A8B3]">
+              <Sparkles className="h-3.5 w-3.5 text-[#E11D2E]" />
+              RDC AI Studio
             </div>
-            <h1 className="text-5xl font-bold uppercase tracking-tight text-white md:text-6xl">
-              Recolor <span className="text-gray-600 font-normal">Studio</span>
+            <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-white">
+              Recolor Studio: Colorway Editor
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-400">
-              Professional textile colorway creation with advanced local preview, precise color sampling, and layered export capabilities.
-            </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-right">
-            <Metric label="Session Status" value={sessionId ? "Active" : "Inactive"} />
-            <Metric label="Applied Layers" value={appliedChanges.length} />
+          <div className="flex items-center gap-6">
+            <div className="grid grid-cols-2 gap-4 text-right">
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wider text-[#A1A8B3]">Session Status</p>
+                <p className="text-xs font-bold text-white">{sessionId ? "Active" : "Inactive"}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wider text-[#A1A8B3]">Applied Layers</p>
+                <p className="text-xs font-bold text-white">{appliedChanges.length}</p>
+              </div>
+            </div>
+            <Link
+              to="/ai-studio"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#2B3138] bg-[#20242A] px-5 text-sm font-bold text-[#F5F7FA] transition hover:border-[#E11D2E]/50 hover:bg-[#252A31] self-start sm:self-auto"
+            >
+              ← Dashboard
+            </Link>
           </div>
-        </motion.header>
+        </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <aside className="lg:col-span-4 space-y-8">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 shadow-lg">
-              <h2 className="mb-8 flex items-center gap-3 text-sm font-semibold uppercase tracking-wide text-gray-300">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#ff1a1a]/30 bg-[#ff1a1a]/10 text-[#ff1a1a]">
-                  <SlidersHorizontal className="h-5 w-5" />
-                </span>
-                Recolor Parameters
-              </h2>
-
-              <div className="space-y-6">
-                <div>
-                  <div className="mb-4 flex items-center justify-between">
-                    <label className="text-sm font-medium uppercase tracking-wide text-gray-400">Source Design</label>
-                    <span className="text-xs font-medium uppercase tracking-wider text-gray-500">PNG / JPG / WEBP</span>
-                  </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept="image/png,image/jpeg,image/jpg,image/webp"
-                    className="hidden"
-                  />
-                  <motion.button
-                    type="button"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      setIsDragOver(true);
-                    }}
-                    onDragLeave={(event) => {
-                      event.preventDefault();
-                      setIsDragOver(false);
-                    }}
-                    onDrop={(event) => {
-                      event.preventDefault();
-                      setIsDragOver(false);
-                      const file = event.dataTransfer.files?.[0];
-                      if (file) void loadFile(file);
-                    }}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`group relative w-full overflow-hidden rounded-xl border-2 border-dashed py-10 transition-all ${
-                      isDragOver
-                        ? "border-[#ff1a1a] bg-[#ff1a1a]/10"
-                        : "border-white/20 bg-white/5 hover:border-[#ff1a1a]/50 hover:bg-[#ff1a1a]/5"
-                    }`}
-                  >
-                    <div className="absolute inset-0 bg-[#ff1a1a]/0 transition-colors group-hover:bg-[#ff1a1a]/5" />
-                    <div className="relative z-10 flex flex-col items-center gap-4 px-6 text-center">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/20 bg-white/10 transition-all group-hover:border-[#ff1a1a]/50 group-hover:text-[#ff1a1a]">
-                        {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <Upload className="h-6 w-6" />}
-                      </div>
-                      <div>
-                        <p className="text-base font-semibold text-white">
-                          {isUploading ? "Uploading textile..." : localPreviewUrl ? "Replace design" : "Upload textile design"}
-                        </p>
-                        <p className="mt-2 text-sm text-gray-500">
-                          Drag and drop or click to browse. High-resolution images recommended.
-                        </p>
-                      </div>
-                    </div>
-                  </motion.button>
+          {/* Generator panel and slideshow slider */}          {/* Main Controls Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-[440px_1fr] gap-8 items-start relative z-30">
+            {/* Left Column: Vertical Settings Card */}
+            <div className="w-full rounded-[24px] border border-[#2B3138]/30 bg-[#181B1F]/90 p-6 backdrop-blur-xl shadow-2xl flex flex-col gap-5">
+              
+              {/* Source Design */}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-xs font-bold uppercase tracking-wider text-[#A1A8B3]">Source Design</label>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">PNG / JPG / WEBP</span>
                 </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={(event) => {
+                    event.preventDefault();
+                    setIsDragOver(false);
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    setIsDragOver(false);
+                    const file = event.dataTransfer.files?.[0];
+                    if (file) void loadFile(file);
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`group relative w-full overflow-hidden rounded-xl border border-dashed py-3.5 transition-all ${
+                    isDragOver
+                      ? "border-[#E11D2E] bg-[#E11D2E]/10"
+                      : "border-[#2B3138]/60 bg-[#111315]/40 hover:border-[#E11D2E]/50 hover:bg-[#111315]/60"
+                  }`}
+                >
+                  <div className="relative z-10 flex items-center gap-3 px-4">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#2B3138] bg-[#1C2025] text-[#A1A8B3] group-hover:border-[#E11D2E]/50 group-hover:text-[#E11D2E]">
+                      {isUploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+                    </div>
+                    <div className="text-left">
+                      <p className="text-xs font-bold text-white">
+                        {isUploading ? "Uploading..." : localPreviewUrl ? "Replace design" : "Upload design"}
+                      </p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Drag & drop or click</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
 
+              {/* Target / Source Colors */}
+              <div className="grid grid-cols-2 gap-4">
                 <ColorControl
                   label="Target Color"
                   color={draft.target_color_hex}
                   onChange={(color) => updateDraft("target_color_hex", color)}
                 />
+                <ColorControl label="Source Color" color={sourceColor} onChange={updateSourceColor} />
+              </div>
 
-                <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2">
-                  <ColorControl label="Source Color" color={sourceColor} onChange={updateSourceColor} />
-                  <div className="flex flex-col gap-3">
-                    <label className="text-sm font-medium uppercase tracking-wide text-gray-400">Enable Source Color</label>
-                    <label className="flex min-h-[104px] items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-4 text-sm text-white transition-colors hover:bg-white/10 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={useSourceColor}
-                        onChange={(e) => updateUseSourceColor(e.target.checked)}
-                        className="hidden"
-                      />
-                      <div className={`w-5 h-5 rounded border-2 border-[#ff1a1a] flex items-center justify-center transition-colors ${useSourceColor ? 'bg-[#ff1a1a]' : 'bg-transparent'}`}>
-                        {useSourceColor && <CheckCircle2 className="w-3 h-3 text-white" />}
-                      </div>
-                      Enable source color
-                    </label>
+              {/* Checkboxes */}
+              <div className="grid grid-cols-2 gap-3">
+                <label className="flex items-center gap-2 rounded-lg border border-[#2B3138] bg-[#111315]/40 p-2.5 text-[11px] text-white hover:bg-[#111315]/60 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={useSourceColor}
+                    onChange={(e) => updateUseSourceColor(e.target.checked)}
+                    className="hidden"
+                  />
+                  <div className={`w-4 h-4 rounded border border-[#E11D2E] flex items-center justify-center transition-colors ${useSourceColor ? 'bg-[#E11D2E]' : 'bg-transparent'}`}>
+                    {useSourceColor && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
                   </div>
-                </div>
+                  <span>Use Source Color</span>
+                </label>
 
-                <p className="text-sm text-gray-500 leading-relaxed">
-                  Click on the preview canvas to automatically sample a source color from your design.
-                </p>
-
-                <RecolorSliderControls
-                  controls={sliderControls}
-                  draft={draft}
-                  onChange={updateNumericDraft}
-                />
-
-                <label className="flex items-center gap-3 bg-white/5 p-4 rounded-lg border border-white/10 text-sm text-white">
+                <label className="flex items-center gap-2 rounded-lg border border-[#2B3138] bg-[#111315]/40 p-2.5 text-[11px] text-white hover:bg-[#111315]/60 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={draft.preserve_lightness}
                     onChange={(e) => updateDraft("preserve_lightness", e.target.checked)}
-                    className="accent-[#ff1a1a] rounded"
+                    className="hidden"
                   />
-                  Preserve Lightness
+                  <div className={`w-4 h-4 rounded border border-[#E11D2E] flex items-center justify-center transition-colors ${draft.preserve_lightness ? 'bg-[#E11D2E]' : 'bg-transparent'}`}>
+                    {draft.preserve_lightness && <CheckCircle2 className="w-2.5 h-2.5 text-white" />}
+                  </div>
+                  <span>Preserve Light</span>
                 </label>
+              </div>
 
-                <AiCreditCost
-                  credits={RECOLOR_CREDIT_COST}
-                  label="Recolor Cost"
-                  className="w-fit"
+              {/* Recolor Sliders */}
+              <div className="space-y-3.5">
+                <RecolorSliderControls
+                  controls={sliderControls}
+                  draft={draft}
+                  onChange={updateNumericDraft}
+                  dense
                 />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2.5 border-t border-[#2B3138]/40 pt-4">
+                <div className="flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={resetAll}
+                    className="flex items-center gap-2 rounded-xl border border-[#2B3138] bg-[#20242A] px-4 py-2 text-xs font-bold text-[#A1A8B3] transition hover:border-[#E11D2E]/50 hover:bg-[#252A31] hover:text-[#F5F7FA] h-10 flex-1 justify-center"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    <span>Reset Workspace</span>
+                  </button>
+
+                  <div className="text-right ml-4">
+                    <p className="text-[9px] uppercase tracking-wider text-[#A1A8B3]">Cost</p>
+                    <p className="text-xs font-bold text-[#ff9ba5]">{RECOLOR_CREDIT_COST} Credits</p>
+                  </div>
+                </div>
 
                 <button
                   type="button"
                   onClick={handleGeneratePreview}
-                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/20 bg-white/5 py-4 text-sm font-semibold uppercase tracking-wide text-white shadow-lg transition-all hover:bg-white/10 hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#2B3138] bg-[#20242A] py-2.5 text-xs font-bold text-white transition hover:border-[#E11D2E]/50 hover:bg-[#252A31] h-10"
                   disabled={!sessionId || isUploading || isPreviewing}
                 >
-                  {isPreviewing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
-                  Generate Preview
+                  {isPreviewing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  <span>Generate Preview</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={applyCurrentLayer}
-                  className="group relative w-full overflow-hidden rounded-xl bg-[#ff1a1a] py-4 text-sm font-semibold uppercase tracking-wide text-white shadow-lg transition-all hover:bg-[#ff0000] hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#E11D2E] py-2.5 text-xs font-bold text-white transition hover:bg-[#FF3347] disabled:opacity-40 h-10"
                   disabled={!originalImageElement || isPreviewing}
                 >
-                  <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                  <span className="relative z-10 flex items-center justify-center gap-3">
-                    <Layers className="h-5 w-5" /> Apply Layer <ChevronRight className="h-5 w-5" />
-                  </span>
+                  <Layers className="h-4 w-4" />
+                  <span>Apply Layer</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={saveFinalImage}
-                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#ff1a1a] bg-white/5 py-4 text-sm font-semibold uppercase tracking-wide text-[#ff1a1a] shadow-lg transition-all hover:bg-[#ff1a1a]/10 hover:shadow-xl active:scale-[0.98] disabled:opacity-50"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-[#E11D2E] bg-white/5 py-2.5 text-xs font-bold text-[#E11D2E] hover:bg-[#E11D2E]/10 disabled:opacity-40 h-10"
                   disabled={!sessionId || isSaving || isPreviewing}
                 >
-                  {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
-                  Save Final Image
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  <span>Save Final Design</span>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={resetAll}
-                  className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/20 bg-transparent py-3 text-sm font-semibold uppercase tracking-wide text-gray-400 transition-colors hover:bg-white/5 hover:text-white"
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Reset Workspace
-                </button>
-
-                <AnimatePresence>
-                  {status && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className={`rounded-lg border p-4 text-sm leading-relaxed ${
-                        status.type === "success"
-                          ? "bg-green-500/20 border-green-500/50 text-green-300"
-                          : status.type === "error"
-                            ? "bg-red-500/20 border-red-500/50 text-red-300"
-                            : "bg-blue-500/20 border-blue-500/50 text-blue-300"
-                      }`}
-                    >
-                      <span className="flex items-start gap-3">
-                        {status.type === "success" ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" /> : <Target className="mt-0.5 h-5 w-5 shrink-0" />}
-                        {status.message}
-                      </span>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-
-          </aside>
-
-          <main className="lg:col-span-8 flex flex-col gap-8">
-            <div className="flex flex-col gap-6 rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-lg">
-              <div className="flex flex-col gap-4 px-2 pt-2 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h2 className="flex items-center gap-3 text-xl font-semibold uppercase tracking-tight text-white">
-                    <Palette className="h-6 w-6 text-[#ff1a1a]" /> Before / After Preview
-                  </h2>
-                  <p className="mt-2 text-sm text-gray-400">Compare the original design with the recolored result. Click the After canvas to sample a color.</p>
-                </div>
               </div>
 
-              {!localPreviewUrl ? (
-                <div className="flex min-h-[420px] items-center justify-center rounded-2xl border border-white/10 bg-[#0a0a0a]">
-                  <div className="px-6 text-center">
-                    <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
-                      <ImageIcon className="h-8 w-8 text-gray-500" />
-                    </div>
-                    <p className="text-lg font-semibold uppercase tracking-wide text-gray-500">Awaiting Design Input</p>
-                    <p className="mt-3 max-w-md text-sm text-gray-600">Upload a textile design to begin recoloring and compare before and after previews.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-4 xl:grid-cols-2">
-                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a]">
-                    <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Before</span>
-                      <span className="text-xs text-gray-600">Original</span>
-                    </div>
-                    <div className="flex items-center justify-center" style={{ aspectRatio: previewAspectRatio }}>
-                      <img
-                        src={localPreviewUrl}
-                        alt="Original textile design"
-                        className="h-full w-full object-contain"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a0a0a]">
-                    <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                      <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">After</span>
-                      <span className="text-xs text-gray-600">Local Preview</span>
-                    </div>
-                    <div className="relative flex cursor-crosshair items-center justify-center" style={{ aspectRatio: previewAspectRatio }}>
-                      <canvas
-                        ref={previewCanvasRef}
-                        onClick={pickSourceColorFromCanvas}
-                        className="h-full w-full object-contain"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (backendPreviewUrl) {
-                            setPreviewImageUrl(backendPreviewUrl);
-                            setShowPreview(true);
-                          } else if (previewCanvasRef.current) {
-                            const canvas = previewCanvasRef.current;
-                            const dataUrl = canvas.toDataURL("image/png");
-                            setPreviewImageUrl(dataUrl);
-                            setShowPreview(true);
-                          }
-                        }}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        className="absolute bottom-5 right-5 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md transition-all hover:scale-105 hover:bg-black/90"
-                        title="Preview full image"
-                      >
-                        <Maximize className="h-5 w-5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeImage();
-                        }}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        className="absolute right-5 top-5 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/50 transition-all hover:scale-105 hover:bg-red-500/20"
-                        title="Remove image"
-                      >
-                        <X className="h-5 w-5 text-white" />
-                      </button>
-                    </div>
-                  </div>
+              {status && (
+                <div className={`rounded-lg border p-3 text-xs leading-relaxed ${
+                  status.type === "success"
+                    ? "bg-green-500/10 border-green-500/30 text-green-400"
+                    : status.type === "error"
+                      ? "bg-red-500/10 border-red-500/30 text-red-400"
+                      : "bg-blue-500/10 border-blue-500/30 text-blue-400"
+                }`}>
+                  <span className="flex items-start gap-2">
+                    {status.type === "success" ? <CheckCircle2 className="h-4 w-4 shrink-0" /> : <Target className="h-4 w-4 shrink-0" />}
+                    {status.message}
+                  </span>
                 </div>
               )}
+
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-lg">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl border border-[#ff1a1a]/30 bg-[#ff1a1a]/10 p-4">
-                  <Zap className="h-6 w-6 text-[#ff1a1a]" />
+            {/* Right Column: Previews / Workspace */}
+            <div className="w-full">
+              {!localPreviewUrl ? (
+                <div 
+                  className="flex flex-col items-center justify-center py-24 px-8 text-center rounded-[24px] border border-dashed border-[#2B3138] bg-[#181B1F]/40 hover:bg-[#181B1F]/60 transition-all cursor-pointer min-h-[500px]" 
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-[#2B3138] bg-[#181B1F] mb-5">
+                    <ImageIcon className="h-9 w-9 text-[#6B7280]" />
+                  </div>
+                  <h2 className="text-xl font-bold tracking-tight text-white">Recolor Studio Workspace</h2>
+                  <p className="mt-2 max-w-sm text-sm text-[#A1A8B3]">
+                    Upload a textile design to begin recoloring and compare before and after previews. Click canvas to sample source colors.
+                  </p>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-white uppercase tracking-wide">AI Processing Engine</p>
-                  <p className="text-sm text-gray-500">Advanced GPU acceleration for complex recoloring tasks.</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={saveFinalImage}
-                disabled={!sessionId || isSaving || isPreviewing}
-                className="flex items-center justify-center gap-3 rounded-xl border border-white/20 bg-white/5 px-8 py-4 text-sm font-semibold uppercase tracking-wide text-white transition-all hover:bg-white/10 hover:shadow-md disabled:opacity-50 shadow-sm"
-              >
-                {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
-                Export Final Design
-              </button>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-lg">
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <Stat label="Session ID" value={sessionId || "Not created"} />
-                <Stat label="Target Color" value={draft.target_color_hex} />
-                <Stat label="Source Color" value={useSourceColor ? sourceColor : "Disabled"} />
-                <Stat label="Scope" value={draft.recolor_scope === "selected_area" ? "Selected area" : "Whole design"} />
-              </div>
-
-              <div className="flex justify-between items-center mb-6">
-                <span className="flex items-center gap-2 text-sm font-semibold text-gray-300 uppercase tracking-wide">
-                  <Layers className="h-4 w-4 text-[#ff1a1a]" /> Applied Layers
-                </span>
-                <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm font-mono text-gray-400">{appliedChanges.length}</span>
-              </div>
-              {appliedChanges.length ? (
-                appliedChanges.map((layer, index) => (
-                  <motion.div
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    key={`${layer.target_color_hex}-${index}`}
-                    className="mb-3 flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/5 p-4"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-xl border border-white/20" style={{ backgroundColor: layer.target_color_hex }} />
-                      <div>
-                        <span className="block text-sm font-semibold text-white">Layer {index + 1}</span>
-                        <span className="text-xs text-gray-500">Strength: {layer.strength}</span>
+              ) : (
+                <div className="flex flex-col gap-6">
+                  {/* Previews Grid */}
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <div className="overflow-hidden rounded-2xl border border-[#2B3138] bg-[#181B1F]">
+                      <div className="flex items-center justify-between border-b border-[#2B3138]/60 px-4 py-2.5">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Before</span>
+                        <span className="text-[10px] text-gray-500 uppercase font-bold">Original</span>
+                      </div>
+                      <div className="relative flex items-center justify-center p-4 bg-black/40 aspect-square w-full">
+                        <img
+                          src={localPreviewUrl}
+                          alt="Original textile design"
+                          className="h-full max-w-full rounded-lg object-contain shadow-md"
+                        />
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setAppliedChanges((layers) => layers.filter((_, itemIndex) => itemIndex !== index));
-                        setUiStatus("Layer removed.", "success");
-                      }}
-                      className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-500/20 hover:text-red-400"
-                      title="Remove layer"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </motion.div>
-                ))
-              ) : (
-                <p className="rounded-xl border border-dashed border-white/10 p-6 text-center text-sm text-gray-600">
-                  No layers applied yet. Configure parameters and apply your first recolor layer.
-                </p>
+
+                    <div className="overflow-hidden rounded-2xl border border-[#2B3138] bg-[#181B1F]">
+                      <div className="flex items-center justify-between border-b border-[#2B3138]/60 px-4 py-2.5">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">After</span>
+                        <span className="text-[10px] text-gray-500 uppercase font-bold">Local Preview</span>
+                      </div>
+                      <div className="relative flex cursor-crosshair items-center justify-center p-4 bg-black/40 aspect-square w-full">
+                        <canvas
+                          ref={previewCanvasRef}
+                          onClick={pickSourceColorFromCanvas}
+                          className="h-full max-w-full rounded-lg object-contain shadow-md"
+                        />
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (backendPreviewUrl) {
+                              setPreviewImageUrl(backendPreviewUrl);
+                              setShowPreview(true);
+                            } else if (previewCanvasRef.current) {
+                              const canvas = previewCanvasRef.current;
+                              const dataUrl = canvas.toDataURL("image/png");
+                              setPreviewImageUrl(dataUrl);
+                              setShowPreview(true);
+                            }
+                          }}
+                          className="absolute bottom-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/60 text-white backdrop-blur-md transition-all hover:scale-105"
+                          title="Preview full image"
+                        >
+                          <Maximize className="h-4 w-4" />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeImage();
+                          }}
+                          className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-black/50 transition-all hover:scale-105 hover:bg-red-500/20"
+                          title="Remove image"
+                        >
+                          <X className="h-4 w-4 text-white" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status & Export Controls Grid */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* GPU Processing Card */}
+                    <div className="lg:col-span-5 rounded-2xl border border-[#2B3138] bg-[#181B1F] p-6 flex flex-col justify-between shadow-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="rounded-xl bg-[#E11D2E]/10 border border-[#E11D2E]/20 p-3 flex items-center justify-center">
+                          <Zap className="h-5 w-5 text-[#E11D2E]" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold text-white uppercase tracking-wider">AI Processing Active</p>
+                          <p className="text-[10px] text-gray-500 mt-0.5">Advanced GPU recolor acceleration active.</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={saveFinalImage}
+                        disabled={!sessionId || isSaving || isPreviewing}
+                        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#E11D2E] py-3 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#FF3347] disabled:opacity-40 shadow-[0_4px_12px_rgba(225,29,46,0.3)]"
+                      >
+                        {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        <span>Export Final Design</span>
+                      </button>
+                    </div>
+
+                    {/* Sessions & Layers Card */}
+                    <div className="lg:col-span-7 rounded-2xl border border-[#2B3138] bg-[#181B1F] p-6 shadow-lg">
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <Stat label="Session ID" value={sessionId || "Not created"} />
+                        <Stat label="Target Color" value={draft.target_color_hex} />
+                      </div>
+
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="flex items-center gap-2 text-xs font-bold text-gray-400 uppercase tracking-wide">
+                          <Layers className="h-3.5 w-3.5 text-[#E11D2E]" /> Applied Layers
+                        </span>
+                        <span className="rounded-full border border-[#2B3138] bg-[#1C2025] px-2.5 py-0.5 text-xs font-mono text-gray-400">{appliedChanges.length}</span>
+                      </div>
+
+                      {appliedChanges.length ? (
+                        <div className="max-h-40 overflow-y-auto space-y-2 pr-1 no-scrollbar">
+                          {appliedChanges.map((layer, index) => (
+                            <motion.div
+                              initial={{ opacity: 0, x: -8 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              key={`${layer.target_color_hex}-${index}`}
+                              className="flex items-center justify-between gap-4 rounded-xl border border-[#2B3138]/60 bg-[#111315]/40 p-3"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="h-8 w-8 rounded-lg border border-white/10" style={{ backgroundColor: layer.target_color_hex }} />
+                                <div>
+                                  <span className="block text-xs font-semibold text-white">Layer {index + 1}</span>
+                                  <span className="text-[10px] text-gray-500">Strength: {layer.strength}</span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAppliedChanges((layers) => layers.filter((_, itemIndex) => itemIndex !== index));
+                                  setUiStatus("Layer removed.", "success");
+                                }}
+                                className="rounded-lg p-2 text-red-500 transition-colors hover:bg-red-500/20 hover:text-red-400"
+                                title="Remove layer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </motion.div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="rounded-xl border border-dashed border-[#2B3138] p-6 text-center text-xs text-gray-600">
+                          No layers applied yet. Configure parameters and apply your first recolor layer.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
               )}
             </div>
-
-          </main>
+          </div>
         </div>
       </div>
 
@@ -1130,7 +1201,7 @@ export default function TextileRecolorStudio() {
 
               <aside className="min-h-0 overflow-y-auto rounded-2xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl">
                 <div className="mb-6">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#ff1a1a]">Live Recolor Controls</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[#E11D2E]">Live Recolor Controls</p>
                   <h3 className="mt-2 text-xl font-semibold uppercase tracking-tight text-white">Full Preview</h3>
                   <p className="mt-2 text-sm leading-relaxed text-gray-500">
                     Tune the parameters while keeping the artwork large enough to inspect details.
@@ -1166,7 +1237,7 @@ export default function TextileRecolorStudio() {
                     type="button"
                     onClick={applyCurrentLayer}
                     disabled={!originalImageElement || isPreviewing}
-                    className="flex w-full items-center justify-center gap-3 rounded-xl bg-[#ff1a1a] py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#ff0000] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-3 rounded-xl bg-[#E11D2E] py-3 text-sm font-semibold uppercase tracking-wide text-white transition-colors hover:bg-[#FF3347] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Layers className="h-5 w-5" />
                     Apply Layer
@@ -1175,7 +1246,7 @@ export default function TextileRecolorStudio() {
                     type="button"
                     onClick={saveFinalImage}
                     disabled={!sessionId || isSaving || isPreviewing}
-                    className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#ff1a1a] bg-white/5 py-3 text-sm font-semibold uppercase tracking-wide text-[#ff1a1a] transition-colors hover:bg-[#ff1a1a]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="flex w-full items-center justify-center gap-3 rounded-xl border border-[#E11D2E] bg-white/5 py-3 text-sm font-semibold uppercase tracking-wide text-[#E11D2E] transition-colors hover:bg-[#E11D2E]/10 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSaving ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
                     Save Final Image
@@ -1195,6 +1266,124 @@ export default function TextileRecolorStudio() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Promotional Info / Description Sections */}
+      <div className="mt-16 space-y-20 border-t border-[#2B3138]/40 pt-16 pb-8">
+        {/* Section 1: Introducing GPT Image 2 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+              Introducing GPT Image 2
+            </h2>
+            <p className="text-sm text-[#A1A8B3] leading-relaxed">
+              OpenAI's GPT Image 2 marks a major step forward in AI-powered image generation, turning simple prompts into detailed, production-ready visuals with greater accuracy, control, and creative range. Built to handle complex instructions, it can render precise cases like marketing campaigns, social media content, storyboarding, and educational graphics.
+            </p>
+            <p className="text-sm text-[#A1A8B3] leading-relaxed">
+              With flexible aspect ratios and the ability to generate cohesive sets of visuals, it streamlines the path from concept to execution. Now available in Shutterstock's AI image generator, GPT Image 2 helps creators move from idea to high-quality visuals faster and more efficiently.
+            </p>
+          </div>
+          <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl">
+            <img
+              src={gptImage2Showcase}
+              alt="GPT Image 2 Showcase"
+              className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            />
+          </div>
+        </div>
+
+        {/* Section 2: More AI Images for Less */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl order-2 md:order-1">
+            <img
+              src={flamingoShowcase}
+              alt="Flamingo Showcase"
+              className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            />
+          </div>
+          <div className="space-y-6 order-1 md:order-2">
+            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+              More AI Images for Less
+            </h2>
+            <p className="text-sm text-[#A1A8B3] leading-relaxed">
+              Generate AI images at scale with our affordable <span className="text-white underline cursor-pointer hover:text-[#E11D2E] transition-colors">Generative AI Plus plan</span>. Get 100 generations a month, each producing four high-quality images, for up to 400 images total.
+            </p>
+            <p className="text-sm text-[#A1A8B3] leading-relaxed">
+              Want to test it out? Get started with two free image generations! Each AI-generation includes a high-res download, and full rights so you can use them commercially.
+            </p>
+          </div>
+        </div>
+
+        {/* Section 3: How the AI Image Generator Works */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+              How the AI Image Generator Works
+            </h2>
+            <p className="text-sm text-[#A1A8B3] leading-relaxed">
+              Our AI image generator, powered by models like Google's Gemini 3.1 Flash, Imagen 4 Ultra, and GPT Image 2 from OpenAI, lets you create high-quality AI generated images from just a few words.
+            </p>
+            <p className="text-sm text-[#A1A8B3] leading-relaxed">
+              Choose from a variety of <span className="text-white underline cursor-pointer hover:text-[#E11D2E] transition-colors">AI styles</span>—including Oil painting, Fish eye, or Motion blur—and select your preferred aspect ratio to match your creative vision.
+            </p>
+          </div>
+          <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl">
+            <img
+              src={colorfulCharacterShowcase}
+              alt="Colorful Character Showcase"
+              className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="mt-12 border-t border-[#2B3138]/40 pt-10 pb-8 max-w-6xl mx-auto w-full px-4">
+        <h2 className="text-2xl font-extrabold text-center text-white tracking-tight mb-8">
+          AI Recolor Studio: FAQs
+        </h2>
+        <div className="space-y-0">
+          {faqs.map((faq, index) => {
+            const isOpen = openFaq === index;
+            return (
+              <div
+                key={index}
+                className="border-b border-[#2B3138]/30 transition-colors"
+              >
+                <button
+                  onClick={() => setOpenFaq(isOpen ? null : index)}
+                  className="w-full flex items-center justify-between py-3 text-left group"
+                >
+                  <span className="text-sm md:text-base font-bold text-[#F5F7FA] group-hover:text-[#E11D2E] transition-colors leading-relaxed pr-6">
+                    {faq.question}
+                  </span>
+                  <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full border border-[#2B3138]/60 group-hover:border-[#E11D2E]/40 text-[#A1A8B3] group-hover:text-[#E11D2E] transition-all duration-300">
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform duration-300 ${
+                        isOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </span>
+                </button>
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <p className="pb-4 text-sm leading-relaxed text-[#A1A8B3] pt-1">
+                        {faq.answer}
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

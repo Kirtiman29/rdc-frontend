@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   CheckCircle2,
   Download,
@@ -16,7 +17,51 @@ import {
   ChevronRight,
   Zap,
   Clock,
+  ChevronDown,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+import pattern1 from "@/assets/sample-pattern-1.jpg";
+import pattern2 from "@/assets/sample-pattern-2.jpg";
+import pattern3 from "@/assets/sample-pattern-3.jpg";
+import pattern4 from "@/assets/sample-pattern-4.jpg";
+
+import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
+import flamingoShowcase from "@/assets/flamingo-showcase.png";
+import colorfulCharacterShowcase from "@/assets/colorful-character-showcase.png";
+
+const slideshowImages = [pattern1, pattern2, pattern3, pattern4];
+
+const faqs = [
+  {
+    question: "Can I use these images for my personal or commercial project?",
+    answer: "Yes! All designs generated through RDC AI Studio are royalty-free. You hold full rights to use them for both personal and commercial projects, including marketing, product printing, social media, and digital publishing.",
+  },
+  {
+    question: "If I generate content, will it be made available for other customers?",
+    answer: "No. Your generated patterns and designs are private to your account and saved under 'My Designs'. They will not be displayed, shared, or made available to other customers unless you explicitly choose to publish them.",
+  },
+  {
+    question: "For content I generate, will it be mine exclusively?",
+    answer: "You have full commercial usage rights to your outputs. However, because AI models can generate similar results for similar prompts, the underlying imagery is not legally patentable or exclusively owned in terms of copyright protection, similar to standard generative AI terms.",
+  },
+  {
+    question: "Do you have any safeguards for inappropriate content?",
+    answer: "Yes, we employ robust automated safety filters. Any prompts or uploaded images that contain explicit, offensive, or inappropriate content are blocked automatically prior to generation. If a generated image bypasses the filters, please report it immediately.",
+  },
+  {
+    question: "Can I write a prompt in other languages besides English?",
+    answer: "Yes! Our AI systems support multi-lingual input and can interpret prompts written in Spanish, French, German, Hindi, and many other major languages. However, English prompts generally produce the most accurate and detailed patterns.",
+  },
+  {
+    question: "How do I report results that seem weird/offensive/illegal?",
+    answer: "If you encounter a generated result that is offensive or inappropriate, you can click on the support/report link in the page footer or contact our support team directly. We review reports and adjust safety guidelines constantly.",
+  },
+  {
+    question: "How do I start making AI generated images?",
+    answer: "It is simple! Just write a description of the design you want in the prompt textbox, select your style and aspect ratio, and click 'Generate Design'. Our studio will create your visuals in seconds.",
+  },
+];
 import {
   COLOR_SEPARATION_TIMEOUT_SECONDS,
   ColorSeparationLayer,
@@ -67,11 +112,11 @@ function Stepper({ currentStep, completedSteps }: { currentStep: Step; completed
         return (
           <React.Fragment key={step.id}>
             <div className={`flex items-center gap-2 rounded-full border px-3 py-2 transition-colors ${
-              isActive ? 'border-[#ff1a1a]/20 bg-[#ff1a1a]/10' : 'border-white/10 bg-white/5'
+              isActive ? 'border-[#E11D2E]/20 bg-[#E11D2E]/10' : 'border-white/10 bg-white/5'
             }`}>
               <div className={`p-2 rounded-full ${
                 isCompleted ? 'bg-green-500/20 text-green-400' :
-                isCurrent ? 'bg-[#ff1a1a]/20 text-[#ff1a1a]' :
+                isCurrent ? 'bg-[#E11D2E]/20 text-[#E11D2E]' :
                 'bg-white/10 text-gray-500'
               }`}>
                 {isCompleted ? <CheckCircle2 size={16} /> : <step.icon size={16} />}
@@ -84,7 +129,7 @@ function Stepper({ currentStep, completedSteps }: { currentStep: Step; completed
             </div>
             {index < steps.length - 1 && (
               <ChevronRight className={`hidden transition-colors sm:block ${
-                completedSteps.includes(steps[index + 1].id) ? 'text-[#ff1a1a]' : 'text-gray-600'
+                completedSteps.includes(steps[index + 1].id) ? 'text-[#E11D2E]' : 'text-gray-600'
               }`} size={20} />
             )}
           </React.Fragment>
@@ -105,7 +150,7 @@ function PanelHeading({
 }) {
   return (
     <div className="flex items-start gap-4">
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#ff1a1a]/20 bg-[#ff1a1a]/10 text-[#ff1a1a]">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#E11D2E]/20 bg-[#E11D2E]/10 text-[#E11D2E]">
         {icon}
       </div>
       <div>
@@ -118,24 +163,30 @@ function PanelHeading({
 
 function HeroHeader() {
   return (
-    <header className="flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[#2B3138]/60 pb-6 mt-4">
       <div>
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#ff1a1a]/30 bg-[#ff1a1a]/10 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-[#ff1a1a]">
-          <Sparkles className="h-4 w-4" /> Textile Separation Engine
+        <div className="inline-flex items-center gap-2 rounded-full border border-[#2B3138] bg-[#1C2025] px-3 py-1 text-xs font-semibold text-[#A1A8B3]">
+          <Sparkles className="h-3.5 w-3.5 text-[#E11D2E]" />
+          RDC AI Studio
         </div>
-        <h1 className="text-5xl font-bold uppercase tracking-tight text-white md:text-6xl">
-          Color <span className="font-normal text-gray-600">Separation</span>
+        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-white">
+          Color Separation: Layer Stack Generator
         </h1>
-        <p className="mt-4 max-w-2xl text-base leading-relaxed text-gray-400">
-          Generate transparent layer stacks, detected palettes, and Photoshop-ready exports for production textile artwork.
-        </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 text-left sm:text-right">
-        <HeaderMetric label="Output" value="PNG Layers" />
-        <HeaderMetric label="Export" value="PSD Ready" />
+      <div className="flex items-center gap-6">
+        <div className="grid grid-cols-2 gap-4 text-right">
+          <HeaderMetric label="Output" value="PNG Layers" />
+          <HeaderMetric label="Export" value="PSD Ready" />
+        </div>
+        <Link
+          to="/ai-studio"
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#2B3138] bg-[#20242A] px-5 text-sm font-bold text-[#F5F7FA] transition hover:border-[#E11D2E]/50 hover:bg-[#252A31] self-start sm:self-auto"
+        >
+          ← Dashboard
+        </Link>
       </div>
-    </header>
+    </div>
   );
 }
 
@@ -178,112 +229,100 @@ function UploadPreviewCard({
     if (droppedFile) onFileChange(droppedFile);
   };
 
-  if (isCollapsed) {
-    return (
-      <section className="cursor-pointer rounded-[28px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur transition-colors hover:bg-white/[0.05]" onClick={onExpand}>
-        <div className="flex items-center justify-between">
-          <PanelHeading
-            icon={<ImageUp size={18} />}
-            title="Upload Artwork"
-            description="Artwork uploaded successfully"
-          />
-          <CheckCircle2 className="text-green-400" size={24} />
-        </div>
-      </section>
-    );
-  }
-
   return (
-    <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur">
-      <PanelHeading
-        icon={<ImageUp size={18} />}
-        title="Source Artwork"
-        description="Upload a single artwork file for transparent layer extraction."
-      />
-
-      <label
-        className={`mt-6 flex cursor-pointer items-center justify-center overflow-hidden rounded-[24px] border-2 border-dashed transition-colors ${
-          dragActive
-            ? "border-[#ff1a1a] bg-[#ff1a1a]/10 shadow-lg shadow-[#ff1a1a]/20"
-            : "border-white/10 bg-black/30 hover:border-[#ff1a1a]/40 hover:bg-white/[0.03] hover:shadow-md"
-        } ${previewUrl ? "aspect-[4/3]" : "min-h-[180px] p-6"}`}
-        onDragEnter={(event) => {
-          event.preventDefault();
-          onDragStateChange(true);
-        }}
-        onDragOver={(event) => {
-          event.preventDefault();
-          onDragStateChange(true);
-        }}
-        onDragLeave={(event) => {
-          event.preventDefault();
-          onDragStateChange(false);
-        }}
-        onDrop={handleDrop}
-      >
-        <input
-          type="file"
-          accept=".png,.jpg,.jpeg"
-          hidden
-          onChange={(event) => onFileChange(event.target.files?.[0])}
-          disabled={loading}
+    <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur w-full max-w-[440px] flex flex-col justify-between">
+      <div>
+        <PanelHeading
+          icon={<ImageUp size={18} />}
+          title="Source Artwork"
+          description="Upload a single artwork file for transparent layer extraction."
         />
 
-        {!previewUrl ? (
-          <div className="text-center">
-            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-gray-500">
-              <Upload size={28} />
-            </div>
-            <h4 className="text-base font-bold text-white">Drop artwork here or browse from device</h4>
-            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-gray-600">PNG, JPG, JPEG supported</p>
-            <span className="mt-3 block text-xs text-gray-500">Transparent pixel-preserving layer generation</span>
-          </div>
-        ) : (
-          <div className="relative group">
-            <img className="h-full w-full object-contain" src={previewUrl} alt={file?.name ?? "Uploaded artwork"} />
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-              <button
-                type="button"
-                onClick={(e) => { e.preventDefault(); onRemove(); }}
-                className="px-3 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
-              >
-                Remove
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.querySelector<HTMLInputElement>('input[type="file"]')?.click();
-                }}
-                className="px-3 py-1 bg-[#ff1a1a] text-white text-xs rounded hover:bg-red-700 transition-colors"
-              >
-                Replace
-              </button>
-            </div>
-          </div>
-        )}
-      </label>
+        <label
+          className={`mt-6 flex cursor-pointer items-center justify-center overflow-hidden rounded-[24px] border-2 border-dashed transition-colors ${
+            dragActive
+              ? "border-[#E11D2E] bg-[#E11D2E]/10 shadow-lg shadow-[#E11D2E]/20"
+              : "border-white/10 bg-black/30 hover:border-[#E11D2E]/40 hover:bg-white/[0.03] hover:shadow-md"
+          } w-full aspect-square relative`}
+          onDragEnter={(event) => {
+            event.preventDefault();
+            onDragStateChange(true);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            onDragStateChange(true);
+          }}
+          onDragLeave={(event) => {
+            event.preventDefault();
+            onDragStateChange(false);
+          }}
+          onDrop={handleDrop}
+        >
+          <input
+            type="file"
+            accept=".png,.jpg,.jpeg"
+            hidden
+            onChange={(event) => onFileChange(event.target.files?.[0])}
+            disabled={loading}
+          />
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <MetaTile label="Selected File" value={file?.name ?? "No image selected"} />
-        <MetaTile label="Mode" value={previewUrl ? "Ready for generation" : "Awaiting upload"} />
+          {!previewUrl ? (
+            <div className="text-center p-4">
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-gray-500">
+                <Upload size={24} />
+              </div>
+              <h4 className="text-sm font-bold text-white">Drop artwork here or browse</h4>
+              <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-600">PNG, JPG, JPEG supported</p>
+            </div>
+          ) : (
+            <div className="absolute inset-0 h-full w-full flex items-center justify-center overflow-hidden">
+              <img
+                className="h-full w-full object-cover transition-transform duration-700 ease-out hover:scale-110"
+                src={previewUrl}
+                alt={file?.name ?? "Uploaded artwork"}
+              />
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/0 opacity-0 transition-all duration-300 hover:bg-black/50 hover:opacity-100 gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); onRemove(); }}
+                  className="px-3 py-1.5 bg-[#E11D2E] text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-colors transform scale-90 hover:scale-100 duration-300 shadow-md"
+                >
+                  Remove
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.querySelector<HTMLInputElement>('input[type="file"]')?.click();
+                  }}
+                  className="px-3 py-1.5 bg-white/10 text-white text-xs font-bold rounded-lg hover:bg-white/20 transition-colors border border-white/10 transform scale-90 hover:scale-100 duration-300 shadow-md"
+                >
+                  Replace
+                </button>
+              </div>
+            </div>
+          )}
+        </label>
       </div>
 
-      {imageMetadata && (
-        <div className="mt-3 grid gap-3 sm:grid-cols-3">
-          <MetaTile label="Resolution" value={`${imageMetadata.width} x ${imageMetadata.height}`} />
-          <MetaTile label="File Size" value={imageMetadata.size} />
-          <MetaTile label="Format" value={file?.type.split('/')[1]?.toUpperCase() || 'Unknown'} />
+      <div className="mt-5 space-y-3">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <MetaTile label="Selected File" value={file?.name ?? "No image selected"} />
+          <MetaTile label="Mode" value={previewUrl ? "Ready" : "Awaiting upload"} />
         </div>
-      )}
 
-      <div className="mt-5 flex flex-wrap gap-3">
-        <AssuranceChip icon={<Info size={15} />} text="PNG, JPG, JPEG supported" />
-        <AssuranceChip icon={<Layers3 size={15} />} text="Transparent pixel-preserving generation" />
+        {imageMetadata && (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <MetaTile label="Width" value={`${imageMetadata.width}px`} />
+            <MetaTile label="Height" value={`${imageMetadata.height}px`} />
+            <MetaTile label="Size" value={imageMetadata.size} />
+          </div>
+        )}
       </div>
     </section>
   );
 }
+
 
 function MetaTile({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -371,7 +410,7 @@ function ControlPanel({
               type="button"
               className={`rounded-2xl border p-4 text-left transition-colors ${
                 mode === value
-                  ? "border-[#ff1a1a]/40 bg-[#ff1a1a]/10"
+                  ? "border-[#E11D2E]/40 bg-[#E11D2E]/10"
                   : "border-white/5 bg-black/30 opacity-70 hover:opacity-100"
               }`}
               onClick={() => onModeChange(value)}
@@ -393,8 +432,8 @@ function ControlPanel({
         <PanelHeading icon={<Palette size={18} />} title="Number of Colors" description="AI suggests optimal count based on image complexity." />
 
         {mode === 'auto' && (
-          <div className="mt-4 p-3 bg-[#ff1a1a]/10 border border-[#ff1a1a]/20 rounded-xl">
-            <div className="flex items-center gap-2 text-[#ff1a1a]">
+          <div className="mt-4 p-3 bg-[#E11D2E]/10 border border-[#E11D2E]/20 rounded-xl">
+            <div className="flex items-center gap-2 text-[#E11D2E]">
               <Zap size={16} />
               <span className="text-xs font-bold">AI Suggestion: {suggestedColors} colors</span>
             </div>
@@ -414,7 +453,7 @@ function ControlPanel({
             onChange={(event) => onNumColorsChange(event.target.value)}
             placeholder={mode === 'auto' ? `Suggested: ${suggestedColors}` : "Enter count"}
             disabled={mode !== "manual" || loading}
-            className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-gray-700 focus:border-[#ff1a1a]/50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="w-full rounded-2xl border border-white/10 bg-black/40 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-gray-700 focus:border-[#E11D2E]/50 disabled:cursor-not-allowed disabled:opacity-40"
           />
         </label>
         <p className="mt-3 text-xs leading-relaxed text-gray-600">
@@ -451,13 +490,13 @@ function ControlPanel({
         <button
           type="button"
           className={`group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl py-4 text-sm font-black uppercase tracking-widest text-white transition-colors ${
-            loading ? 'bg-gray-700' : 'bg-[#ff1a1a] hover:bg-red-700'
+            loading ? 'bg-gray-700' : 'bg-[#E11D2E] hover:bg-red-700'
           } disabled:cursor-not-allowed disabled:opacity-40`}
           disabled={!hasFile || loading}
           onClick={onSubmit}
         >
           {loading && (
-            <div className="absolute inset-y-0 left-0 bg-[#ff1a1a]" style={{ width: `${loadingProgressPercent}%` }} />
+            <div className="absolute inset-y-0 left-0 bg-[#E11D2E]" style={{ width: `${loadingProgressPercent}%` }} />
           )}
           {loading ? <LoaderCircle size={18} className="animate-spin relative z-10" /> : <Zap size={18} className="relative z-10" />}
           <span className="relative z-10">
@@ -686,7 +725,7 @@ function PhotoshopExportCard({
   if (!result?.photoshop_package && !result?.photoshop_script && !result?.photoshop_psd) return null;
 
   return (
-    <div className="rounded-[28px] border border-[#ff1a1a]/20 bg-[#ff1a1a]/5 p-6 backdrop-blur">
+    <div className="rounded-[28px] border border-[#E11D2E]/20 bg-[#E11D2E]/5 p-6 backdrop-blur">
       <PanelHeading
         icon={<Layers3 size={18} />}
         title="Photoshop Export"
@@ -726,7 +765,7 @@ function ExportButton({
   primary?: boolean;
 }) {
   const buttonClassName = primary
-    ? "inline-flex items-center justify-center gap-2 rounded-2xl border border-[#ff1a1a] bg-[#ff1a1a] px-4 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/40 disabled:opacity-40"
+    ? "inline-flex items-center justify-center gap-2 rounded-2xl border border-[#E11D2E] bg-[#E11D2E] px-4 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-white/40 disabled:opacity-40"
     : "inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-black uppercase tracking-widest text-white/60 transition-colors hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-30";
 
   return (
@@ -838,7 +877,7 @@ function ResultsSection({
             <button
               type="button"
               onClick={onDownloadAll}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#ff1a1a]/70 bg-[#ff1a1a] px-4 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#E11D2E]/70 bg-[#E11D2E] px-4 py-3 text-xs font-black uppercase tracking-widest text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-40"
               disabled={!layers.length}
             >
               <Download size={16} />
@@ -949,6 +988,19 @@ export default function ColorSeparationPage() {
   const [imageMetadata, setImageMetadata] = useState<ImageMetadata | null>(null);
   const colorSeparationAbortRef = useRef<AbortController | null>(null);
   const requestIdRef = useRef(0);
+
+  // Slideshow state
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const interval = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % slideshowImages.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isPlaying]);
 
   useEffect(() => {
     if (!file) {
@@ -1129,72 +1181,98 @@ export default function ColorSeparationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] p-4 text-white md:p-8 lg:p-10">
-      <div className="pointer-events-none absolute left-1/2 top-0 h-[320px] w-full -translate-x-1/2 bg-[#ff1a1a]/5 blur-[120px]" />
-      <div className="relative z-10 mx-auto max-w-[1500px] space-y-8">
-        <HeroHeader />
+    <div className="bg-[#111315] text-[#F5F7FA] relative pb-6">
+      {/* Top Wrapper to limit Background Slideshow to Header and Generator Card */}
+      <div className="relative w-full">
+        {/* Background Slideshow */}
+        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={activeSlide}
+              src={slideshowImages[activeSlide]}
+              initial={{ opacity: 0, scale: 1.05 }}
+              animate={{ opacity: 0.45, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1.5 }}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          </AnimatePresence>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-[#111315]/85 to-[#111315]" />
+        </div>
 
-        <Stepper currentStep={currentStep} completedSteps={completedSteps} />
+        <div className="relative z-10 mx-auto flex max-w-[1480px] flex-col gap-8 p-5 md:p-7 xl:p-8">
+          <HeroHeader />
 
-        {(currentStep === 'upload' || completedSteps.includes('upload')) && (
-          <UploadPreviewCard
-            file={file}
-            previewUrl={previewUrl}
-            dragActive={dragActive}
-            loading={loading}
-            imageMetadata={imageMetadata}
-            onFileChange={(nextFile) => {
-              if (nextFile) {
-                if (!isSupportedImageFile(nextFile)) {
-                  setError("Invalid file type. Only PNG, JPG, JPEG images are allowed.");
-                  setResult(null);
-                  return;
-                }
+          <div className="flex flex-col lg:flex-row items-stretch gap-6">
+            <div className="flex-1 space-y-6">
+              <Stepper currentStep={currentStep} completedSteps={completedSteps} />
 
-                setFile(nextFile);
-                setResult(null);
-                setError("");
-              }
-            }}
-            onDragStateChange={setDragActive}
-            onRemove={handleStartNewDesign}
-            isCollapsed={currentStep !== 'upload'}
-            onExpand={() => setCurrentStep('upload')}
-          />
-        )}
+              <div className="grid grid-cols-1 md:grid-cols-[440px_1fr] gap-8 items-start">
+                <UploadPreviewCard
+                  file={file}
+                  previewUrl={previewUrl}
+                  dragActive={dragActive}
+                  loading={loading}
+                  imageMetadata={imageMetadata}
+                  onFileChange={(nextFile) => {
+                    if (nextFile) {
+                      if (!isSupportedImageFile(nextFile)) {
+                        setError("Invalid file type. Only PNG, JPG, JPEG images are allowed.");
+                        setResult(null);
+                        return;
+                      }
 
-        {(currentStep === 'configure' || completedSteps.includes('configure')) && (
-          <ControlPanel
-            mode={mode}
-            numColors={numColors}
-            loading={loading}
-            loadingSeconds={loadingSeconds}
-            imageMetadata={imageMetadata}
-            hasFile={Boolean(file)}
-            hasResults={Boolean(result?.layers?.length)}
-            onModeChange={(nextMode) => {
-              setMode(nextMode);
-              if (nextMode === "auto") setNumColors("");
-            }}
-            onNumColorsChange={setNumColors}
-            onSubmit={handleSubmit}
-            onDownloadAll={handleDownloadAll}
-            isCollapsed={currentStep !== 'configure'}
-            onExpand={() => setCurrentStep('configure')}
-          />
-        )}
+                      setFile(nextFile);
+                      setResult(null);
+                      setError("");
+                    }
+                  }}
+                  onDragStateChange={setDragActive}
+                  onRemove={handleStartNewDesign}
+                  isCollapsed={false}
+                  onExpand={() => {}}
+                />
 
-        {currentStep === 'generate' && (
-          <StatusBanner
-            error={error}
-            result={result}
-            loading={loading}
-            loadingSeconds={loadingSeconds}
-            requestMeta={requestMeta}
-            onCancel={handleCancelGeneration}
-          />
-        )}
+                <div className="space-y-6">
+                  {currentStep === 'generate' ? (
+                    <StatusBanner
+                      error={error}
+                      result={result}
+                      loading={loading}
+                      loadingSeconds={loadingSeconds}
+                      requestMeta={requestMeta}
+                      onCancel={handleCancelGeneration}
+                    />
+                  ) : (
+                    <ControlPanel
+                      mode={mode}
+                      numColors={numColors}
+                      loading={loading}
+                      loadingSeconds={loadingSeconds}
+                      imageMetadata={imageMetadata}
+                      hasFile={Boolean(file)}
+                      hasResults={Boolean(result?.layers?.length)}
+                      onModeChange={(nextMode) => {
+                        setMode(nextMode);
+                        if (nextMode === "auto") setNumColors("");
+                      }}
+                      onNumColorsChange={setNumColors}
+                      onSubmit={handleSubmit}
+                      onDownloadAll={handleDownloadAll}
+                      isCollapsed={false}
+                      onExpand={() => {}}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
+      {/* Main content below the slideshow (Results & Marketing sections) */}
+      <div className="relative z-10 mx-auto flex max-w-[1480px] flex-col gap-8 p-5 md:p-7 xl:p-8 pt-0">
+        
         {(currentStep === 'export' || completedSteps.includes('export')) && result && (
           <ResultsSection
             result={result}
@@ -1215,6 +1293,125 @@ export default function ColorSeparationPage() {
           isOpen={Boolean(previewLayer)}
           onClose={handleClosePreview}
         />
+
+        {/* Promotional Info / Description Sections */}
+        <div className="mt-16 space-y-20 border-t border-[#2B3138]/40 pt-16 pb-8">
+          {/* Section 1: Introducing GPT Image 2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                Introducing GPT Image 2
+              </h2>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                OpenAI's GPT Image 2 marks a major step forward in AI-powered image generation, turning simple prompts into detailed, production-ready visuals with greater accuracy, control, and creative range. Built to handle complex instructions, it can render precise cases like marketing campaigns, social media content, storyboarding, and educational graphics.
+              </p>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                With flexible aspect ratios and the ability to generate cohesive sets of visuals, it streamlines the path from concept to execution. Now available in Shutterstock's AI image generator, GPT Image 2 helps creators move from idea to high-quality visuals faster and more efficiently.
+              </p>
+            </div>
+            <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl">
+              <img
+                src={gptImage2Showcase}
+                alt="GPT Image 2 Showcase"
+                className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            </div>
+          </div>
+
+          {/* Section 2: More AI Images for Less */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl order-2 md:order-1">
+              <img
+                src={flamingoShowcase}
+                alt="Flamingo Showcase"
+                className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            </div>
+            <div className="space-y-6 order-1 md:order-2">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                More AI Images for Less
+              </h2>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Generate AI images at scale with our affordable <span className="text-white underline cursor-pointer hover:text-[#E11D2E] transition-colors">Generative AI Plus plan</span>. Get 100 generations a month, each producing four high-quality images, for up to 400 images total.
+              </p>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Want to test it out? Get started with two free image generations! Each AI-generation includes a high-res download, and full rights so you can use them commercially.
+              </p>
+            </div>
+          </div>
+
+          {/* Section 3: How the AI Image Generator Works */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                How the AI Image Generator Works
+              </h2>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Our AI image generator, powered by models like Google's Gemini 3.1 Flash, Imagen 4 Ultra, and GPT Image 2 from OpenAI, lets you create high-quality AI generated images from just a few words.
+              </p>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Choose from a variety of <span className="text-white underline cursor-pointer hover:text-[#E11D2E] transition-colors">AI styles</span>—including Oil painting, Fish eye, or Motion blur—and select your preferred aspect ratio to match your creative vision.
+              </p>
+            </div>
+            <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl">
+              <img
+                src={colorfulCharacterShowcase}
+                alt="Colorful Character Showcase"
+                className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-12 border-t border-[#2B3138]/40 pt-10 pb-8 max-w-6xl mx-auto w-full px-4">
+          <h2 className="text-2xl font-extrabold text-center text-white tracking-tight mb-8">
+            AI Color Separation: FAQs
+          </h2>
+          <div className="space-y-0">
+            {faqs.map((faq, index) => {
+              const isOpen = openFaq === index;
+              return (
+                <div
+                  key={index}
+                  className="border-b border-[#2B3138]/30 transition-colors"
+                >
+                  <button
+                    onClick={() => setOpenFaq(isOpen ? null : index)}
+                    className="w-full flex items-center justify-between py-3 text-left group"
+                  >
+                    <span className="text-sm md:text-base font-bold text-[#F5F7FA] group-hover:text-[#E11D2E] transition-colors leading-relaxed pr-6">
+                      {faq.question}
+                    </span>
+                    <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full border border-[#2B3138]/60 group-hover:border-[#E11D2E]/40 text-[#A1A8B3] group-hover:text-[#E11D2E] transition-all duration-300">
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform duration-300 ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </span>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <p className="pb-4 text-sm leading-relaxed text-[#A1A8B3] pt-1">
+                          {faq.answer}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
       </div>
     </div>
   );
