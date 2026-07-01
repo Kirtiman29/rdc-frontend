@@ -81,6 +81,7 @@ export default function GeminiImageMix() {
   const [, setRemainingCredits] = useState<number | null>(null);
   const [aspectRatio, setAspectRatio] =
     useState<GeminiImageMixAspectRatio>("1:1");
+  const [isDragOver, setIsDragOver] = useState(false);
 
   // Popover state
   const [activePopover, setActivePopover] = useState<"outputs" | "aspect" | null>(null);
@@ -160,7 +161,7 @@ export default function GeminiImageMix() {
 
       if (result.images.length < numImages) {
         setError(
-          `Requested ${numImages} outputs, but the backend returned ${result.images.length}. The missing outputs are not present in /api/ai/use response.`
+          `Requested ${numImages} outputs, but the backend returned ${result.images.length}. The missing outputs are not present in /ai/use response.`
         );
       }
     } catch (generationError) {

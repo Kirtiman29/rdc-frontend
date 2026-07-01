@@ -367,7 +367,7 @@ export default function Generate() {
 
       if (result.images.length < numImages) {
         setError(
-          `Requested ${numImages} outputs, but the backend returned ${result.images.length}. The missing outputs are not present in /api/ai/use response.`
+          `Requested ${numImages} outputs, but the backend returned ${result.images.length}. The missing outputs are not present in /ai/use response.`
         );
       }
     } catch (generationError) {

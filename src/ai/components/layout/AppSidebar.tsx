@@ -2,7 +2,7 @@
 import React from "react";
 import { 
   Wand2, Image, Heart, Settings, LayoutDashboard, 
-  Maximize, Search, Sparkles, Palette, SwatchBook, User
+  Maximize, Search, Sparkles, Palette, SwatchBook, User, ImageUp
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const navSection = [
   { label: "Dashboard", path: "/ai-studio/dashboard", icon: LayoutDashboard },
   { label: "Pattern Generator", path: "/ai-studio/generate", icon: Wand2 },
+  { label: "Bitmap", path: "/ai-studio/bitmap", icon: ImageUp },
   { label: "Text to Pattern", path: "/ai-studio/gemini-text-to-image", icon: Sparkles },
   { label: "Pattern Mixer", path: "/ai-studio/gemini-image-mix", icon: Image },
   { label: "Upscale", path: "/ai-studio/upscale", icon: Maximize },

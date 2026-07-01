@@ -26,7 +26,7 @@ const fallbackImages = [pattern1, pattern2, pattern3, pattern4];
 const getBlogImage = (image: string | undefined, fallbackIndex: number) => {
   if (!image) return fallbackImages[fallbackIndex % fallbackImages.length];
 
-  if (image.startsWith("http") && !image.includes("/api/assets/")) {
+  if (image.startsWith("http") && !image.includes("/assets/") && !image.includes("/api/assets/")) {
     return image;
   }
 

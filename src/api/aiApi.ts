@@ -1,5 +1,6 @@
 import axios from "axios";
 import { applyIndustrialInterceptors, getAssetUrl } from "./apiClient";
+import { createApiUrl, serviceOrigins } from "./serviceConfig";
 
 const ADMIN_SERVICE_URL = (
   import.meta.env.VITE_ADMIN_SERVICE_URL ||
@@ -17,7 +18,7 @@ const ASSET_SERVICE_URL = (
 const normalizeEndpoint = (value: string) =>
   value.replace(/([^:]\/)\/+/g, "$1").replace(/\/+$/, "");
 
-const DEFAULT_AI_INPUT_UPLOAD_ENDPOINT = `${ASSET_SERVICE_URL}/api/assets/ai-upload`;
+const DEFAULT_AI_INPUT_UPLOAD_ENDPOINT = createApiUrl(serviceOrigins.asset, "assets/ai-upload");
 const AI_INPUT_UPLOAD_ENDPOINT = normalizeEndpoint(
   import.meta.env.VITE_AI_INPUT_UPLOAD_ENDPOINT || DEFAULT_AI_INPUT_UPLOAD_ENDPOINT
 );
@@ -26,7 +27,7 @@ const AI_INPUT_UPLOAD_ENDPOINTS = [AI_INPUT_UPLOAD_ENDPOINT, DEFAULT_AI_INPUT_UP
   .map(normalizeEndpoint)
   .filter((value, index, items) => items.indexOf(value) === index);
 
-const AI_USE_BASE_URL = `${ADMIN_SERVICE_URL}/api/ai`;
+const AI_USE_BASE_URL = createApiUrl(serviceOrigins.admin, "ai");
 const SEAMLESS_PATTERN_TOOL_NAME = (import.meta.env.VITE_SEAMLESS_PATTERN_TOOL_NAME || "PATTERN_GENERATOR").trim();
 const LEGACY_SEAMLESS_PATTERN_ENDPOINT = (
   import.meta.env.VITE_SEAMLESS_PATTERN_ENDPOINT || "/pattern/generate-seamless"
@@ -757,7 +758,7 @@ export const invokeAiTool = async <TData = unknown>(
   dispatchCreditsUpdated(response.remainingCredits);
 
   if (IS_DEV) {
-    console.debug("[aiApi] Raw /api/ai/use response", {
+    console.debug("[aiApi] Raw /ai/use response", {
       toolName: payload.toolName,
       requestedParams: payload.params,
       response,

@@ -11,7 +11,13 @@ const createProxyOptions = (target: string) => ({
   target,
   changeOrigin: true,
   secure: false,
-  rewrite: (path: string) => path.replace(/^\/api/, ""),
+  rewrite: (path: string) => `/api${path}`,
+});
+
+const createBitmapProxyOptions = (target: string) => ({
+  target,
+  changeOrigin: true,
+  secure: false,
 });
 
 export default defineConfig(({ mode }) => ({
@@ -27,17 +33,22 @@ export default defineConfig(({ mode }) => ({
     proxy:
       mode === "development"
         ? {
-            "/api/auth": createProxyOptions("http://192.168.0.17:8081"),
-            "/api/users": createProxyOptions("http://192.168.0.17:8081"),
-            "/api/cart": createProxyOptions("http://192.168.0.17:8091"),
-            "/api/orders": createProxyOptions("http://192.168.0.17:8095"),
-            "/api/coupons": createProxyOptions("http://192.168.0.17:8095"),
-            "/api/payments": createProxyOptions("http://192.168.0.17:8092"),
-            "/api/subscriptions": createProxyOptions("http://192.168.0.17:8094"),
-            "/api/public/subscriptions": createProxyOptions("http://192.168.0.17:8094"),
-            "/api/wishlist": createProxyOptions("http://192.168.0.17:8093"),
-            "/api/assets": createProxyOptions("http://192.168.0.17:8090"),
-            "/api": createProxyOptions("http://192.168.0.17:8080"),
+            "/auth": createProxyOptions("http://192.168.0.17:8081"),
+            "/users": createProxyOptions("http://192.168.0.17:8081"),
+            "/cart": createProxyOptions("http://192.168.0.17:8091"),
+            "/orders": createProxyOptions("http://192.168.0.17:8095"),
+            "/coupons": createProxyOptions("http://192.168.0.17:8095"),
+            "/payments": createProxyOptions("http://192.168.0.17:8092"),
+            "/subscriptions": createProxyOptions("http://192.168.0.17:8094"),
+            "/public/subscriptions": createProxyOptions("http://192.168.0.17:8094"),
+            "/api/bitmap": createBitmapProxyOptions("http://localhost:8094"),
+            "/bitmap": createProxyOptions("http://localhost:8094"),
+            "/wishlist": createProxyOptions("http://192.168.0.17:8093"),
+            "/assets": createProxyOptions("http://192.168.0.17:8090"),
+            "/ai": createProxyOptions("http://192.168.0.17:8080"),
+            "/public": createProxyOptions("http://192.168.0.17:8080"),
+            "/notifications": createProxyOptions("http://192.168.0.17:8080"),
+            "/categories": createProxyOptions("http://192.168.0.17:8080"),
           }
         : undefined,
   },

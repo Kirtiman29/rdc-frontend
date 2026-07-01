@@ -43,7 +43,7 @@ export function Footer() {
               <Link to="/ai-studio/color-separation" className="hover:text-white transition-colors">Color Separation</Link>
             </li>
             <li>
-              <Link to="/ai-studio/generate?mode=bitmap" className="hover:text-white transition-colors">Bitmap</Link>
+              <Link to="/ai-studio/bitmap" className="hover:text-white transition-colors">Bitmap</Link>
             </li>
             <li>
               <Link to="/ai-studio/generate?mode=placement" className="hover:text-white transition-colors">Placement Pattern</Link>

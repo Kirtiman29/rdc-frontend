@@ -28,19 +28,19 @@ const ShopByCategory = () => {
       const ASSET_BASE = import.meta.env.VITE_ASSET_SERVICE_URL; // e.g., http://192.168.0.17:8090
 
       // Case 1: Handle legacy stored URLs (localhost or direct IP)
-      if (imageUrl.includes('/api/assets/')) {
+      if (imageUrl.includes('/assets/') || imageUrl.includes('/api/assets/')) {
         const parts = imageUrl.split('/');
         // The UUID is usually the segment before '/download' or the last segment
         const uuid = imageUrl.includes('/download') 
           ? parts[parts.indexOf('assets') + 1] 
           : parts[parts.length - 1];
         
-        return `${ASSET_BASE}/api/assets/download/${uuid}`;
+        return `${ASSET_BASE}/assets/download/${uuid}`;
       }
 
       // Case 2: If only a raw UUID is provided
       if (!imageUrl.startsWith('http')) {
-        return `${ASSET_BASE}/api/assets/download/${imageUrl}`;
+        return `${ASSET_BASE}/assets/download/${imageUrl}`;
       }
 
       // Case 3: Already correct (External link)

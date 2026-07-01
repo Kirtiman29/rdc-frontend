@@ -49,17 +49,17 @@ const resolveCategoryImageUrl = (imageUrl?: string | null) => {
   try {
     const assetBase = import.meta.env.VITE_ASSET_SERVICE_URL;
 
-    if (imageUrl.includes("/api/assets/")) {
+    if (imageUrl.includes("/assets/") || imageUrl.includes("/api/assets/")) {
       const parts = imageUrl.split("/");
       const uuid = imageUrl.includes("/download")
         ? parts[parts.indexOf("assets") + 1]
         : parts[parts.length - 1];
 
-      return `${assetBase}/api/assets/download/${uuid}`;
+      return `${assetBase}/assets/download/${uuid}`;
     }
 
     if (!imageUrl.startsWith("http")) {
-      return `${assetBase}/api/assets/download/${imageUrl}`;
+      return `${assetBase}/assets/download/${imageUrl}`;
     }
 
     return imageUrl;

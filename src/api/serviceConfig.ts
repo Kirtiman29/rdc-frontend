@@ -22,7 +22,11 @@ export const serviceOrigins = {
 
 export const createApiUrl = (serviceOrigin: string, path = "") => {
   const cleanPath = path ? `/${path.replace(/^\/+/, "")}` : "";
-  return `${trimTrailingSlash(serviceOrigin)}/api${cleanPath}`;
+  const origin = trimTrailingSlash(serviceOrigin);
+  if (origin && !cleanPath.startsWith("/api")) {
+    return `${origin}/api${cleanPath}`;
+  }
+  return `${origin}${cleanPath}`;
 };
 
 export const serviceApiUrls = {

@@ -6,9 +6,10 @@ import axios from 'axios';
  */
 const ADMIN_SERVICE_BASE = import.meta.env.VITE_ADMIN_SERVICE_URL;
 const ASSET_SERVICE_BASE = import.meta.env.VITE_ASSET_SERVICE_URL;
+const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
-const PUBLIC_CAREERS_URL = `${ADMIN_SERVICE_BASE}/api/public/careers`;
-const PUBLIC_ASSETS_URL = `${ASSET_SERVICE_BASE}/api/assets`;
+const PUBLIC_CAREERS_URL = `${trimTrailingSlash(ADMIN_SERVICE_BASE)}/api/public/careers`;
+const PUBLIC_ASSETS_URL = `${trimTrailingSlash(ASSET_SERVICE_BASE)}/api/assets`;
 
 export const publicCareerApi = {
     // Get OPEN jobs

@@ -23,7 +23,7 @@ const generateItems = [
   { label: "Text to Pattern", path: "/ai-studio/gemini-text-to-image" },
   { label: "Pattern Mixer", path: "/ai-studio/gemini-image-mix" },
   { label: "Color Separation", path: "/ai-studio/color-separation" },
-  { label: "Bitmap", path: "/ai-studio/generate?mode=bitmap" },
+  { label: "Bitmap", path: "/ai-studio/bitmap" },
   { label: "Placement Pattern", path: "/ai-studio/generate?mode=placement" },
 ];
 
@@ -242,6 +242,7 @@ export function TopNav() {
                 "/ai-studio/gemini-text-to-image",
                 "/ai-studio/gemini-image-mix",
                 "/ai-studio/color-separation",
+                "/ai-studio/bitmap",
               ].includes(location.pathname) || 
               (location.pathname === "/ai-studio/generate" && 
                 !["?mode=seamless", "?mode=brush", "?mode=texture", "?mode=fabric-texture", "?mode=embroidery"].includes(location.search))

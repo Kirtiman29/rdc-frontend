@@ -14,7 +14,7 @@ export interface ContactRequest {
 /**
  * 🌍 PUBLIC: Submit a contact inquiry to the RDC Admin Service.
  * * Target Service: VITE_ADMIN_SERVICE_URL
- * Backend Route: POST /api/public/contact
+ * Backend Route: POST /public/contact
  * * Note: Uses the centralized apiClient which handles production base URLs
  * and automatic data unwrapping.
  */
