@@ -52,6 +52,7 @@ import DashboardLayout from "@/ai/components/layout/DashboardLayout";
 import Generate from "@/ai/pages/Generate";
 import BitmapStudio from "@/ai/pages/BitmapStudio";
 import GeminiTextToImage from "@/ai/pages/GeminiTextToImage";
+import GeminiImageToImage from "@/ai/pages/GeminiImageToImage";
 import GeminiImageMix from "@/ai/pages/GeminiImageMix";
 import MyDesigns from "@/ai/pages/MyDesigns";
 import AiNotFound from "@/ai/pages/NotFound";
@@ -188,6 +189,7 @@ const App = () => (
                 <Route path="generate" element={<Generate />} />
                 <Route path="bitmap" element={<BitmapStudio />} />
                 <Route path="gemini-text-to-image" element={<GeminiTextToImage />} />
+                <Route path="gemini-image-to-image" element={<GeminiImageToImage />} />
                 <Route path="gemini-image-mix" element={<GeminiImageMix />} />
                 <Route path="upscale" element={<Upscale />} />
                 <Route path="finder" element={<PatternFinder />} />

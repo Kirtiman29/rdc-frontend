@@ -29,6 +29,7 @@ type Notice = {
 type BitmapPresetId = "luxury-fabric" | "soft-vintage" | "embroidery" | "newspaper" | "sharp-print" | "custom";
 type WorkflowMode = "single" | "multicolor";
 type HalftoneShape = "circle" | "square" | "diamond" | "line";
+type DitherAlgorithm = "floyd-steinberg" | "atkinson" | "bayer4" | "threshold";
 
 const DEFAULT_MANUAL_SPOT_COLORS = "#f7d7dc,#e8a9b4,#c86f84,#8d4259";
 
@@ -85,6 +86,19 @@ const shapeOptions: HalftoneShape[] = ["circle", "square", "diamond", "line"];
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 const spacingFromFrequency = (frequency: number) => clamp(32 - frequency * 0.3, 5, 30);
+
+const getPresetDitherAlgorithm = (preset: BitmapPresetId): DitherAlgorithm => {
+  switch (preset) {
+    case "luxury-fabric":
+      return "floyd-steinberg";
+    case "embroidery":
+      return "bayer4";
+    case "sharp-print":
+      return "threshold";
+    default:
+      return "atkinson";
+  }
+};
 
 const formatBytes = (bytes: number) => {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -401,10 +415,27 @@ export default function BitmapStudio() {
       return null;
     }
 
-    return preset === "custom"
-      ? {
-          endpoint: workflowMode === "multicolor" ? ("separationProof" as const) : ("halftone" as const),
-          params: buildCustomParams({
+    const selectedSpacing = Number(spacingFromFrequency(frequency).toFixed(2));
+    const selectedDotSize = Number((selectedSpacing * (dotSize / 100)).toFixed(2));
+    const proofOverrides = {
+      algorithm: dotScreenEnabled ? "halftone" : "dither",
+      dither_algo: dotScreenEnabled ? "atkinson" : getPresetDitherAlgorithm(preset),
+      shape: dotShape,
+      spacing: selectedSpacing,
+      dot_size: selectedDotSize,
+      angle: Number(angle.toFixed(2)),
+      dpi,
+      workflow_mode: workflowMode,
+      dot_screen_enabled: dotScreenEnabled,
+      spot_color_count: spotColorCount,
+      manual_spot_colors: manualSpotColors,
+    };
+
+    if (preset === "custom") {
+      return {
+        endpoint: "separationProof" as const,
+        params: {
+          ...buildCustomParams({
             fileId: currentFileId,
             workflowMode,
             dotScreenEnabled,
@@ -418,8 +449,23 @@ export default function BitmapStudio() {
             dpi,
             intensity,
           }),
-        }
-      : buildPresets(preset, intensity, currentFileId);
+          ...proofOverrides,
+        },
+      };
+    }
+
+    const presetRequest = buildPresets(preset, intensity, currentFileId);
+    if (!presetRequest) {
+      return null;
+    }
+
+    return {
+      endpoint: "separationProof" as const,
+      params: {
+        ...presetRequest.params,
+        ...proofOverrides,
+      },
+    };
   };
 
   const requestPreview = async () => {
@@ -445,12 +491,14 @@ export default function BitmapStudio() {
         return;
       }
 
-      const blob =
-        workflowMode === "multicolor"
-          ? await bitmapApi.previewSeparationProof(request.params, token || undefined)
-          : request.endpoint === "halftone"
-            ? await bitmapApi.previewHalftone(request.params, token || undefined)
-            : await bitmapApi.previewDither(request.params, token || undefined);
+      let blob: Blob;
+      switch (request.endpoint) {
+        case "separationProof":
+          blob = await bitmapApi.previewSeparationProof(request.params, token || undefined);
+          break;
+        default:
+          blob = await bitmapApi.previewDither(request.params, token || undefined);
+      }
 
       if (resultUrlRef.current) {
         URL.revokeObjectURL(resultUrlRef.current);
@@ -873,6 +921,9 @@ export default function BitmapStudio() {
                       max={8}
                       onChange={setSpotColorCount}
                     />
+                    <span className="text-xs text-[#6B7280]">
+                      This counts artwork color layers only. Base and patch layers are added separately.
+                    </span>
 
                     <label className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
                       <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">

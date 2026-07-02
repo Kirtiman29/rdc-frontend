@@ -54,6 +54,10 @@ export const GEMINI_IMAGE_MIX_ASPECT_RATIOS = [
   "9:16",
   "16:9",
 ] as const;
+export const GEMINI_IMAGE_TO_IMAGE_ASPECT_RATIOS = [
+  "auto",
+  ...GEMINI_GENERATION_ASPECT_RATIOS,
+] as const;
 
 export const aiStudioApi = axios.create({
   baseURL: AI_USE_BASE_URL,
@@ -511,6 +515,37 @@ export type GeminiGenerationAspectRatio =
   (typeof GEMINI_GENERATION_ASPECT_RATIOS)[number];
 export type GeminiImageMixAspectRatio =
   (typeof GEMINI_IMAGE_MIX_ASPECT_RATIOS)[number];
+export type GeminiImageToImageAspectRatio =
+  (typeof GEMINI_IMAGE_TO_IMAGE_ASPECT_RATIOS)[number];
+export type GeminiImageToImageMode = "auto" | "edit" | "redesign";
+
+const normalizeGeminiImageToImageEndpoint = (value: string) => {
+  const trimmed = value.replace(/\/+$/, "");
+
+  if (/\/gemini-image\/image-to-image$/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/\/api\/gemini\/img-to-img$/i.test(trimmed)) {
+    return trimmed.replace(/\/api\/gemini\/img-to-img$/i, "/gemini-image/image-to-image");
+  }
+
+  if (/\/img-to-img$/i.test(trimmed)) {
+    return trimmed.replace(/\/img-to-img$/i, "/gemini-image/image-to-image");
+  }
+
+  return `${trimmed}/gemini-image/image-to-image`;
+};
+
+const GEMINI_IMAGE_TO_IMAGE_ENDPOINT = normalizeGeminiImageToImageEndpoint(
+  import.meta.env.VITE_GEMINI_IMAGE_TO_IMAGE_ENDPOINT ||
+    "http://192.168.0.154:8000"
+);
+const GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY = (
+  import.meta.env.VITE_GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY ||
+  import.meta.env.VITE_INTERNAL_KEY ||
+  ""
+).trim();
 
 export interface AiToolPayload {
   toolName: AiToolName;
@@ -556,6 +591,28 @@ interface GeminiGenerateOptions {
 interface GeminiImageToImageOptions extends Omit<GeminiGenerateOptions, "prompt"> {
   file: File;
   prompt?: string;
+  aspectRatio?: GeminiImageToImageAspectRatio;
+  maskFile?: File | null;
+  editMode?: string;
+  editType?: string;
+  sourceColor?: string;
+  targetColor?: string;
+  colorPreset?: string;
+  colorPalette?: string;
+  targetElement?: string;
+  replacement?: string;
+  preserve?: string;
+  changeStrength?: number;
+  referenceStrength?: number;
+  promptStrength?: number;
+  motifScale?: number | string;
+  repeatType?: string;
+  detailLevel?: string;
+  colorLock?: string;
+  motifLock?: string | string[];
+  outputIntent?: string;
+  qualityPreset?: string;
+  variationType?: string;
 }
 
 interface GeminiImageMixOptions {
@@ -860,27 +917,190 @@ export const generateGeminiImageToImage = async ({
   numImages = 1,
   aspectRatio = "1:1",
   enhancePrompt = true,
+  maskFile = null,
+  editMode,
+  editType,
+  sourceColor,
+  targetColor,
+  colorPreset,
+  colorPalette,
+  targetElement,
+  replacement,
+  preserve,
+  changeStrength,
+  referenceStrength,
+  promptStrength,
+  motifScale,
+  repeatType,
+  detailLevel,
+  colorLock,
+  motifLock,
+  outputIntent,
+  qualityPreset,
+  variationType,
 }: GeminiImageToImageOptions): Promise<GenerateResponse> => {
   const inputUrl = await uploadAiInputAsset(file);
+  const maskUrl = maskFile ? await uploadAiInputAsset(maskFile) : null;
   const trimmedPrompt = prompt.trim();
+  const params: Record<string, unknown> = {
+    ...(trimmedPrompt ? { prompt: trimmedPrompt, user_prompt: trimmedPrompt } : {}),
+    style,
+    enhance_prompt: enhancePrompt,
+    num_images: numImages,
+  };
+
+  if (aspectRatio === "auto") {
+    params.aspect_ratio = "auto";
+  } else {
+    params.aspect_ratio = assertAllowedAspectRatio(
+      aspectRatio,
+      GEMINI_GENERATION_ASPECT_RATIOS,
+      "Invalid aspect_ratio for Gemini image to image."
+    );
+  }
+
+  const setParam = (key: string, value: unknown) => {
+    if (value === undefined || value === null) return;
+    if (typeof value === "string" && value.trim() === "") return;
+    if (Array.isArray(value) && value.length === 0) return;
+    params[key] = Array.isArray(value) ? value.join(", ") : value;
+  };
+
+  setParam("edit_mode", editMode);
+  setParam("edit_type", editType);
+  setParam("source_color", sourceColor);
+  setParam("target_color", targetColor);
+  setParam("color_preset", colorPreset);
+  setParam("color_palette", colorPalette);
+  setParam("mask_file", maskUrl);
+  setParam("target_element", targetElement);
+  setParam("replacement", replacement);
+  setParam("preserve", preserve);
+  setParam("change_strength", changeStrength);
+  setParam("reference_strength", referenceStrength);
+  setParam("prompt_strength", promptStrength);
+  setParam("motif_scale", motifScale);
+  setParam("repeat_type", repeatType);
+  setParam("detail_level", detailLevel);
+  setParam("color_lock", colorLock);
+  setParam("motif_lock", motifLock);
+  setParam("output_intent", outputIntent);
+  setParam("quality_preset", qualityPreset);
+  setParam("variation_type", variationType);
 
   const response = await invokeAiTool({
     toolName: "GEMINI_IMAGE_TO_IMAGE",
     inputUrl,
-    params: {
-      ...(trimmedPrompt ? { prompt: trimmedPrompt } : {}),
-      style,
-      aspect_ratio: assertAllowedAspectRatio(
-        aspectRatio,
-        GEMINI_GENERATION_ASPECT_RATIOS,
-        "Invalid aspect_ratio for Gemini image to image."
-      ),
-      enhance_prompt: enhancePrompt,
-      num_images: numImages,
-    },
+    params,
   });
 
   return mapAiResponseToGenerateResponse(response, inputUrl, style);
+};
+
+type GeminiImageToImageApiResponse = {
+  success?: boolean;
+  message?: string;
+  imageBase64?: string;
+  mimeType?: string;
+  filename?: string;
+  images?: Array<{
+    imageBase64?: string;
+    mimeType?: string;
+    filename?: string;
+  }>;
+  remainingCredits?: number | null;
+};
+
+const toDataUrl = (base64: string, mimeType: string) => {
+  if (/^data:/i.test(base64)) {
+    return base64;
+  }
+
+  return `data:${mimeType};base64,${base64}`;
+};
+
+const mimeTypeToExtension = (mimeType: string) => {
+  if (mimeType.includes("jpeg") || mimeType.includes("jpg")) return "jpg";
+  if (mimeType.includes("webp")) return "webp";
+  if (mimeType.includes("gif")) return "gif";
+  return "png";
+};
+
+export const generateGeminiImgToImg = async ({
+  file,
+  prompt,
+  mode = "auto",
+  aspectRatio = "auto",
+  numImages = 1,
+}: {
+  file: File;
+  prompt: string;
+  mode?: GeminiImageToImageMode;
+  aspectRatio?: GeminiImageToImageAspectRatio;
+  numImages?: number;
+}): Promise<GenerateResponse> => {
+  const trimmedPrompt = prompt.trim();
+
+  if (!file) {
+    throw new Error("image is required for Gemini image to image.");
+  }
+
+  if (!trimmedPrompt) {
+    throw new Error("prompt is required for Gemini image to image.");
+  }
+
+  if (!GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY) {
+    throw new Error(
+      "VITE_GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY is required to call the Gemini image-to-image backend."
+    );
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("prompt", trimmedPrompt);
+  formData.append("mode", mode);
+  formData.append("aspect_ratio", aspectRatio);
+  formData.append("num_images", String(numImages));
+
+  const response = await fetch(GEMINI_IMAGE_TO_IMAGE_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "X-INTERNAL-KEY": GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    throw new Error(errorText || `Gemini image-to-image request failed (${response.status}).`);
+  }
+
+  const data = (await response.json()) as GeminiImageToImageApiResponse;
+  const payloads = Array.isArray(data.images) && data.images.length > 0
+    ? data.images
+    : data.imageBase64
+      ? [{ imageBase64: data.imageBase64, mimeType: data.mimeType, filename: data.filename }]
+      : [];
+
+  const images = payloads.map((item, index) => {
+    const mimeType = item.mimeType || data.mimeType || "image/png";
+    const base64 = item.imageBase64 || "";
+    const dataUrl = toDataUrl(base64, mimeType);
+
+    return {
+      id: index + 1,
+      filename: item.filename || `gemini-img-to-img-${index + 1}.${mimeTypeToExtension(mimeType)}`,
+      url: dataUrl,
+      input_image: "",
+      style: mode,
+    };
+  });
+
+  return {
+    status: data.success === false ? "error" : "success",
+    remainingCredits: data.remainingCredits ?? null,
+    images,
+  };
 };
 
 export const generateGeminiImageMix = async ({

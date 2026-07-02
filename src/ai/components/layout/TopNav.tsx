@@ -21,6 +21,7 @@ const logo = "/rdc-logo.png";
 const generateItems = [
   { label: "Pattern Generate", path: "/ai-studio/generate" },
   { label: "Text to Pattern", path: "/ai-studio/gemini-text-to-image" },
+  { label: "Gemini Img to Img", path: "/ai-studio/gemini-image-to-image" },
   { label: "Pattern Mixer", path: "/ai-studio/gemini-image-mix" },
   { label: "Color Separation", path: "/ai-studio/color-separation" },
   { label: "Bitmap", path: "/ai-studio/bitmap" },
@@ -240,6 +241,7 @@ export function TopNav() {
             isActive={
               [
                 "/ai-studio/gemini-text-to-image",
+                "/ai-studio/gemini-image-to-image",
                 "/ai-studio/gemini-image-mix",
                 "/ai-studio/color-separation",
                 "/ai-studio/bitmap",

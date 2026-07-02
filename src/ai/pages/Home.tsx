@@ -94,6 +94,22 @@ const chapter2Tools = [
     accentColor: "#10B981"
   },
   {
+    id: "gemini-image-to-image",
+    title: "Gemini Image-to-Image",
+    description: "Refine a source image with mask guidance, palette controls, and backend-friendly edit parameters for professional image-to-image workflows.",
+    icon: Wand2,
+    badge: "Reference Editing",
+    cost: "12 Credits",
+    to: "/ai-studio/gemini-image-to-image",
+    image: pattern3,
+    features: [
+      "Upload a reference image and optional mask",
+      "Tune edit mode, palette, and prompt strength",
+      "Generate multiple polished variations"
+    ],
+    accentColor: "#F97316"
+  },
+  {
     id: "upscale",
     title: "Smart Upscale",
     description: "Prepare low-resolution prints for production mills. Enhance canvas texture outlines, remove jpeg compression blocks, and output 4K resolution files with absolute clarity.",
