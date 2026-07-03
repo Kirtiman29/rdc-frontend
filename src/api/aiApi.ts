@@ -115,6 +115,23 @@ const getUrlPath = (url: string) => {
   }
 };
 
+const rewriteLegacyAiHost = (url: string) => {
+  try {
+    const parsedUrl = new URL(url);
+    if (
+      parsedUrl.hostname === "192.168.0.155" ||
+      parsedUrl.hostname === "localhost" ||
+      parsedUrl.hostname === "127.0.0.1"
+    ) {
+      return joinUrl(AI_SERVICE_URL || parsedUrl.origin, `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`);
+    }
+  } catch {
+    // Ignore malformed URLs and fall back to the default logic below.
+  }
+
+  return url;
+};
+
 const shouldUseAiServiceForOutput = (url: string) =>
   Boolean(AI_SERVICE_URL) &&
   /^(?:patterns|output|files(?:\/|$)|static(?:\/|$)|storage(?:\/|$)|mixed-images(?:\/|$))/i.test(
@@ -134,7 +151,7 @@ const normalizeAiOutputUrlFromBase = (baseUrl: string, url?: string | null) => {
   if (!url) return "";
   if (/^(data:|blob:)/i.test(url)) return url;
   if (shouldUseAiServiceForOutput(url)) return normalizeAiServiceOutputUrl(url);
-  if (/^https?:\/\//i.test(url)) return url;
+  if (/^https?:\/\//i.test(url)) return rewriteLegacyAiHost(url);
   return joinUrl(baseUrl, url);
 };
 
@@ -588,7 +605,7 @@ interface GeminiGenerateOptions {
   enhancePrompt?: boolean;
 }
 
-interface GeminiImageToImageOptions extends Omit<GeminiGenerateOptions, "prompt"> {
+interface GeminiImageToImageOptions extends Omit<GeminiGenerateOptions, "prompt" | "aspectRatio"> {
   file: File;
   prompt?: string;
   aspectRatio?: GeminiImageToImageAspectRatio;
@@ -1000,14 +1017,35 @@ export const generateGeminiImageToImage = async ({
 type GeminiImageToImageApiResponse = {
   success?: boolean;
   message?: string;
+  outputUrl?: string;
+  output_url?: string;
+  output_image?: string;
+  outputImage?: string;
+  image?: string;
+  imageUrl?: string;
+  image_url?: string;
   imageBase64?: string;
+  image_base64?: string;
   mimeType?: string;
+  mime_type?: string;
   filename?: string;
   images?: Array<{
+    outputUrl?: string;
+    output_url?: string;
+    output_image?: string;
+    outputImage?: string;
+    image?: string;
+    imageUrl?: string;
+    image_url?: string;
+    url?: string;
     imageBase64?: string;
+    image_base64?: string;
     mimeType?: string;
+    mime_type?: string;
     filename?: string;
   }>;
+  data?: unknown;
+  result?: unknown;
   remainingCredits?: number | null;
 };
 
@@ -1024,6 +1062,43 @@ const mimeTypeToExtension = (mimeType: string) => {
   if (mimeType.includes("webp")) return "webp";
   if (mimeType.includes("gif")) return "gif";
   return "png";
+};
+
+const normalizeGeminiImgToImgOutputUrl = (url: string) => {
+  if (!url) return "";
+  if (/^(data:|blob:|https?:\/\/)/i.test(url)) return url;
+
+  try {
+    return new URL(url, GEMINI_IMAGE_TO_IMAGE_ENDPOINT).toString();
+  } catch {
+    return url;
+  }
+};
+
+const resolveGeminiImgToImgImageUrl = (item: GeminiImageToImageApiResponse, fallbackMimeType = "image/png") => {
+  const candidate =
+    item.outputUrl ||
+    item.output_url ||
+    item.output_image ||
+    item.outputImage ||
+    item.imageUrl ||
+    item.image_url ||
+    item.image;
+
+  if (candidate && /^(\s*data:|\s*blob:|\s*https?:\/\/)/i.test(candidate)) {
+    return candidate.trim();
+  }
+
+  if (candidate && !/^[A-Za-z0-9+/=]+$/.test(candidate.trim())) {
+    return normalizeGeminiImgToImgOutputUrl(candidate.trim());
+  }
+
+  const mimeType = item.mimeType || item.mime_type || fallbackMimeType;
+  const base64 = item.imageBase64 || item.image_base64 || candidate || "";
+
+  if (!base64) return "";
+
+  return toDataUrl(base64, mimeType);
 };
 
 export const generateGeminiImgToImg = async ({
@@ -1076,25 +1151,111 @@ export const generateGeminiImgToImg = async ({
   }
 
   const data = (await response.json()) as GeminiImageToImageApiResponse;
-  const payloads = Array.isArray(data.images) && data.images.length > 0
-    ? data.images
-    : data.imageBase64
-      ? [{ imageBase64: data.imageBase64, mimeType: data.mimeType, filename: data.filename }]
-      : [];
+  const mimeType = data.mimeType || data.mime_type || "image/png";
+  const directImage = resolveGeminiImgToImgImageUrl(data, mimeType);
+  const nestedSources = [data.data, data.result].filter(Boolean);
 
-  const images = payloads.map((item, index) => {
-    const mimeType = item.mimeType || data.mimeType || "image/png";
-    const base64 = item.imageBase64 || "";
-    const dataUrl = toDataUrl(base64, mimeType);
+  const payloads: Array<Record<string, unknown>> = [];
 
-    return {
-      id: index + 1,
-      filename: item.filename || `gemini-img-to-img-${index + 1}.${mimeTypeToExtension(mimeType)}`,
-      url: dataUrl,
-      input_image: "",
-      style: mode,
-    };
-  });
+  for (const item of data.images || []) {
+    if (typeof item === "string") {
+      payloads.push({ image: item });
+      continue;
+    }
+
+    if (isRecord(item)) {
+      payloads.push(item);
+    }
+  }
+
+  if (payloads.length === 0) {
+    for (const source of nestedSources) {
+      if (!isRecord(source)) continue;
+
+      if (Array.isArray(source.images)) {
+        for (const item of source.images) {
+          if (typeof item === "string") {
+            payloads.push({ image: item });
+          } else if (isRecord(item)) {
+            payloads.push(item);
+          }
+        }
+      }
+
+      const nestedImage =
+        resolveGeminiImgToImgImageUrl(
+          {
+            outputUrl: source.outputUrl as string | undefined,
+            output_url: source.output_url as string | undefined,
+            output_image: source.output_image as string | undefined,
+            outputImage: source.outputImage as string | undefined,
+            image: source.image as string | undefined,
+            imageUrl: source.imageUrl as string | undefined,
+            image_url: source.image_url as string | undefined,
+            imageBase64: source.imageBase64 as string | undefined,
+            image_base64: source.image_base64 as string | undefined,
+            mimeType: source.mimeType as string | undefined,
+            mime_type: source.mime_type as string | undefined,
+            filename: source.filename as string | undefined,
+          },
+          mimeType
+        );
+
+      if (nestedImage) {
+        payloads.push({
+          image: nestedImage,
+          filename: source.filename,
+          mimeType: source.mimeType,
+        });
+      }
+    }
+  }
+
+  if (payloads.length === 0 && directImage) {
+    payloads.push({
+      image: directImage,
+      filename: data.filename,
+      mimeType,
+    });
+  }
+
+  if (payloads.length === 0) {
+    const fallbackUrls: string[] = [];
+    readUrlsFromValue(data, fallbackUrls);
+
+    for (const url of fallbackUrls) {
+      payloads.push({ image: url, filename: data.filename, mimeType });
+    }
+  }
+
+  const images = payloads
+    .map((item, index) => {
+      const itemMimeType = String(item.mimeType || item.mime_type || mimeType || "image/png");
+      const rawUrl =
+        String(item.image || item.imageUrl || item.image_url || item.outputUrl || item.output_url || item.output_image || "");
+      const resolvedUrl = resolveGeminiImgToImgImageUrl(
+        {
+          outputUrl: rawUrl,
+          mimeType: itemMimeType,
+          filename: typeof item.filename === "string" ? item.filename : undefined,
+        },
+        itemMimeType
+      );
+
+      if (!resolvedUrl) return null;
+
+      return {
+        id: index + 1,
+        filename:
+          typeof item.filename === "string" && item.filename.trim()
+            ? item.filename.trim()
+            : `gemini-img-to-img-${index + 1}.${mimeTypeToExtension(itemMimeType)}`,
+        url: resolvedUrl,
+        input_image: "",
+        style: String(mode),
+      };
+    })
+    .filter(Boolean) as GenerateResponse["images"];
 
   return {
     status: data.success === false ? "error" : "success",

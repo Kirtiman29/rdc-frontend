@@ -16,6 +16,7 @@ const navSection = [
   { label: "Upscale", path: "/ai-studio/upscale", icon: Maximize },
   { label: "Pattern Extractor", path: "/ai-studio/finder", icon: Search },
   { label: "Color Matching", path: "/ai-studio/recolor", icon: Palette },
+  { label: "AI Color Matching", path: "/ai-studio/ai-color-matching", icon: Sparkles },
   { label: "Color Separation", path: "/ai-studio/color-separation", icon: SwatchBook },
 ];
 

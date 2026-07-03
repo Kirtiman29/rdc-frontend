@@ -21,7 +21,7 @@ const logo = "/rdc-logo.png";
 const generateItems = [
   { label: "Pattern Generate", path: "/ai-studio/generate" },
   { label: "Text to Pattern", path: "/ai-studio/gemini-text-to-image" },
-  { label: "Gemini Img to Img", path: "/ai-studio/gemini-image-to-image" },
+  { label: "Pattern Maker", path: "/ai-studio/pattern-maker" },
   { label: "Pattern Mixer", path: "/ai-studio/gemini-image-mix" },
   { label: "Color Separation", path: "/ai-studio/color-separation" },
   { label: "Bitmap", path: "/ai-studio/bitmap" },
@@ -36,6 +36,7 @@ const editItems = [
 
 const colorItems = [
   { label: "Color Matching", path: "/ai-studio/recolor" },
+  { label: "AI Color Matching", path: "/ai-studio/ai-color-matching" },
 ];
 
 const toolsItems = [
@@ -241,7 +242,7 @@ export function TopNav() {
             isActive={
               [
                 "/ai-studio/gemini-text-to-image",
-                "/ai-studio/gemini-image-to-image",
+                "/ai-studio/pattern-maker",
                 "/ai-studio/gemini-image-mix",
                 "/ai-studio/color-separation",
                 "/ai-studio/bitmap",
@@ -276,6 +277,7 @@ export function TopNav() {
             items={colorItems}
             isActive={[
               "/ai-studio/recolor",
+              "/ai-studio/ai-color-matching",
             ].includes(location.pathname)}
             activeDropdown={activeDropdown}
             setActiveDropdown={setActiveDropdown}

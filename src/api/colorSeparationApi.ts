@@ -25,7 +25,7 @@ const getDefaultApiBaseUrl = () => {
 
   const { protocol, hostname } = window.location;
 
-  if (!hostname || hostname === "localhost" || hostname === "192.168.0.155") {
+  if (!hostname || hostname === "localhost" || hostname === "192.168.0.154") {
     return normalizeBaseUrl(import.meta.env.VITE_AI_SERVICE_URL);
   }
 

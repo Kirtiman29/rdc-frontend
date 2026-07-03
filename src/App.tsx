@@ -52,7 +52,7 @@ import DashboardLayout from "@/ai/components/layout/DashboardLayout";
 import Generate from "@/ai/pages/Generate";
 import BitmapStudio from "@/ai/pages/BitmapStudio";
 import GeminiTextToImage from "@/ai/pages/GeminiTextToImage";
-import GeminiImageToImage from "@/ai/pages/GeminiImageToImage";
+import PatternMaker from "@/ai/pages/PatternMaker";
 import GeminiImageMix from "@/ai/pages/GeminiImageMix";
 import MyDesigns from "@/ai/pages/MyDesigns";
 import AiNotFound from "@/ai/pages/NotFound";
@@ -60,6 +60,7 @@ import Upscale from "@/ai/pages/Upscale";
 import PatternFinder from "@/ai/pages/Patternfinder";
 import Favorites from "@/ai/pages/favorites";
 import TextileRecolorStudio from "@/ai/pages/TextileRecolorStudio";
+import ColorMatchingStudio from "@/ai/pages/ColorMatchingStudio";
 import ColorSeparation from "@/ai/pages/ColorSeparation";
 import AiProfile from "@/ai/pages/Profile";
 import ExploreFabrics from "@/pages/fabrics/ExploreFabrics";
@@ -189,11 +190,13 @@ const App = () => (
                 <Route path="generate" element={<Generate />} />
                 <Route path="bitmap" element={<BitmapStudio />} />
                 <Route path="gemini-text-to-image" element={<GeminiTextToImage />} />
-                <Route path="gemini-image-to-image" element={<GeminiImageToImage />} />
+                <Route path="pattern-maker" element={<PatternMaker />} />
+                <Route path="gemini-image-to-image" element={<Navigate to="pattern-maker" replace />} />
                 <Route path="gemini-image-mix" element={<GeminiImageMix />} />
                 <Route path="upscale" element={<Upscale />} />
                 <Route path="finder" element={<PatternFinder />} />
                 <Route path="recolor" element={<TextileRecolorStudio />} />
+                <Route path="ai-color-matching" element={<ColorMatchingStudio />} />
                 <Route path="color-separation" element={<ColorSeparation />} />
                 <Route path="favorites" element={<Favorites />} />
                 <Route path="profile" element={<AiProfile />} />

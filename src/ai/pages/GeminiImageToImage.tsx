@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   GEMINI_IMAGE_TO_IMAGE_ASPECT_RATIOS,
   generateGeminiImgToImg,
@@ -57,6 +57,13 @@ const editModeOptions: Array<{
 ];
 
 export default function GeminiImageToImage() {
+  const location = useLocation();
+  const isAiColorMatching = location.pathname === "/ai-studio/ai-color-matching";
+  const pageTitle = isAiColorMatching ? "AI Color Matching" : "Pattern Maker";
+  const pageIntro = isAiColorMatching
+    ? "Upload a source image, write the prompt, choose the aspect ratio, and tune the edit mode for studio color-matching workflows."
+    : "Upload a source image, write the prompt, choose the aspect ratio, and create refined pattern-maker variations.";
+
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
@@ -171,14 +178,13 @@ export default function GeminiImageToImage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-[#2B3138] bg-[#1C2025] px-3 py-1 text-xs font-semibold text-[#A1A8B3]">
               <Sparkles className="h-3.5 w-3.5 text-[#E11D2E]" />
-              RDC AI Studio
+              {isAiColorMatching ? "RDC AI Studio / Color" : "RDC AI Studio / Generate"}
             </div>
             <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-white md:text-4xl">
-              Gemini Image to Image
+              {pageTitle}
             </h1>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#A1A8B3]">
-              Upload a source image, write the prompt, choose the aspect ratio,
-              and pick the edit mode.
+              {pageIntro}
             </p>
           </div>
 
