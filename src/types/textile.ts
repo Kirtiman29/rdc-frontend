@@ -22,7 +22,9 @@ export type PresetId =
   | "mens_ethnic"
   | "womens_formal"
   | "womens_casual"
-  | "womens_party";
+  | "womens_party"
+  | "natural"
+  | "natural_white";
 
 export type PresetCategory = {
   title: string;
@@ -100,6 +102,9 @@ export const PRESET_CATEGORIES: PresetCategory[] = [
   },
   {
     title: "Natural Basics",
-    presets: [{ id: "earthy", label: "Earthy", colors: ["#F8EED0", "#D4A870", "#8B4010", "#3C2A10"] }],
+    presets: [
+      { id: "natural", label: "Natural", colors: ["#6F8F72", "#A9794B", "#D8C3A5", "#7D6B55", "#B08A5A"] },
+      { id: "natural_white", label: "Natural + White", colors: ["#F7F3EA", "#6F8F72", "#A9794B", "#D8C3A5", "#B08A5A"] },
+    ],
   },
 ];
