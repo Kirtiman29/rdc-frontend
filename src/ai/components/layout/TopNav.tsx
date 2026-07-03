@@ -29,7 +29,7 @@ const generateItems = [
 ];
 
 const editItems = [
-  { label: "Seamless", path: "/ai-studio/generate?mode=seamless" },
+  { label: "Seamless", path: "/ai-studio/seamless" },
   { label: "Upscale", path: "/ai-studio/upscale" },
   { label: "Pattern Extractor", path: "/ai-studio/finder" },
 ];
@@ -43,7 +43,7 @@ const toolsItems = [
   { label: "Brush Effect", path: "/ai-studio/generate?mode=brush" },
   { label: "Texture", path: "/ai-studio/generate?mode=texture" },
   { label: "Fabric Texture", path: "/ai-studio/generate?mode=fabric-texture" },
-  { label: "Embroidery", path: "/ai-studio/generate?mode=embroidery" },
+  { label: "Embroidery", path: "/ai-studio/embroidery" },
 ];
 
 interface DropdownNavItemProps {
@@ -262,6 +262,7 @@ export function TopNav() {
             isActive={
               [
                 "/ai-studio/upscale",
+                "/ai-studio/seamless",
                 "/ai-studio/finder",
               ].includes(location.pathname) ||
               (location.pathname === "/ai-studio/generate" && location.search === "?mode=seamless")
@@ -289,12 +290,12 @@ export function TopNav() {
             label="Pattern Effect"
             items={toolsItems}
             isActive={
-              [
+              ([
                 "?mode=brush",
                 "?mode=texture",
                 "?mode=fabric-texture",
-                "?mode=embroidery",
-              ].includes(location.search) && location.pathname === "/ai-studio/generate"
+              ].includes(location.search) && location.pathname === "/ai-studio/generate") ||
+              location.pathname === "/ai-studio/embroidery"
             }
             activeDropdown={activeDropdown}
             setActiveDropdown={setActiveDropdown}

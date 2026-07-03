@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   BadgeCheck,
@@ -20,6 +21,30 @@ import {
 
 import { getToken } from "@/api/apiClient";
 import { bitmapApi, type BitmapUploadResponse } from "@/api/bitmapApi";
+
+import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
+import flamingoShowcase from "@/assets/flamingo-showcase.png";
+import colorfulCharacterShowcase from "@/assets/colorful-character-showcase.png";
+
+const faqs = [
+  {
+    question: "What is RDC Bitmap Studio?",
+    answer: "RDC Bitmap Studio is a specialized production tool that prepares digital artwork for textile screen printing. It translates gradient tones into bitmap dithers or halftone screens so each color plate can be exposed as clean, printable stencils.",
+  },
+  {
+    question: "What are halftone shapes?",
+    answer: "Halftone shapes define the geometry of screens: Circle is standard for smooth details; Square/Diamond offers bold artistic screen patterns; Line is ideal for textured vintage and high-density printing.",
+  },
+  {
+    question: "What is the difference between Screen DPI and PSD DPI?",
+    answer: "Screen DPI represents the target output screen frequency (e.g. 300, 520, or 600 DPI) for previewing and dithering calculations. PSD DPI is the resolution embedded in the final Photoshop file download to ensure print film outputs map correctly on stencils.",
+  },
+  {
+    question: "How do manual spot color hex values work?",
+    answer: "By entering comma-separated hex codes (e.g., #ff0000,#00ff00), you explicitly instruct the separation engine to map the artwork's color channels directly into those specific printing ink channels, matching your physical setup.",
+  },
+];
+
 
 type Notice = {
   type: "info" | "success" | "error";
@@ -301,7 +326,9 @@ export default function BitmapStudio() {
   const [screenDpiOptions, setScreenDpiOptions] = useState<string[]>(DEFAULT_SCREEN_DPI_OPTIONS);
   const [psdDpi, setPsdDpi] = useState(520);
   const [dotShape, setDotShape] = useState<HalftoneShape>("circle");
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
   const sourceUrlRef = useRef<string | null>(null);
   const resultUrlRef = useRef<string | null>(null);
   const token = getToken();
@@ -626,242 +653,382 @@ export default function BitmapStudio() {
           </div>
         )}
 
-        <main className="grid gap-6 lg:grid-cols-[440px_minmax(0,1fr)]">
-          <aside className="min-h-0 space-y-6 lg:self-start">
-            <Panel
-              title="1. Design Asset"
-              description="Upload a source file. The stored filename powers every later preview request."
-              icon={<CloudUpload className="h-4 w-4" />}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,image/png,image/jpeg,image/webp,image/bmp,image/tiff"
-                className="hidden"
-                onChange={(event) => {
-                  const file = event.target.files?.[0] || null;
-                  void handleFileSelection(file || undefined);
-                  event.currentTarget.value = "";
-                }}
-              />
+        {/* Design Workspace: Upload & Live Preview Side-by-Side in one box */}
+        <div className="rounded-[28px] border border-[#2B3138] bg-[#181B1F]/92 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-6 mb-6">
+          <div className="flex flex-wrap items-center justify-between border-b border-[#2B3138]/40 pb-4 mb-6 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#E11D2E]/20 bg-[#E11D2E]/10 text-[#E11D2E]">
+                <FileImage className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-white">Design Workspace & Simulation</h2>
+                <p className="text-xs text-[#A1A8B3]">Upload design artwork and inspect the generated screen-printing halftone simulation side-by-side.</p>
+              </div>
+            </div>
 
+            <div className="flex flex-wrap items-center gap-3">
+              <LabeledSelect
+                label="PSD DPI"
+                value={String(psdDpi)}
+                options={DEFAULT_SCREEN_DPI_OPTIONS}
+                onChange={(value) => setPsdDpi(Number(value))}
+                className="w-[120px]"
+              />
+              <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] uppercase tracking-[0.25em] text-[#A1A8B3]">
+                {resultPreviewUrl ? "Preview ready" : "No preview yet"}
+              </span>
+              {resultPreviewUrl && (
+                <a
+                  href={resultPreviewUrl}
+                  download={downloadFileName}
+                  className="inline-flex h-9 items-center gap-2 rounded-full border border-[#E11D2E]/30 bg-[#E11D2E]/10 px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ffb4b9] transition hover:border-[#E11D2E]/50 hover:bg-[#E11D2E]/20 hover:text-white"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download PNG
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={downloadPsd}
+                disabled={!currentFileId || isRendering || isUploading || isDownloadingPsd || !hasAuth}
+                className="inline-flex h-9 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#A1A8B3] transition hover:border-[#E11D2E]/40 hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isDownloadingPsd ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                Download PSD
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column: Upload zone */}
+            <div className="flex flex-col space-y-3">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#A1A8B3]">
+                1. Source Artwork
+              </span>
               <div
-                onDragEnter={(event) => {
-                  event.preventDefault();
+                onDragEnter={(e) => {
+                  e.preventDefault();
                   setIsDragOver(true);
                 }}
-                onDragOver={(event) => {
-                  event.preventDefault();
+                onDragOver={(e) => {
+                  e.preventDefault();
                   setIsDragOver(true);
                 }}
-                onDragLeave={(event) => {
-                  event.preventDefault();
+                onDragLeave={(e) => {
+                  e.preventDefault();
                   setIsDragOver(false);
                 }}
-                onDrop={(event) => {
-                  event.preventDefault();
+                onDrop={(e) => {
+                  e.preventDefault();
                   setIsDragOver(false);
-                  const file = event.dataTransfer.files?.[0];
+                  const file = e.dataTransfer.files?.[0];
                   if (file) {
                     void handleFileSelection(file);
                   }
                 }}
-                className={`group rounded-3xl border border-dashed p-6 transition ${
+                className={`group relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-2xl border-2 border-dashed transition-all duration-300 ${
                   isDragOver
-                    ? "border-[#E11D2E]/50 bg-[#E11D2E]/10"
+                    ? "border-[#E11D2E] bg-[#E11D2E]/5"
+                    : "border-[#2B3138] bg-[#111315]/30 hover:border-[#E11D2E]/40 hover:bg-[#111315]/50"
+                } w-full aspect-square`}
+              >
+                {sourcePreviewUrl ? (
+                  <div className="absolute inset-0 h-full w-full flex items-center justify-center overflow-hidden">
+                    <img
+                      src={sourcePreviewUrl}
+                      alt="Source preview"
+                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/0 transition-colors duration-300 group-hover:bg-black/50">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (sourceUrlRef.current) {
+                            URL.revokeObjectURL(sourceUrlRef.current);
+                            sourceUrlRef.current = null;
+                          }
+                          clearGeneratedPreview();
+                          setSelectedFile(null);
+                          setUploadResponse(null);
+                          setSourcePreviewUrl(null);
+                        }}
+                        className="rounded-full bg-[#E11D2E] p-2.5 text-white hover:bg-[#ff3347] transition transform scale-90 group-hover:scale-100 duration-300 shadow-lg"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <CloudUpload className="h-5 w-5 text-[#A1A8B3] group-hover:text-[#E11D2E] transition-colors" />
+                    <div className="text-center px-4">
+                      <p className="text-xs font-bold text-[#A1A8B3] group-hover:text-white transition-colors">
+                        Drag & drop image here or <span className="text-[#E11D2E]">browse</span>
+                      </p>
+                      <p className="mt-0.5 text-[9px] text-[#6B7280]">Supports PNG, JPG, WEBP • Max 10MB</p>
+                    </div>
+                  </>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0"
+                  accept=".png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,image/png,image/jpeg,image/webp,image/bmp,image/tiff"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null;
+                    void handleFileSelection(file || undefined);
+                    event.currentTarget.value = "";
+                  }}
+                />
+              </div>
+
+              {selectedFile && (
+                <div className="rounded-2xl border border-white/10 bg-[#0E1012] p-4 mt-2">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#6B7280]">Selected File</p>
+                      <p className="mt-1 text-sm font-semibold text-white break-all">
+                        {selectedFile.name}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-[#A1A8B3]">
+                    <InfoRow label="Type" value={selectedFile.type || "Unknown"} />
+                    <InfoRow label="Size" value={formatBytes(selectedFile.size)} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Column: Live Preview Output */}
+            <div className="flex flex-col space-y-3">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#A1A8B3]">
+                2. Live Print Simulation
+              </span>
+              <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/10 bg-[#0E1012] flex items-center justify-center">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(225,29,46,0.12),transparent_55%)]" />
+                {resultPreviewUrl ? (
+                  <img
+                    src={resultPreviewUrl}
+                    alt="Bitmap preview output"
+                    className="relative z-10 h-full w-full origin-center object-contain p-4 mx-auto"
+                  />
+                ) : sourcePreviewUrl ? (
+                  <img
+                    src={sourcePreviewUrl}
+                    alt="Source image preview"
+                    className="relative z-10 h-full w-full origin-center object-contain p-4 opacity-90 mx-auto"
+                  />
+                ) : (
+                  <div className="relative z-10 flex h-full items-center justify-center text-center text-sm text-[#6B7280]">
+                    <div className="space-y-2 py-20">
+                      <Palette className="mx-auto h-10 w-10 text-[#E11D2E]" />
+                      <p>Upload an asset and select a preset to generate the textile print simulation.</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Section: Remaining Options (Style Presets & Print Parameters stacked) */}
+        <div className="space-y-6 mb-6">
+          <Panel
+            title="1. Bitmap Style Preset"
+            description="Choose a concise preset that matches the target print style."
+            icon={<Layers3 className="h-4 w-4" />}
+          >
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {presetCards.map((item) => {
+                const selected = preset === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setPreset(item.id)}
+                    className={`flex flex-col items-center justify-between rounded-2xl border p-3.5 text-center transition ${
+                      selected
+                        ? "border-[#E11D2E]/35 bg-[#E11D2E]/10"
+                        : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
+                    }`}
+                  >
+                    <span
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border mb-2"
+                      style={{
+                        color: item.accent,
+                        borderColor: selected ? `${item.accent}55` : "rgba(255,255,255,0.08)",
+                        backgroundColor: selected ? `${item.accent}15` : "rgba(255,255,255,0.04)",
+                      }}
+                    >
+                      <Wand2 className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="space-y-0.5">
+                      <p className="text-xs font-bold text-white leading-snug">{item.title}</p>
+                      <p className="text-[8px] uppercase tracking-wider text-[#A1A8B3] leading-none">{item.badge}</p>
+                    </div>
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => setPreset("custom")}
+                className={`flex flex-col items-center justify-between rounded-2xl border p-3.5 text-center transition ${
+                  preset === "custom"
+                    ? "border-[#E11D2E]/35 bg-[#E11D2E]/10"
                     : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
                 }`}
               >
-                <div className="grid gap-6">
-                  <div className="space-y-4">
-                    <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.3em] text-[#A1A8B3]">
-                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">PNG / JPG / WEBP / BMP</span>
-                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">Stored filename workflow</span>
-                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1">JWT protected</span>
-                    </div>
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#A1A8B3] mb-2">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                </span>
+                <div className="space-y-0.5">
+                  <p className="text-xs font-bold text-white leading-snug">Custom Work</p>
+                  <p className="text-[8px] uppercase tracking-wider text-[#A1A8B3] leading-none">Manual tuning</p>
+                </div>
+              </button>
+            </div>
+          </Panel>
 
-                    <div className="rounded-3xl border border-white/10 bg-[#0E1012] p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#6B7280]">Selected File</p>
-                          <p className="mt-1 text-sm font-semibold text-white">
-                            {selectedFile ? selectedFile.name : "Drop a file or click Browse to begin"}
-                          </p>
-                        </div>
-                        {selectedFile && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (sourceUrlRef.current) {
-                                URL.revokeObjectURL(sourceUrlRef.current);
-                                sourceUrlRef.current = null;
-                              }
-
-                              clearGeneratedPreview();
-                              setSelectedFile(null);
-                              setUploadResponse(null);
-                              setSourcePreviewUrl(null);
-                            }}
-                            className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-[#A1A8B3] transition hover:border-[#E11D2E]/30 hover:text-white"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
+          <Panel
+            title={preset === "custom" ? "2. Print Customization" : "2. Print Parameters"}
+            description={preset === "custom" ? "Full custom control options." : "Adjust intensity for preset print style."}
+            icon={<ScanLine className="h-4 w-4" />}
+          >
+            <div className="space-y-5">
+              {preset === "custom" ? (
+                <>
+                  <div className="grid gap-4">
+                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-2">
+                      <div className="mb-2 px-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#6B7280]">
+                        Workflow Mode
                       </div>
-
-                      {selectedFile && (
-                        <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-[#A1A8B3]">
-                          <InfoRow label="Type" value={selectedFile.type || "Unknown"} />
-                          <InfoRow label="Size" value={formatBytes(selectedFile.size)} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="rounded-3xl border border-white/10 bg-[#0E1012] p-3">
-                    <div className="mb-3 flex items-center justify-between px-1 text-[10px] uppercase tracking-[0.3em] text-[#6B7280]">
-                      <span>Source Preview</span>
-                      <span>{sourcePreviewUrl ? "Loaded" : "Empty"}</span>
-                    </div>
-                    <div className="relative h-56 overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02))]">
-                      {sourcePreviewUrl ? (
-                        <img
-                          src={sourcePreviewUrl}
-                          alt="Bitmap source preview"
-                          className="h-full w-full object-contain p-3"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-center text-sm text-[#6B7280]">
-                          <div className="space-y-2">
-                            <ImageUp className="mx-auto h-8 w-8 text-[#E11D2E]" />
-                            <p>Preview appears here after upload.</p>
+                      <div className="rounded-xl border border-white/10 bg-[#0E1012] px-3 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-semibold text-white">Multi-Color</p>
+                            <p className="text-xs text-[#A1A8B3]">Single-color mode has been removed.</p>
                           </div>
+                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-emerald-200">
+                            Active
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Panel>
-
-            <Panel
-              title="2. Bitmap Style Preset"
-              description="Choose a concise preset that matches the target print style."
-              icon={<Layers3 className="h-4 w-4" />}
-            >
-              <div className="space-y-3">
-                {presetCards.map((item) => {
-                  const selected = preset === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setPreset(item.id)}
-                      className={`w-full rounded-3xl border p-4 text-left transition ${
-                        selected
-                          ? "border-[#E11D2E]/35 bg-[#E11D2E]/10"
-                          : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-white">{item.title}</p>
-                          <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-[#A1A8B3]">{item.badge}</p>
-                        </div>
-                        <span
-                          className="flex h-9 w-9 items-center justify-center rounded-2xl border"
-                          style={{
-                            color: item.accent,
-                            borderColor: selected ? `${item.accent}55` : "rgba(255,255,255,0.08)",
-                            backgroundColor: selected ? `${item.accent}15` : "rgba(255,255,255,0.04)",
-                          }}
-                        >
-                          <Wand2 className="h-4 w-4" />
-                        </span>
-                      </div>
-                      <p className="mt-3 text-xs leading-6 text-[#A1A8B3]">{item.description}</p>
-                    </button>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  onClick={() => setPreset("custom")}
-                  className={`w-full rounded-3xl border p-4 text-left transition ${
-                    preset === "custom"
-                      ? "border-[#E11D2E]/35 bg-[#E11D2E]/10"
-                      : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-white">Custom Workspace</p>
-                      <p className="mt-1 text-[11px] uppercase tracking-[0.25em] text-[#A1A8B3]">Manual control</p>
-                    </div>
-                    <span className="flex h-9 w-9 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[#A1A8B3]">
-                      <SlidersHorizontal className="h-4 w-4" />
-                    </span>
-                  </div>
-                  <p className="mt-3 text-xs leading-6 text-[#A1A8B3]">
-                    Keep the preset stack lean and move into manual control only when you need it.
-                  </p>
-                </button>
-              </div>
-            </Panel>
-
-            <Panel
-              title="3. Print Customization"
-              description="Only the production controls stay visible."
-              icon={<ScanLine className="h-4 w-4" />}
-            >
-              <div className="space-y-5">
-                <div className="grid gap-4">
-                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-2">
-                    <div className="mb-2 px-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#6B7280]">
-                      Workflow Mode
-                    </div>
-                    <div className="rounded-xl border border-white/10 bg-[#0E1012] px-3 py-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-white">Multi-Color</p>
-                          <p className="text-xs text-[#A1A8B3]">Single-color mode has been removed.</p>
-                        </div>
-                        <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-emerald-200">
-                          Active
-                        </span>
                       </div>
                     </div>
+
+                    <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                      <label className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                        <span>
+                          <span className="block text-sm font-semibold text-white">Dot Screen</span>
+                          <span className="text-xs text-[#A1A8B3]">Enable halftone bitmap conversion.</span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={dotScreenEnabled}
+                          onChange={(event) => setDotScreenEnabled(event.target.checked)}
+                          className="h-5 w-5 rounded border-white/20 bg-transparent accent-[#E11D2E]"
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                        <span>
+                          <span className="block text-sm font-semibold text-white">Grayscale</span>
+                          <span className="text-xs text-[#A1A8B3]">Use smooth gray separations for print.</span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={grayscaleEnabled}
+                          onChange={(event) => setGrayscaleEnabled(event.target.checked)}
+                          className="h-5 w-5 rounded border-white/20 bg-transparent accent-[#E11D2E]"
+                        />
+                      </label>
+                    </div>
                   </div>
 
-                  <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                    <label className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                      <span>
-                        <span className="block text-sm font-semibold text-white">Dot Screen</span>
-                        <span className="text-xs text-[#A1A8B3]">Enable halftone bitmap conversion.</span>
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={dotScreenEnabled}
-                        onChange={(event) => setDotScreenEnabled(event.target.checked)}
-                        className="h-5 w-5 rounded border-white/20 bg-transparent accent-[#E11D2E]"
-                      />
-                    </label>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <LabeledSelect
+                      label="Screen DPI"
+                      value={String(dpi)}
+                      options={screenDpiOptions}
+                      onChange={(value) => setDpi(Number(value))}
+                    />
+                    <RangeField label="Shading Balance" value={intensity} min={0} max={100} onChange={setIntensity} unit="%" />
+                  </div>
 
-                    <label className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                      <span>
-                        <span className="block text-sm font-semibold text-white">Grayscale</span>
-                        <span className="text-xs text-[#A1A8B3]">Use smooth gray separations for print.</span>
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={grayscaleEnabled}
-                        onChange={(event) => setGrayscaleEnabled(event.target.checked)}
-                        className="h-5 w-5 rounded border-white/20 bg-transparent accent-[#E11D2E]"
-                      />
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <RangeField label="Frequency" value={frequency} min={20} max={90} onChange={setFrequency} unit="LPI" />
+                    <RangeField label="Dot Size" value={dotSize} min={0} max={100} onChange={setDotSize} unit="%" />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <RangeField label="Angle" value={angle} min={0} max={90} onChange={setAngle} unit="deg" />
+
+                    <label className="grid gap-2">
+                      <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">Dot Shape</span>
+                      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2">
+                        {shapeOptions.map((shape) => {
+                          const active = dotShape === shape;
+                          return (
+                            <button
+                              key={shape}
+                              type="button"
+                              onClick={() => setDotShape(shape)}
+                              className={`rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                                active ? "bg-[#E11D2E] text-white" : "text-[#A1A8B3] hover:text-white"
+                              }`}
+                            >
+                              {shape}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </label>
                   </div>
-                </div>
 
+                  {workflowMode === "multicolor" && (
+                    <div className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-white">Color Separation</p>
+                          <p className="text-xs text-[#A1A8B3]">Keep the stack lean and readable.</p>
+                        </div>
+                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-[#A1A8B3]">
+                          Optional
+                        </span>
+                      </div>
+
+                      <RangeField
+                        label="Layers"
+                        value={spotColorCount}
+                        min={1}
+                        max={8}
+                        onChange={setSpotColorCount}
+                      />
+                      <span className="text-xs text-[#6B7280]">
+                        This counts artwork color layers only. Base and patch layers are added separately.
+                      </span>
+
+                      <label className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
+                          Manual Spot Colors
+                        </span>
+                        <textarea
+                          value={manualSpotColors}
+                          onChange={(event) => setManualSpotColors(event.target.value)}
+                          rows={3}
+                          className="w-full resize-none rounded-xl border border-white/10 bg-[#0E1012] px-3 py-2 text-sm text-white outline-none transition focus:border-[#E11D2E]/40"
+                          placeholder="#f7d7dc,#e8a9b4,#c86f84,#8d4259"
+                        />
+                        <span className="text-xs text-[#6B7280]">
+                          Use comma-separated hex values for the separation stack.
+                        </span>
+                      </label>
+                    </div>
+                  )}
+                </>
+              ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <LabeledSelect
                     label="Screen DPI"
@@ -871,162 +1038,146 @@ export default function BitmapStudio() {
                   />
                   <RangeField label="Shading Balance" value={intensity} min={0} max={100} onChange={setIntensity} unit="%" />
                 </div>
+              )}
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <RangeField label="Frequency" value={frequency} min={20} max={90} onChange={setFrequency} unit="LPI" />
-                  <RangeField label="Dot Size" value={dotSize} min={0} max={100} onChange={setDotSize} unit="%" />
-                </div>
+              <button
+                type="button"
+                onClick={requestPreview}
+                disabled={!currentFileId || isRendering || isUploading || !hasAuth}
+                className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#E11D2E] px-5 text-sm font-semibold text-white transition hover:bg-[#ff3347] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {isRendering ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
+                Generate Preview
+              </button>
+            </div>
+          </Panel>
+        </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <RangeField label="Angle" value={angle} min={0} max={90} onChange={setAngle} unit="deg" />
+        {/* Selected file summary card info */}
+        <section className="grid gap-4 md:grid-cols-3 mt-4">
+          <InfoCard label="File" value={selectedFile ? selectedFile.name : "Awaiting upload"} />
+          <InfoCard label="Preset" value={activePresetLabel} />
+          <InfoCard label="Mode" value="Multi-Color" />
+        </section>
 
-                  <label className="grid gap-2">
-                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">Dot Shape</span>
-                    <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2">
-                      {shapeOptions.map((shape) => {
-                        const active = dotShape === shape;
-                        return (
-                          <button
-                            key={shape}
-                            type="button"
-                            onClick={() => setDotShape(shape)}
-                            className={`rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                              active ? "bg-[#E11D2E] text-white" : "text-[#A1A8B3] hover:text-white"
-                            }`}
-                          >
-                            {shape}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </label>
-                </div>
+        {/* Promotional Info / Description Sections */}
+        <div className="mt-16 space-y-20 border-t border-[#2B3138]/40 pt-16 pb-8">
+          {/* Section 1: Introducing GPT Image 2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                Introducing GPT Image 2
+              </h2>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                OpenAI's GPT Image 2 marks a major step forward in AI-powered image generation, turning simple prompts into detailed, production-ready visuals with greater accuracy, control, and creative range. Built to handle complex instructions, it can render precise cases like marketing campaigns, social media content, storyboarding, and educational graphics.
+              </p>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                With flexible aspect ratios and the ability to generate cohesive sets of visuals, it streamlines the path from concept to execution. Now available in Shutterstock's AI image generator, GPT Image 2 helps creators move from idea to high-quality visuals faster and more efficiently.
+              </p>
+            </div>
+            <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl">
+              <img
+                src={gptImage2Showcase}
+                alt="GPT Image 2 Showcase"
+                className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            </div>
+          </div>
 
-                {workflowMode === "multicolor" && (
-                  <div className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white">Color Separation</p>
-                        <p className="text-xs text-[#A1A8B3]">Keep the stack lean and readable.</p>
-                      </div>
-                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-[#A1A8B3]">
-                        Optional
-                      </span>
-                    </div>
+          {/* Section 2: More AI Images for Less */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl order-2 md:order-1">
+              <img
+                src={flamingoShowcase}
+                alt="Flamingo Showcase"
+                className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            </div>
+            <div className="space-y-6 order-1 md:order-2">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                More AI Images for Less
+              </h2>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Generate AI images at scale with our affordable <span className="text-white underline cursor-pointer hover:text-[#E11D2E] transition-colors">Generative AI Plus plan</span>. Get 100 generations a month, each producing four high-quality images, for up to 400 images total.
+              </p>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Want to test it out? Get started with two free image generations! Each AI-generation includes a high-res download, and full rights so you can use them commercially.
+              </p>
+            </div>
+          </div>
 
-                    <RangeField
-                      label="Layers"
-                      value={spotColorCount}
-                      min={1}
-                      max={8}
-                      onChange={setSpotColorCount}
-                    />
-                    <span className="text-xs text-[#6B7280]">
-                      This counts artwork color layers only. Base and patch layers are added separately.
-                    </span>
+          {/* Section 3: How the AI Image Generator Works */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                How the AI Image Generator Works
+              </h2>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Our AI image generator, powered by models like Google's Gemini 3.1 Flash, Imagen 4 Ultra, and GPT Image 2 from OpenAI, lets you create high-quality AI generated images from just a few words.
+              </p>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Choose from a variety of <span className="text-white underline cursor-pointer hover:text-[#E11D2E] transition-colors">AI styles</span>—including Oil painting, Fish eye, or Motion blur—and select your preferred aspect ratio to match your creative vision.
+              </p>
+            </div>
+            <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl">
+              <img
+                src={colorfulCharacterShowcase}
+                alt="Colorful Character Showcase"
+                className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            </div>
+          </div>
+        </div>
 
-                    <label className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                      <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
-                        Manual Spot Colors
-                      </span>
-                      <textarea
-                        value={manualSpotColors}
-                        onChange={(event) => setManualSpotColors(event.target.value)}
-                        rows={3}
-                        className="w-full resize-none rounded-xl border border-white/10 bg-[#0E1012] px-3 py-2 text-sm text-white outline-none transition focus:border-[#E11D2E]/40"
-                        placeholder="#f7d7dc,#e8a9b4,#c86f84,#8d4259"
-                      />
-                      <span className="text-xs text-[#6B7280]">
-                        Use comma-separated hex values for the separation stack.
-                      </span>
-                    </label>
-                  </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={requestPreview}
-                  disabled={!currentFileId || isRendering || isUploading || !hasAuth}
-                  className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#E11D2E] px-5 text-sm font-semibold text-white transition hover:bg-[#ff3347] disabled:cursor-not-allowed disabled:opacity-40"
+        {/* FAQ Section */}
+        <div className="mt-12 border-t border-[#2B3138]/40 pt-10 pb-8 max-w-6xl mx-auto w-full px-4">
+          <h2 className="text-2xl font-extrabold text-center text-white tracking-tight mb-8">
+            AI Bitmap Studio: FAQs
+          </h2>
+          <div className="space-y-0">
+            {faqs.map((faq, index) => {
+              const isOpen = openFaq === index;
+              return (
+                <div
+                  key={index}
+                  className="border-b border-[#2B3138]/30 transition-colors"
                 >
-                  {isRendering ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
-                  Generate Preview
-                </button>
-              </div>
-            </Panel>
-          </aside>
-
-          <section className="space-y-6">
-            <Panel
-              title="Live Preview"
-              description="Rendered output appears here after the backend processes the stored filename."
-              icon={<FileImage className="h-4 w-4" />}
-              action={
-                <div className="flex flex-wrap items-end gap-3">
-                  <LabeledSelect
-                    label="PSD DPI"
-                    value={String(psdDpi)}
-                    options={DEFAULT_SCREEN_DPI_OPTIONS}
-                    onChange={(value) => setPsdDpi(Number(value))}
-                    className="w-[150px]"
-                  />
-                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-[#A1A8B3]">
-                    {resultPreviewUrl ? "Preview ready" : "No preview yet"}
-                  </span>
-                  {resultPreviewUrl && (
-                    <a
-                      href={resultPreviewUrl}
-                      download={downloadFileName}
-                      className="inline-flex h-9 items-center gap-2 rounded-full border border-[#E11D2E]/30 bg-[#E11D2E]/10 px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#ffb4b9] transition hover:border-[#E11D2E]/50 hover:bg-[#E11D2E]/20 hover:text-white"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Download PNG
-                    </a>
-                  )}
                   <button
-                    type="button"
-                    onClick={downloadPsd}
-                    disabled={!currentFileId || isRendering || isUploading || isDownloadingPsd || !hasAuth}
-                    className="inline-flex h-9 items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#A1A8B3] transition hover:border-[#E11D2E]/40 hover:bg-white/[0.07] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                    onClick={() => setOpenFaq(isOpen ? null : index)}
+                    className="w-full flex items-center justify-between py-3 text-left group"
                   >
-                    {isDownloadingPsd ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                    Download PSD
+                    <span className="text-sm md:text-base font-bold text-[#F5F7FA] group-hover:text-[#E11D2E] transition-colors leading-relaxed pr-6">
+                      {faq.question}
+                    </span>
+                    <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full border border-[#2B3138]/60 group-hover:border-[#E11D2E]/40 text-[#A1A8B3] group-hover:text-[#E11D2E] transition-all duration-300">
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform duration-300 ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </span>
                   </button>
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <p className="pb-4 text-sm leading-relaxed text-[#A1A8B3] pt-1">
+                          {faq.answer}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-              }
-            >
-              <div className="relative min-h-[72vh] overflow-hidden rounded-3xl border border-white/10 bg-[#0E1012]">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(225,29,46,0.12),transparent_55%)]" />
-                {resultPreviewUrl ? (
-                  <img
-                    src={resultPreviewUrl}
-                    alt="Bitmap preview output"
-                    className="relative z-10 h-full w-full origin-center object-contain p-4"
-                  />
-                ) : sourcePreviewUrl ? (
-                  <img
-                    src={sourcePreviewUrl}
-                    alt="Source image preview"
-                    className="relative z-10 h-full w-full origin-center object-contain p-4 opacity-90"
-                  />
-                ) : (
-                  <div className="relative z-10 flex h-full items-center justify-center text-center text-sm text-[#6B7280]">
-                    <div className="space-y-2">
-                      <Palette className="mx-auto h-10 w-10 text-[#E11D2E]" />
-                      <p>Upload an asset and select a preset to generate the textile print simulation.</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </Panel>
+              );
+            })}
+          </div>
+        </div>
 
-            <section className="grid gap-4 md:grid-cols-3">
-              <InfoCard label="File" value={selectedFile ? selectedFile.name : "Awaiting upload"} />
-              <InfoCard label="Preset" value={activePresetLabel} />
-              <InfoCard label="Mode" value="Multi-Color" />
-            </section>
-          </section>
-        </main>
       </div>
     </div>
   );

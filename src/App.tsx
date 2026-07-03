@@ -62,6 +62,8 @@ import Favorites from "@/ai/pages/favorites";
 import TextileRecolorStudio from "@/ai/pages/TextileRecolorStudio";
 import ColorMatchingStudio from "@/ai/pages/ColorMatchingStudio";
 import ColorSeparation from "@/ai/pages/ColorSeparation";
+import EmbroideryStudio from "@/ai/pages/EmbroideryStudio";
+import SeamlessStudio from "@/ai/pages/SeamlessStudio";
 import AiProfile from "@/ai/pages/Profile";
 import ExploreFabrics from "@/pages/fabrics/ExploreFabrics";
 import IndetailFabrics from "./pages/fabrics/IndetailFabrics";
@@ -194,10 +196,12 @@ const App = () => (
                 <Route path="gemini-image-to-image" element={<Navigate to="pattern-maker" replace />} />
                 <Route path="gemini-image-mix" element={<GeminiImageMix />} />
                 <Route path="upscale" element={<Upscale />} />
+                <Route path="seamless" element={<SeamlessStudio />} />
                 <Route path="finder" element={<PatternFinder />} />
                 <Route path="recolor" element={<TextileRecolorStudio />} />
                 <Route path="ai-color-matching" element={<ColorMatchingStudio />} />
                 <Route path="color-separation" element={<ColorSeparation />} />
+                <Route path="embroidery" element={<EmbroideryStudio />} />
                 <Route path="favorites" element={<Favorites />} />
                 <Route path="profile" element={<AiProfile />} />
                 <Route path="*" element={<AiNotFound />} />

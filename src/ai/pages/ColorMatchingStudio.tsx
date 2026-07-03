@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
   ChevronDown,
@@ -13,8 +14,13 @@ import {
   Wand2,
 } from "lucide-react";
 
-import { generateImage, normalizeBackendImageUrl, resolveImageUrl } from "@/api/imageToImageApi";
+import { separateColors } from "@/api/colorSeparationApi";
+import { buildBackgroundForm, generateImage, normalizeBackendImageUrl, resolveImageUrl } from "@/api/imageToImageApi";
 import { PRESET_CATEGORIES, type GenerateResponse, type PresetId } from "@/types/textile";
+
+import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
+import flamingoShowcase from "@/assets/flamingo-showcase.png";
+import colorfulCharacterShowcase from "@/assets/colorful-character-showcase.png";
 
 const ALLOWED_IMAGE_TYPES = [
   "image/png",
@@ -25,6 +31,8 @@ const ALLOWED_IMAGE_TYPES = [
 ];
 const ALLOWED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"];
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
+const BACKGROUND_WHITE_SWATCHES = ["#FFFFFF", "#F7F3EA", "#F2F2EF", "#FFF8E7"] as const;
+const MAX_DETECTED_IMAGE_COLORS = 8;
 
 const PASTEL_MOOD_PALETTES = [
   {
@@ -584,6 +592,101 @@ const getNaturalTonalPalette = (baseColor: string, preset: PresetId) => {
   ];
 };
 
+const getColorDistance = (first: string, second: string) => {
+  const firstRgb = hexToRgb(first);
+  const secondRgb = hexToRgb(second);
+  if (!firstRgb || !secondRgb) return Number.POSITIVE_INFINITY;
+
+  const red = firstRgb.r - secondRgb.r;
+  const green = firstRgb.g - secondRgb.g;
+  const blue = firstRgb.b - secondRgb.b;
+
+  return Math.sqrt(red * red + green * green + blue * blue);
+};
+
+const dedupeColors = (colors: string[], threshold = 22) => {
+  const unique: string[] = [];
+
+  colors.forEach((color) => {
+    const normalized = normalizeHexColor(color).slice(0, 7);
+    if (!isValidHexColor(normalized)) return;
+    if (unique.some((existing) => getColorDistance(existing, normalized) < threshold)) return;
+    unique.push(normalized);
+  });
+
+  return unique;
+};
+
+const extractColorsFromImageFile = async (file: File, limit = MAX_DETECTED_IMAGE_COLORS) =>
+  new Promise<string[]>((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    image.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+        if (!context) {
+          resolve([]);
+          return;
+        }
+
+        const longestEdge = Math.max(image.width, image.height) || 1;
+        const scale = Math.min(1, 180 / longestEdge);
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+        const { data } = context.getImageData(0, 0, canvas.width, canvas.height);
+        const buckets = new Map<string, { count: number; r: number; g: number; b: number }>();
+        const bucketSize = 24;
+
+        for (let index = 0; index < data.length; index += 4) {
+          const alpha = data[index + 3];
+          if (alpha < 125) continue;
+
+          const red = data[index];
+          const green = data[index + 1];
+          const blue = data[index + 2];
+          const key = [
+            Math.round(red / bucketSize),
+            Math.round(green / bucketSize),
+            Math.round(blue / bucketSize),
+          ].join(":");
+          const bucket = buckets.get(key) ?? { count: 0, r: 0, g: 0, b: 0 };
+          bucket.count += 1;
+          bucket.r += red;
+          bucket.g += green;
+          bucket.b += blue;
+          buckets.set(key, bucket);
+        }
+
+        const colors = Array.from(buckets.values())
+          .sort((first, second) => second.count - first.count)
+          .map((bucket) =>
+            rgbToHex({
+              r: bucket.r / bucket.count,
+              g: bucket.g / bucket.count,
+              b: bucket.b / bucket.count,
+            })
+          );
+
+        resolve(dedupeColors(colors).slice(0, limit));
+      } catch (error) {
+        reject(error);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+
+    image.onerror = (error) => {
+      URL.revokeObjectURL(objectUrl);
+      reject(error);
+    };
+
+    image.src = objectUrl;
+  });
+
 const extractOutputUrls = (data: GenerateResponse) => {
   const urls = [...(data.image_urls ?? []), ...(data.output_url ? [data.output_url] : [])]
     .map((url) => normalizeBackendImageUrl(resolveImageUrl(url)))
@@ -613,32 +716,52 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[28px] border border-[#d8c5a8] bg-[#fffaf3] p-4 shadow-[0_24px_80px_rgba(76,53,25,0.08)] md:p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#8a6a47]">{title}</p>
-      {description && <p className="mt-2 text-sm leading-6 text-[#685241]">{description}</p>}
+    <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.15)] backdrop-blur-xl md:p-5">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#E11D2E]">{title}</p>
+      {description && <p className="mt-2 text-sm leading-6 text-[#A1A8B3]">{description}</p>}
       <div className="mt-4">{children}</div>
     </section>
   );
 }
-
+ 
 function MiniBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-[#d7c4a9] bg-[#fffaf1] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#8a6a47]">
+    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#A1A8B3]">
       {children}
     </span>
   );
 }
-
+ 
 function DetailCard({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="rounded-3xl border border-[#2f2924] bg-[#1d1713] p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a18f79]">{label}</p>
+    <div className="rounded-2xl border border-[#2B3138] bg-[#1C2025] p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#A1A8B3]">{label}</p>
       <p className="mt-2 text-sm font-semibold text-white">{value}</p>
     </div>
   );
 }
 
+const colorMatchingFaqs = [
+  {
+    question: "What is the AI Color Matching Studio?",
+    answer: "The AI Color Matching Studio is a production tool designed to recolor and shift colorways of textile designs. It maps original image channels onto new to target palettes.",
+  },
+  {
+    question: "How do I select target colorways?",
+    answer: "You can select from curated preset color families (Pastel, Earthy, Playful, Dark, Interior, Fashion, Ethnic) or use the custom color picker and hex text input to enter your own printing inks.",
+  },
+  {
+    question: "Can I generate multiple variations?",
+    answer: "Yes! Every generation run produces multiple colorway variations that are displayed in the results panel. You can preview, download, or reuse them as inputs.",
+  },
+  {
+    question: "Does the tool modify the original file channels?",
+    answer: "The recoloring engine generates new high-fidelity output variations of your artwork while fully preserving the underlying structure, resolution, and details.",
+  },
+];
+
 export default function ColorMatchingStudio() {
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<PresetId>("monotone");
   const [selectedShadeIndex, setSelectedShadeIndex] = useState(0);
   const [openCategory, setOpenCategory] = useState(getPresetCategoryTitle("monotone"));
@@ -648,6 +771,13 @@ export default function ColorMatchingStudio() {
   const [selectedPlayfulMoodId, setSelectedPlayfulMoodId] = useState(PLAYFUL_MOOD_PALETTES[0].id);
   const [selectedInteriorMoodId, setSelectedInteriorMoodId] = useState(INTERIOR_MOOD_PALETTES[0].id);
   const [selectedFashionMoodId, setSelectedFashionMoodId] = useState(FASHION_MOOD_PALETTES[0].id);
+  const [backgroundColor, setBackgroundColor] = useState("#FFFFFF");
+  const [backgroundHexInput, setBackgroundHexInput] = useState("#FFFFFF");
+  const [detectedImageColors, setDetectedImageColors] = useState<string[]>([]);
+  const [detectedColorTargets, setDetectedColorTargets] = useState<Record<string, string>>({});
+  const [selectedDetectedColor, setSelectedDetectedColor] = useState("");
+  const [detectedColorsOpen, setDetectedColorsOpen] = useState(false);
+  const [isDetectingColors, setIsDetectingColors] = useState(false);
   const [customTargetColors, setCustomTargetColors] = useState<Partial<Record<PresetId, string>>>({});
   const [customHexInput, setCustomHexInput] = useState("#264F7A");
   const [customSubmittedPalettes, setCustomSubmittedPalettes] = useState<Partial<Record<PresetId, string[]>>>({});
@@ -790,6 +920,54 @@ export default function ColorMatchingStudio() {
     setLastResponse(null);
   };
 
+  const resetDetectedColorState = () => {
+    setDetectedImageColors([]);
+    setDetectedColorTargets({});
+    setSelectedDetectedColor("");
+    setDetectedColorsOpen(false);
+    setIsDetectingColors(false);
+  };
+
+  const detectImageColors = async (file: File) => {
+    setIsDetectingColors(true);
+    setDetectedImageColors([]);
+    setDetectedColorTargets({});
+    setSelectedDetectedColor("");
+    setDetectedColorsOpen(false);
+
+    try {
+      let colors: string[] = [];
+
+      try {
+        const result = await separateColors(file);
+        colors = dedupeColors(result.detected_colors ?? []).slice(0, MAX_DETECTED_IMAGE_COLORS);
+      } catch {
+        colors = [];
+      }
+
+      if (!colors.length) {
+        colors = await extractColorsFromImageFile(file, MAX_DETECTED_IMAGE_COLORS);
+      }
+
+      const nextColors = dedupeColors(colors).slice(0, MAX_DETECTED_IMAGE_COLORS);
+      const nextTargets = Object.fromEntries(nextColors.map((color) => [color, color])) as Record<string, string>;
+
+      setDetectedImageColors(nextColors);
+      setDetectedColorTargets(nextTargets);
+      setSelectedDetectedColor(nextColors[0] ?? "");
+      setDetectedColorsOpen(false);
+      setStatus(
+        nextColors.length
+          ? `Detected ${nextColors.length} image color${nextColors.length > 1 ? "s" : ""}.`
+          : "Image loaded. No editable colors were detected."
+      );
+    } catch {
+      setStatus("Image loaded, but color detection could not be completed.");
+    } finally {
+      setIsDetectingColors(false);
+    }
+  };
+
   const setFilePreview = (file: File) => {
     if (previewRef.current) {
       URL.revokeObjectURL(previewRef.current);
@@ -822,7 +1000,8 @@ export default function ColorMatchingStudio() {
     setSelectedFile(file);
     setFilePreview(file);
     clearResult();
-    setStatus("Image loaded. Pick a preset and generate.");
+    setStatus("Image loaded. Detecting image colors...");
+    void detectImageColors(file);
   };
 
   const handlePastelMoodChange = (moodId: string) => {
@@ -1092,6 +1271,49 @@ export default function ColorMatchingStudio() {
     setEditingColorPaletteHex(nextColor.slice(0, 7));
   };
 
+  const updateDetectedPaletteTarget = (sourceColor: string, value: string) => {
+    const normalized = normalizeHexColor(value);
+    const nextColor = isValidHexColor(normalized) ? normalized.slice(0, 7) : value.toUpperCase();
+
+    setDetectedColorTargets((current) => ({
+      ...current,
+      [sourceColor]: nextColor,
+    }));
+    setSelectedDetectedColor(sourceColor);
+  };
+
+  const settleDetectedPaletteHex = (sourceColor: string) => {
+    const rawValue = detectedColorTargets[sourceColor] || sourceColor;
+    const normalized = normalizeHexColor(rawValue);
+
+    setDetectedColorTargets((current) => ({
+      ...current,
+      [sourceColor]: isValidHexColor(normalized) ? normalized.slice(0, 7) : sourceColor,
+    }));
+  };
+
+  const getEditedDetectedColorMappings = () =>
+    detectedImageColors
+      .map((source) => ({
+        source: source.toUpperCase(),
+        target: normalizeHexColor(detectedColorTargets[source] || ""),
+      }))
+      .filter((mapping) => isValidHexColor(mapping.target) && mapping.source !== mapping.target.toUpperCase())
+      .map((mapping) => ({
+        source: mapping.source,
+        target: mapping.target.toUpperCase(),
+      }));
+
+  const getDetectedColorInstruction = (mappings: Array<{ source: string; target: string }>) => {
+    const pairs = mappings.map((mapping) => `${mapping.source} to ${mapping.target}`).join(", ");
+
+    return (
+      `Change these detected image color mappings only: ${pairs}. ` +
+      "For each mapping, target only pixels and motifs visually closest to the source color. " +
+      "Do not recolor unrelated palette colors. Preserve the textile pattern, layout, motif edges, texture, linework, and print details."
+    );
+  };
+
   const buildFormData = () => {
     if (!selectedFile) {
       throw new Error("Please upload a textile image first.");
@@ -1139,6 +1361,183 @@ export default function ColorMatchingStudio() {
     }
   };
 
+  const updateBackgroundColor = (value: string) => {
+    setBackgroundHexInput(value.toUpperCase());
+
+    const nextColor = normalizeHexColor(value);
+    if (!isValidHexColor(nextColor)) return;
+
+    setBackgroundColor(nextColor.slice(0, 7));
+  };
+
+  const settleBackgroundColor = () => {
+    const nextColor = normalizeHexColor(backgroundHexInput);
+
+    if (!isValidHexColor(nextColor)) {
+      setBackgroundHexInput(backgroundColor);
+      return;
+    }
+
+    const normalized = nextColor.slice(0, 7);
+    setBackgroundColor(normalized);
+    setBackgroundHexInput(normalized);
+  };
+
+  const handleBackgroundGenerate = async () => {
+    if (!selectedFile) {
+      setStatus("Please upload an image first.");
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      setError(null);
+      setStatus("Changing background color...");
+      clearResult();
+
+      const response = await generateImage(
+        buildBackgroundForm({
+          file: selectedFile,
+          backgroundColor,
+          numImages: 1,
+        })
+      );
+      const urls = extractOutputUrls(response);
+
+      setLastResponse(response);
+      setResultUrls(urls);
+      setSelectedResultUrl(urls[0] ?? null);
+      setStatus(
+        urls.length
+          ? `Generated ${urls.length} background update${urls.length > 1 ? "s" : ""}.`
+          : "Background change finished, but no output URL was returned."
+      );
+    } catch (err) {
+      setError(getFriendlyError(err));
+      setStatus("Background change failed.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDetectedColorChangesGenerate = async () => {
+    if (!selectedFile) {
+      setStatus("Please upload an image first.");
+      return;
+    }
+
+    const mappings = getEditedDetectedColorMappings();
+    if (!mappings.length) {
+      setError("Please change at least one detected color before generating.");
+      setStatus("Detected color change needs at least one edited mapping.");
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      setError(null);
+      setStatus(`Changing ${mappings.length} detected color${mappings.length > 1 ? "s" : ""}...`);
+      clearResult();
+
+      const form = new FormData();
+      const instruction = getDetectedColorInstruction(mappings);
+      form.append("file", selectedFile);
+      form.append("prompt", instruction);
+      form.append("edit_mode", "precise_edit");
+      form.append("edit_type", "change color");
+      form.append("target_element", "detected color areas");
+      form.append("replacement", mappings.map((mapping) => `${mapping.source} to ${mapping.target}`).join(", "));
+      form.append("preserve", "textile pattern, motif edges, linework, texture, layout, non-selected colors");
+      form.append("target_color", mappings[0].target);
+      form.append("color_palette", mappings.map((mapping) => mapping.target).join(", "));
+      form.append("change_strength", "medium");
+      form.append("reference_strength", "medium");
+      form.append("prompt_strength", "medium");
+      form.append("num_images", "1");
+      form.append("enhance_prompt", "false");
+
+      const response = await generateImage(form);
+      const urls = extractOutputUrls(response);
+
+      setLastResponse(response);
+      setResultUrls(urls);
+      setSelectedResultUrl(urls[0] ?? null);
+      setStatus(
+        urls.length
+          ? `Generated ${urls.length} detected-color update${urls.length > 1 ? "s" : ""}.`
+          : "Detected color change finished, but no output URL was returned."
+      );
+    } catch (err) {
+      setError(getFriendlyError(err));
+      setStatus("Detected color change failed.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleDetectedSingleColorGenerate = async (sourceColor: string) => {
+    if (!selectedFile) {
+      setStatus("Please upload an image first.");
+      return;
+    }
+
+    const sourceHex = normalizeHexColor(sourceColor).slice(0, 7).toUpperCase();
+    const normalizedTarget = normalizeHexColor(detectedColorTargets[sourceColor] || "");
+
+    if (!isValidHexColor(normalizedTarget)) {
+      setError("Please enter a valid replacement hex color.");
+      setStatus("Detected color change needs a valid hex color.");
+      return;
+    }
+
+    const targetHex = normalizedTarget.slice(0, 7).toUpperCase();
+    if (sourceHex === targetHex) {
+      setError("Please choose a replacement color different from the detected source color.");
+      setStatus("Detected color change needs a different target color.");
+      return;
+    }
+
+    try {
+      setIsGenerating(true);
+      setError(null);
+      setStatus(`Changing detected color ${sourceHex}...`);
+      clearResult();
+
+      const instruction = getDetectedColorInstruction([{ source: sourceHex, target: targetHex }]);
+      const form = new FormData();
+      form.append("file", selectedFile);
+      form.append("prompt", instruction);
+      form.append("edit_mode", "precise_edit");
+      form.append("edit_type", "change color");
+      form.append("target_element", `areas matching ${sourceHex}`);
+      form.append("target_color", targetHex);
+      form.append("replacement", `${sourceHex} to ${targetHex}`);
+      form.append("preserve", "all other colors, textile pattern, motif edges, linework, texture, layout");
+      form.append("change_strength", "medium");
+      form.append("reference_strength", "medium");
+      form.append("prompt_strength", "medium");
+      form.append("num_images", "1");
+      form.append("enhance_prompt", "false");
+
+      const response = await generateImage(form);
+      const urls = extractOutputUrls(response);
+
+      setLastResponse(response);
+      setResultUrls(urls);
+      setSelectedResultUrl(urls[0] ?? null);
+      setStatus(
+        urls.length
+          ? `Generated ${urls.length} detected-color update${urls.length > 1 ? "s" : ""}.`
+          : "Detected color change finished, but no output URL was returned."
+      );
+    } catch (err) {
+      setError(getFriendlyError(err));
+      setStatus("Detected color change failed.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleDownload = async (url: string, filename: string) => {
     const resolvedUrl = normalizeBackendImageUrl(resolveImageUrl(url));
     const response = await fetch(resolvedUrl);
@@ -1166,30 +1565,30 @@ export default function ColorMatchingStudio() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f4ecdf] text-[#241b15]">
+    <div className="relative min-h-screen overflow-hidden bg-[#111315] text-white">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[-10%] top-[-8%] h-[420px] w-[420px] rounded-full bg-[#d69a6a]/20 blur-[150px]" />
-        <div className="absolute right-[-12%] top-[6%] h-[420px] w-[420px] rounded-full bg-[#e11d2e]/8 blur-[150px]" />
-        <div className="absolute bottom-[-12%] left-[16%] h-[360px] w-[360px] rounded-full bg-[#9aa899]/18 blur-[140px]" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(129,96,58,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(129,96,58,0.05)_1px,transparent_1px)] bg-[size:72px_72px] opacity-[0.18]" />
+        <div className="absolute left-[-10%] top-[-8%] h-[520px] w-[520px] rounded-full bg-[#E11D2E]/10 blur-[160px]" />
+        <div className="absolute right-[-12%] top-[8%] h-[460px] w-[460px] rounded-full bg-[#3B82F6]/8 blur-[150px]" />
+        <div className="absolute bottom-[-12%] left-[18%] h-[420px] w-[420px] rounded-full bg-white/5 blur-[160px]" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:80px_80px] opacity-[0.12]" />
       </div>
 
       <div className="relative z-10 mx-auto flex max-w-[1600px] flex-col gap-6 px-4 py-5 md:px-6 md:py-6">
-        <header className="flex flex-col gap-5 border-b border-[#d8c5a8] pb-6 lg:flex-row lg:items-end lg:justify-between">
+        <header className="flex flex-col gap-5 border-b border-white/5 pb-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#d7c4a9] bg-[#fffaf1] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#8d6a43]">
-              <Sparkles className="h-3.5 w-3.5 text-[#e11d2e]" />
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.35em] text-[#A1A8B3]">
+              <Sparkles className="h-3.5 w-3.5 text-[#E11D2E]" />
               RDC AI Studio / Color Matching
             </div>
             <div>
-              <h1 className="font-serif text-4xl font-semibold tracking-tight text-[#1d1712] md:text-6xl">
+              <h1 className="text-4xl font-extrabold tracking-tight text-white md:text-6xl">
                 AI Color Matching Studio
               </h1>
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-[#685241] md:text-base">
-                Preset-only studio for textile recoloring. Pick a palette, adjust the swatches, and generate.
+              <p className="mt-4 max-w-3xl text-sm leading-7 text-[#A1A8B3] md:text-base">
+                Textile recoloring studio for presets, detected image colors, and background-only edits.
               </p>
-              <p className="mt-3 inline-flex rounded-full border border-[#d7c4a9] bg-[#fffaf1] px-3 py-1 text-[11px] font-medium text-[#8a6a47]">
-                All advanced and background controls removed as requested.
+              <p className="mt-3 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-[#A1A8B3]">
+                Preserve motifs, print details, linework, texture, and layout while changing colorways.
               </p>
             </div>
           </div>
@@ -1198,14 +1597,14 @@ export default function ColorMatchingStudio() {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#e11d2e] px-5 text-sm font-semibold text-white transition hover:bg-[#ff3347]"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#E11D2E] px-5 text-sm font-semibold text-white transition hover:bg-[#ff3347]"
             >
               <CloudUpload className="h-4 w-4" />
               Upload Design
             </button>
             <Link
               to="/ai-studio/dashboard"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-[#d7c4a9] bg-[#fffaf1] px-5 text-sm font-semibold text-[#685241] transition hover:border-[#e11d2e]/35 hover:text-[#1d1712]"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-5 text-sm font-semibold text-[#A1A8B3] transition hover:border-[#E11D2E]/40 hover:text-white"
             >
               Dashboard
               <ArrowRight className="h-4 w-4" />
@@ -1214,7 +1613,7 @@ export default function ColorMatchingStudio() {
         </header>
 
         {error && (
-          <div className="rounded-2xl border border-[#b84a4a]/30 bg-[#f8d7d7] px-4 py-3 text-sm text-[#7a2424]">
+          <div className="rounded-2xl border border-[#E11D2E]/25 bg-[#E11D2E]/10 px-4 py-3 text-sm text-[#ffb4b9]">
             {error}
           </div>
         )}
@@ -1240,11 +1639,11 @@ export default function ColorMatchingStudio() {
                   handleFileSelection(event.dataTransfer.files?.[0] ?? null);
                 }}
                 className={`flex min-h-[220px] cursor-pointer flex-col items-center justify-center rounded-[24px] border-2 border-dashed px-5 text-center transition ${
-                  isDragOver ? "border-[#e11d2e] bg-[#f9e5e5]" : "border-[#d4c0a0] bg-[#f7efe3]"
+                  isDragOver ? "border-[#E11D2E] bg-[#E11D2E]/5" : "border-[#2B3138] bg-[#111315]/30 hover:border-[#E11D2E]/40 hover:bg-[#111315]/50"
                 }`}
               >
                 {previewUrl ? (
-                  <div className="relative h-full w-full overflow-hidden rounded-[20px] border border-[#dbc6a2] bg-white">
+                  <div className="relative h-full w-full overflow-hidden rounded-[20px] border border-white/10 bg-[#0E1012]">
                     <img src={previewUrl} alt="Source preview" className="h-full w-full object-cover" />
                     <button
                       type="button"
@@ -1253,13 +1652,14 @@ export default function ColorMatchingStudio() {
                         event.stopPropagation();
                         setSelectedFile(null);
                         setPreviewUrl(null);
+                        resetDetectedColorState();
                         clearResult();
                         if (previewRef.current) {
                           URL.revokeObjectURL(previewRef.current);
                           previewRef.current = null;
                         }
                       }}
-                      className="absolute right-3 top-3 rounded-full bg-black/70 p-2 text-white transition hover:bg-[#e11d2e]"
+                      className="absolute right-3 top-3 rounded-full bg-black/70 p-2 text-white transition hover:bg-[#E11D2E]"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -1272,15 +1672,15 @@ export default function ColorMatchingStudio() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-[#caa87b] bg-[#fff5e8] text-[#8a6a47]">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[#A1A8B3]">
                       <Upload className="h-6 w-6" />
                     </div>
                     <div className="mt-3">
-                      <p className="text-sm font-semibold text-[#2c2017]">Drop textile image here</p>
-                      <p className="mt-1 text-[11px] uppercase tracking-[0.22em] text-[#8a6a47]">
+                      <p className="text-sm font-semibold text-white">Drop textile image here</p>
+                      <p className="mt-1 text-[11px] uppercase tracking-[0.22em] text-[#A1A8B3]">
                         PNG · JPG · JPEG · WEBP · BMP · TIF · TIFF
                       </p>
-                      <p className="mt-2 text-[11px] text-[#9b866f]">
+                      <p className="mt-2 text-[11px] text-[#6B7280]">
                         Keep files under {formatBytes(MAX_FILE_SIZE_BYTES)}.
                       </p>
                     </div>
@@ -1297,7 +1697,144 @@ export default function ColorMatchingStudio() {
             </SectionCard>
 
             <SectionCard
-              title="02 - Quick Presets"
+              title="02 - Detected Colors"
+              description="Detected image colors appear here after upload. Edit targets and change one color or all edited mappings."
+            >
+              <div className="overflow-hidden rounded-[24px] border border-white/10 bg-[#111315]/40">
+                <button
+                  type="button"
+                  onClick={() => setDetectedColorsOpen((current) => !current)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition hover:bg-white/[0.04]"
+                  aria-expanded={detectedColorsOpen}
+                >
+                  <div>
+                    <span className="block text-sm font-semibold text-white">Detected Image Colors</span>
+                    <span className="mt-1 block text-[11px] text-[#A1A8B3]">
+                      {isDetectingColors
+                        ? "Scanning uploaded image..."
+                        : detectedImageColors.length
+                          ? `${detectedImageColors.length} color${detectedImageColors.length === 1 ? "" : "s"} found`
+                          : selectedFile
+                            ? "No editable colors detected yet"
+                            : "Upload an image to scan colors"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full border border-white/10 bg-white/[0.04] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#A1A8B3]">
+                      {selectedDetectedColor || "-"}
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 text-[#A1A8B3] transition-transform ${detectedColorsOpen ? "rotate-180" : ""}`}
+                    />
+                  </div>
+                </button>
+
+                {detectedColorsOpen && (
+                  <div className="border-t border-white/10 p-4">
+                    {isDetectingColors ? (
+                      <div className="rounded-2xl border border-white/10 bg-[#0E1012] p-4 text-sm text-[#A1A8B3]">
+                        Detecting colors from the uploaded image...
+                      </div>
+                    ) : detectedImageColors.length ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-4 gap-2">
+                          {detectedImageColors.map((color) => (
+                            <button
+                              key={`detected-swatch-${color}`}
+                              type="button"
+                              onClick={() => setSelectedDetectedColor(color)}
+                              className={`flex items-center gap-2 rounded-xl border p-2 text-left transition ${
+                                selectedDetectedColor === color
+                                  ? "border-[#E11D2E]/50 bg-[#E11D2E]/10"
+                                  : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                              }`}
+                              aria-label={`Detected color ${color}`}
+                            >
+                              <span className="h-7 w-7 rounded-lg border border-black/10 shadow-sm" style={{ backgroundColor: color }} />
+                              <span className="truncate text-[10px] font-semibold uppercase text-[#A1A8B3]">{color}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="space-y-3">
+                          {detectedImageColors.map((color) => {
+                            const targetValue = detectedColorTargets[color] || color;
+                            return (
+                              <div
+                                key={`detected-editor-${color}`}
+                                className={`rounded-2xl border p-3 transition ${
+                                  selectedDetectedColor === color
+                                    ? "border-[#E11D2E]/40 bg-[#E11D2E]/10"
+                                    : "border-white/10 bg-[#0E1012]"
+                                }`}
+                                onClick={() => setSelectedDetectedColor(color)}
+                              >
+                                <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)_44px_auto] sm:items-center">
+                                  <div className="flex items-center gap-2">
+                                    <span className="h-9 w-9 rounded-xl border border-black/10 shadow-sm" style={{ backgroundColor: color }} />
+                                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#A1A8B3]">
+                                      {color}
+                                    </span>
+                                  </div>
+
+                                  <input
+                                    type="text"
+                                    value={targetValue}
+                                    onChange={(event) => updateDetectedPaletteTarget(color, event.target.value)}
+                                    onBlur={() => settleDetectedPaletteHex(color)}
+                                    onKeyDown={(event) => {
+                                      if (event.key === "Enter") event.currentTarget.blur();
+                                    }}
+                                    className="h-10 min-w-0 rounded-xl border border-white/10 bg-[#111315] px-3 text-sm font-semibold uppercase text-white outline-none transition focus:border-[#E11D2E]/50"
+                                    aria-label={`Replacement hex for ${color}`}
+                                  />
+
+                                  <input
+                                    type="color"
+                                    value={isValidHexColor(targetValue) ? targetValue.slice(0, 7) : color}
+                                    onChange={(event) => updateDetectedPaletteTarget(color, event.target.value)}
+                                    className="h-10 w-11 cursor-pointer rounded-xl border border-white/10 bg-transparent p-1"
+                                    aria-label={`Pick replacement for ${color}`}
+                                  />
+
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      void handleDetectedSingleColorGenerate(color);
+                                    }}
+                                    disabled={!selectedFile || isGenerating}
+                                    className="inline-flex h-10 items-center justify-center rounded-xl bg-[#E11D2E] px-3 text-xs font-semibold text-white transition hover:bg-[#ff3347] disabled:cursor-not-allowed disabled:opacity-50"
+                                  >
+                                    Change
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => void handleDetectedColorChangesGenerate()}
+                          disabled={!selectedFile || isGenerating || getEditedDetectedColorMappings().length === 0}
+                          className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#E11D2E] px-4 text-sm font-semibold text-white transition hover:bg-[#ff3347] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Change All Edited Colors ({getEditedDetectedColorMappings().length})
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-white/10 bg-[#0E1012] p-4 text-sm leading-6 text-[#A1A8B3]">
+                        Upload complete, but no editable colors were detected yet.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </SectionCard>
+ 
+            <SectionCard
+              title="03 - Quick Presets"
               description="Select a preset and tweak individual swatches if needed."
             >
               <div className="space-y-3">
@@ -1305,19 +1842,19 @@ export default function ColorMatchingStudio() {
                   const isOpen = openCategory === category.title;
                   const visiblePresets = category.presets.filter((preset) => !isHiddenPreset(preset.id));
                   const isSelectedCategory = visiblePresets.some((preset) => preset.id === selectedPreset);
-
+ 
                   return (
-                    <div key={category.title} className="overflow-hidden rounded-lg border border-[#d4c8b6] bg-[#f6efe3] p-1">
+                    <div key={category.title} className="overflow-hidden rounded-lg border border-white/10 bg-[#111315]/40 p-1">
                       <button
                         type="button"
                         onClick={() => setOpenCategory((current) => (current === category.title ? "" : category.title))}
-                        className="flex w-full items-center justify-between gap-3 px-2 py-1 text-left transition hover:bg-[#efe4d3]"
+                        className="flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left transition hover:bg-white/[0.04]"
                       >
-                        <span className="font-serif text-[12px] font-bold uppercase text-[#1d1712]">
+                        <span className="text-[12px] font-bold uppercase tracking-wider text-white">
                           {category.title}
                         </span>
                         <ChevronDown
-                          className={`h-3 w-3 text-[#9a8467] transition-transform ${isOpen ? "rotate-180" : ""}`}
+                          className={`h-3 w-3 text-[#6B7280] transition-transform ${isOpen ? "rotate-180" : ""}`}
                         />
                       </button>
 
@@ -1326,7 +1863,7 @@ export default function ColorMatchingStudio() {
                           <div className="grid grid-cols-2 gap-2">
                             {visiblePresets.map((preset) => {
                               const active = selectedPreset === preset.id;
-
+ 
                               return (
                                 <button
                                   key={preset.id}
@@ -1338,50 +1875,50 @@ export default function ColorMatchingStudio() {
                                   }}
                                   className={`flex min-h-[60px] flex-col items-center justify-center rounded-md border px-2 py-2 text-center transition ${
                                     active
-                                      ? "border-[#9e702f] bg-[#fff8ea] shadow-[0_0_0_1px_rgba(158,112,47,0.18)]"
-                                      : "border-[#d6c7ad] bg-[#fffdf8] hover:border-[#b48a56]"
+                                      ? "border-[#E11D2E]/40 bg-[#E11D2E]/10"
+                                      : "border-white/10 bg-white/[0.03] hover:border-white/20"
                                   }`}
                                 >
                                   <span
                                     className="h-7 w-7 rounded-full border border-black/10 shadow-sm"
                                     style={{ background: getPresetSwatchBackground(preset.colors) }}
                                   />
-                                  <span className="mt-1 font-serif text-[11px] font-semibold text-[#241b15]">
+                                  <span className="mt-1 text-[11px] font-semibold text-white">
                                     {preset.label}
                                   </span>
                                 </button>
                               );
                             })}
                           </div>
-
+ 
                           {isSelectedCategory && (
-                            <div className="mt-2 rounded-md border border-[#d6c7ad] bg-[#fffaf6] p-3">
+                            <div className="mt-2 rounded-md border border-white/10 bg-[#0E1012] p-3">
                               <div className="flex items-center justify-between gap-3">
                                 <div>
-                                  <p className="font-serif text-sm font-semibold text-[#241b15]">
+                                  <p className="text-sm font-semibold text-white">
                                     {selectedPresetMeta?.label ?? "Monotone"}
                                   </p>
-                                  <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#9a8467]">
+                                  <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#A1A8B3]">
                                     {activePaletteColor}
                                   </p>
                                 </div>
-                                <span className="text-[10px] uppercase tracking-[0.18em] text-[#9a8467]">
+                                <span className="text-[10px] uppercase tracking-[0.18em] text-[#A1A8B3]">
                                   color_palette
                                 </span>
                               </div>
-
+ 
                               {selectedPreset === "pastel" && (
-                                <div className="mt-3 rounded-md border border-[#d8c6a7] bg-[#fbf4ea] p-3">
-                                  <p className="font-serif text-sm font-semibold text-[#241b15]">Pastel Palette</p>
-                                  <p className="mt-1 text-[11px] leading-4 text-[#8a7662]">
+                                <div className="mt-3 rounded-md border border-white/10 bg-[#111315]/50 p-3">
+                                  <p className="text-sm font-semibold text-white">Pastel Palette</p>
+                                  <p className="mt-1 text-[11px] leading-4 text-[#A1A8B3]">
                                     Only colors will change. Pattern, layout, and print details stay preserved.
                                   </p>
                                   <label className="mt-3 grid gap-1">
-                                    <span className="font-serif text-xs text-[#241b15]">Start from mood</span>
+                                    <span className="text-xs text-[#A1A8B3]">Start from mood</span>
                                     <select
                                       value={selectedPastelMoodId}
                                       onChange={(event) => handlePastelMoodChange(event.target.value)}
-                                      className="h-9 w-full rounded-md border border-[#caa87b] bg-white px-3 text-sm text-[#241b15] outline-none transition focus:border-[#8b622e]"
+                                      className="h-9 w-full rounded-md border border-white/10 bg-[#111315] px-3 text-sm text-white outline-none transition focus:border-[#E11D2E]/40"
                                       aria-label="Select pastel mood"
                                     >
                                       {PASTEL_MOOD_PALETTES.map((mood) => (
@@ -1393,21 +1930,21 @@ export default function ColorMatchingStudio() {
                                   </label>
                                 </div>
                               )}
-
+ 
                               {isDarkMoodPreset(selectedPreset) && (
-                                <div className="mt-3 rounded-md border border-[#d8c6a7] bg-[#fbf4ea] p-3">
-                                  <p className="font-serif text-sm font-semibold text-[#241b15]">
+                                <div className="mt-3 rounded-md border border-white/10 bg-[#111315]/50 p-3">
+                                  <p className="text-sm font-semibold text-white">
                                     {selectedPresetMeta?.label ?? "Dark"} Palette
                                   </p>
-                                  <p className="mt-1 text-[11px] leading-4 text-[#8a7662]">
+                                  <p className="mt-1 text-[11px] leading-4 text-[#A1A8B3]">
                                     Choose a predefined {(selectedPresetMeta?.label ?? "dark").toLowerCase()} mood, or tune the palette colors manually.
                                   </p>
                                   <label className="mt-3 grid gap-1">
-                                    <span className="font-serif text-xs text-[#241b15]">Start from mood</span>
+                                    <span className="text-xs text-[#A1A8B3]">Start from mood</span>
                                     <select
                                       value={selectedDarkMood.id}
                                       onChange={(event) => handleDarkMoodChange(event.target.value)}
-                                      className="h-9 w-full rounded-md border border-[#caa87b] bg-white px-3 text-sm text-[#241b15] outline-none transition focus:border-[#8b622e]"
+                                      className="h-9 w-full rounded-md border border-white/10 bg-[#111315] px-3 text-sm text-white outline-none transition focus:border-[#E11D2E]/40"
                                       aria-label="Select dark mood"
                                     >
                                       {darkMoodOptions.map((mood) => (
@@ -1421,17 +1958,17 @@ export default function ColorMatchingStudio() {
                               )}
 
                               {selectedPreset === "earthy" && (
-                                <div className="mt-3 rounded-md border border-[#d8c6a7] bg-[#fbf4ea] p-3">
-                                  <p className="font-serif text-sm font-semibold text-[#241b15]">Earthy Palette</p>
-                                  <p className="mt-1 text-[11px] leading-4 text-[#8a7662]">
+                                <div className="mt-3 rounded-md border border-white/10 bg-[#111315]/50 p-3">
+                                  <p className="text-sm font-semibold text-white">Earthy Palette</p>
+                                  <p className="mt-1 text-[11px] leading-4 text-[#A1A8B3]">
                                     Choose an earthy light-base mood with natural contrast colors, or tune the palette manually.
                                   </p>
                                   <label className="mt-3 grid gap-1">
-                                    <span className="font-serif text-xs text-[#241b15]">Start from mood</span>
+                                    <span className="text-xs text-[#A1A8B3]">Start from mood</span>
                                     <select
                                       value={selectedEarthyMoodId}
                                       onChange={(event) => handleEarthyMoodChange(event.target.value)}
-                                      className="h-9 w-full rounded-md border border-[#caa87b] bg-white px-3 text-sm text-[#241b15] outline-none transition focus:border-[#8b622e]"
+                                      className="h-9 w-full rounded-md border border-white/10 bg-[#111315] px-3 text-sm text-white outline-none transition focus:border-[#E11D2E]/40"
                                       aria-label="Select earthy mood"
                                     >
                                       {EARTHY_MOOD_PALETTES.map((mood) => (
@@ -1443,21 +1980,21 @@ export default function ColorMatchingStudio() {
                                   </label>
                                 </div>
                               )}
-
+ 
                               {isPlayfulMoodPreset(selectedPreset) && (
-                                <div className="mt-3 rounded-md border border-[#d8c6a7] bg-[#fbf4ea] p-3">
-                                  <p className="font-serif text-sm font-semibold text-[#241b15]">
+                                <div className="mt-3 rounded-md border border-white/10 bg-[#111315]/50 p-3">
+                                  <p className="text-sm font-semibold text-white">
                                     {selectedPresetMeta?.label ?? "Bright"} Palette
                                   </p>
-                                  <p className="mt-1 text-[11px] leading-4 text-[#8a7662]">
+                                  <p className="mt-1 text-[11px] leading-4 text-[#A1A8B3]">
                                     Choose a {(selectedPresetMeta?.label ?? "bright").toLowerCase()} mood with playful contrast colors.
                                   </p>
                                   <label className="mt-3 grid gap-1">
-                                    <span className="font-serif text-xs text-[#241b15]">Start from mood</span>
+                                    <span className="text-xs text-[#A1A8B3]">Start from mood</span>
                                     <select
                                       value={selectedPlayfulMood.id}
                                       onChange={(event) => handlePlayfulMoodChange(event.target.value)}
-                                      className="h-9 w-full rounded-md border border-[#caa87b] bg-white px-3 text-sm text-[#241b15] outline-none transition focus:border-[#8b622e]"
+                                      className="h-9 w-full rounded-md border border-white/10 bg-[#111315] px-3 text-sm text-white outline-none transition focus:border-[#E11D2E]/40"
                                       aria-label="Select bright playful mood"
                                     >
                                       {playfulMoodOptions.map((mood) => (
@@ -1469,21 +2006,21 @@ export default function ColorMatchingStudio() {
                                   </label>
                                 </div>
                               )}
-
+ 
                               {isInteriorMoodPreset(selectedPreset) && (
-                                <div className="mt-3 rounded-md border border-[#d8c6a7] bg-[#fbf4ea] p-3">
-                                  <p className="font-serif text-sm font-semibold text-[#241b15]">
+                                <div className="mt-3 rounded-md border border-white/10 bg-[#111315]/50 p-3">
+                                  <p className="text-sm font-semibold text-white">
                                     {selectedPresetMeta?.label ?? "Interior"} Palette
                                   </p>
-                                  <p className="mt-1 text-[11px] leading-4 text-[#8a7662]">
+                                  <p className="mt-1 text-[11px] leading-4 text-[#A1A8B3]">
                                     Choose an interior mood with room bases and furnishing or wallpaper accent colors.
                                   </p>
                                   <label className="mt-3 grid gap-1">
-                                    <span className="font-serif text-xs text-[#241b15]">Start from mood</span>
+                                    <span className="text-xs text-[#A1A8B3]">Start from mood</span>
                                     <select
                                       value={selectedInteriorMood.id}
                                       onChange={(event) => handleInteriorMoodChange(event.target.value)}
-                                      className="h-9 w-full rounded-md border border-[#caa87b] bg-white px-3 text-sm text-[#241b15] outline-none transition focus:border-[#8b622e]"
+                                      className="h-9 w-full rounded-md border border-white/10 bg-[#111315] px-3 text-sm text-white outline-none transition focus:border-[#E11D2E]/40"
                                       aria-label="Select natural interior mood"
                                     >
                                       {interiorMoodOptions.map((mood) => (
@@ -1495,21 +2032,21 @@ export default function ColorMatchingStudio() {
                                   </label>
                                 </div>
                               )}
-
+ 
                               {isFashionMoodPreset(selectedPreset) && (
-                                <div className="mt-3 rounded-md border border-[#d8c6a7] bg-[#fbf4ea] p-3">
-                                  <p className="font-serif text-sm font-semibold text-[#241b15]">
+                                <div className="mt-3 rounded-md border border-white/10 bg-[#111315]/50 p-3">
+                                  <p className="text-sm font-semibold text-white">
                                     {selectedPresetMeta?.label ?? "Fashion"} Palette
                                   </p>
-                                  <p className="mt-1 text-[11px] leading-4 text-[#8a7662]">
+                                  <p className="mt-1 text-[11px] leading-4 text-[#A1A8B3]">
                                     Choose a fashion mood with apparel base colors, accents, and highlights from the reference palette.
                                   </p>
                                   <label className="mt-3 grid gap-1">
-                                    <span className="font-serif text-xs text-[#241b15]">Start from mood</span>
+                                    <span className="text-xs text-[#A1A8B3]">Start from mood</span>
                                     <select
                                       value={selectedFashionMood.id}
                                       onChange={(event) => handleFashionMoodChange(event.target.value)}
-                                      className="h-9 w-full rounded-md border border-[#caa87b] bg-white px-3 text-sm text-[#241b15] outline-none transition focus:border-[#8b622e]"
+                                      className="h-9 w-full rounded-md border border-white/10 bg-[#111315] px-3 text-sm text-white outline-none transition focus:border-[#E11D2E]/40"
                                       aria-label="Select fashion apparel mood"
                                     >
                                       {fashionMoodOptions.map((mood) => (
@@ -1535,15 +2072,15 @@ export default function ColorMatchingStudio() {
                                     onClick={() => selectPaletteShade(index, color)}
                                     className={`h-12 rounded-md border transition ${
                                       selectedShadeIndex === index
-                                        ? "border-[#8b622e] shadow-[0_0_0_2px_rgba(139,98,46,0.18)]"
-                                        : "border-[#d8c6a7] hover:border-[#b48a56]"
+                                        ? "border-[#E11D2E] shadow-[0_0_0_2px_rgba(225,29,70,0.22)]"
+                                        : "border-white/20 hover:border-white/40"
                                     }`}
                                     style={{ backgroundColor: color }}
                                     aria-label={`Select shade ${index + 1}`}
                                   />
                                 ))}
                               </div>
-
+ 
                               {selectedPreset !== "pastel" &&
                                 !isDarkMoodPreset(selectedPreset) &&
                                 selectedPreset !== "earthy" &&
@@ -1551,8 +2088,8 @@ export default function ColorMatchingStudio() {
                                 !isInteriorMoodPreset(selectedPreset) &&
                                 !isFashionMoodPreset(selectedPreset) && (
                                 <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)_44px_auto] items-center gap-2">
-                                  <span className="font-serif text-xs leading-4 text-[#241b15]">Custom color</span>
-
+                                  <span className="text-xs leading-4 text-[#A1A8B3]">Custom color</span>
+ 
                                   <input
                                     type="text"
                                     value={customHexInput}
@@ -1564,32 +2101,32 @@ export default function ColorMatchingStudio() {
                                       }
                                     }}
                                     placeholder="#3A3A3A"
-                                    className="h-9 min-w-0 rounded-md border border-[#d8c6a7] bg-[#fffdf9] px-3 text-sm font-semibold uppercase text-[#241b15] outline-none transition focus:border-[#8b622e]"
+                                    className="h-9 min-w-0 rounded-md border border-white/10 bg-[#0E1012] px-3 text-sm font-semibold uppercase text-white outline-none transition focus:border-[#E11D2E]/40"
                                     aria-label="Custom color hex"
                                   />
-
+ 
                                   <input
                                     type="color"
                                     value={isValidHexColor(activePaletteColor) ? activePaletteColor.slice(0, 7) : "#000000"}
                                     onChange={(event) => updateCustomTargetColor(event.target.value)}
-                                    className="h-9 w-11 cursor-pointer rounded-md border border-[#d8c6a7] bg-white p-1"
+                                    className="h-9 w-11 cursor-pointer rounded-md border border-white/10 bg-transparent p-1"
                                     aria-label="Pick custom color"
                                   />
-
+ 
                                   <button
                                     type="button"
                                     onClick={() => void handleGenerate()}
                                     disabled={!selectedFile || isGenerating}
-                                    className="inline-flex h-9 items-center justify-center rounded-md bg-[#8b622e] px-3 text-xs font-semibold text-white transition hover:bg-[#a77439] disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="inline-flex h-9 items-center justify-center rounded-md bg-[#E11D2E] px-3 text-xs font-semibold text-white transition hover:bg-[#ff3347] disabled:cursor-not-allowed disabled:opacity-50"
                                   >
                                     {isGenerating ? "Generating" : "Generate"}
                                   </button>
                                 </div>
                               )}
-
-                              <div className="mt-3 rounded-md border border-[#d8c6a7] bg-white p-3">
+ 
+                              <div className="mt-3 rounded-md border border-white/10 bg-[#0E1012] p-3">
                                 <div className="flex items-center justify-between gap-3">
-                                  <p className="font-serif text-sm font-semibold text-[#241b15]">
+                                  <p className="text-sm font-semibold text-white">
                                     {isDarkMoodPreset(selectedPreset)
                                       ? `Your ${selectedPresetMeta?.label ?? "Dark"} Colors`
                                       : selectedPreset === "earthy"
@@ -1602,7 +2139,7 @@ export default function ColorMatchingStudio() {
                                               ? `Your ${selectedPresetMeta?.label ?? "Fashion"} Colors`
                                               : `Your ${selectedPresetMeta?.label ?? "Preset"} Palette`}
                                   </p>
-                                  <span className="text-[9px] uppercase tracking-[0.16em] text-[#9a8467]">
+                                  <span className="text-[9px] uppercase tracking-[0.16em] text-[#A1A8B3]">
                                     color_palette
                                   </span>
                                 </div>
@@ -1619,8 +2156,8 @@ export default function ColorMatchingStudio() {
                                       onClick={() => selectSubmittedPaletteColor(index)}
                                       className={`h-7 rounded-sm border transition ${
                                         selectedColorPaletteIndex === index
-                                          ? "border-[#8b622e] shadow-[0_0_0_2px_rgba(139,98,46,0.18)]"
-                                          : "border-[#d8c6a7] hover:border-[#b48a56]"
+                                          ? "border-[#E11D2E] shadow-[0_0_0_2px_rgba(225,29,70,0.22)]"
+                                          : "border-white/20 hover:border-white/40"
                                       }`}
                                       style={{ backgroundColor: color }}
                                       aria-label={`Edit color palette shade ${index + 1}`}
@@ -1646,7 +2183,7 @@ export default function ColorMatchingStudio() {
                                             event.currentTarget.blur();
                                           }
                                         }}
-                                        className="h-[26px] min-w-0 rounded-sm border border-[#8b622e] bg-white px-1 py-1 text-center text-[10px] font-semibold uppercase text-[#241b15] outline-none"
+                                        className="h-[26px] min-w-0 rounded-sm border border-[#E11D2E] bg-[#111315] px-1 py-1 text-center text-[10px] font-semibold uppercase text-white outline-none"
                                         aria-label={`Edit color palette hex ${index + 1}`}
                                         autoFocus
                                       />
@@ -1655,10 +2192,10 @@ export default function ColorMatchingStudio() {
                                         key={`${selectedPreset}-your-palette-code-${index}`}
                                         type="button"
                                         onClick={() => editSubmittedPaletteHex(index, color)}
-                                        className={`truncate rounded-sm border px-1 py-1 text-center text-[10px] font-semibold uppercase text-[#241b15] transition ${
+                                        className={`truncate rounded-sm border px-1 py-1 text-center text-[10px] font-semibold uppercase transition ${
                                           selectedColorPaletteIndex === index
-                                            ? "border-[#8b622e] bg-[#f7ebd6]"
-                                            : "border-[#e4d8c7] bg-[#fffaf3] hover:border-[#b48a56]"
+                                            ? "border-[#E11D2E]/40 bg-[#E11D2E]/10 text-white"
+                                            : "border-white/10 bg-[#111315]/40 text-[#A1A8B3] hover:border-white/20"
                                         }`}
                                       >
                                         {color}
@@ -1679,10 +2216,10 @@ export default function ColorMatchingStudio() {
                                   tabIndex={-1}
                                   aria-hidden="true"
                                 />
-                                <p className="mt-3 text-[10px] leading-5 text-[#6f5b49]">
+                                <p className="mt-3 text-[10px] leading-5 text-[#A1A8B3]">
                                   {submittedPaletteLabel}: {submittedPalette.join(", ")}
                                 </p>
-                                <p className="mt-2 text-[10px] leading-5 text-[#8a7662]">
+                                <p className="mt-2 text-[10px] leading-5 text-[#6B7280]">
                                   {isTonalPalettePreset(selectedPreset)
                                     ? "Base color is sent as target_color. Tonal shades are sent in color_palette."
                                     : "Selected shades are sent in color_palette."}
@@ -1700,39 +2237,39 @@ export default function ColorMatchingStudio() {
           </section>
 
           <section className="space-y-5">
-            <div className="rounded-[30px] border border-[#2c2622] bg-[#181210] p-5 text-[#f7f2ea] shadow-[0_24px_80px_rgba(0,0,0,0.22)]">
+            <div className="rounded-[24px] border border-[#2B3138] bg-[#181B1F]/92 p-5 text-white shadow-2xl backdrop-blur-xl">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#b49b7a]">
-                    <Palette className="h-4 w-4 text-[#e11d2d]" />
+                  <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-[#A1A8B3]">
+                    <Palette className="h-4 w-4 text-[#E11D2E]" />
                     Results
                   </div>
                   <p className="mt-2 text-lg font-semibold text-white">
                     {selectedFile ? "Preview and outputs" : "Upload an image to begin"}
                   </p>
-                  <p className="mt-1 text-sm leading-6 text-[#9a8d7b]">{status}</p>
+                  <p className="mt-1 text-sm leading-6 text-[#A1A8B3]">{status}</p>
                 </div>
-
+ 
                 <div className="flex flex-wrap gap-2">
                   <MiniBadge>Preset Mode</MiniBadge>
                   {selectedPresetMeta?.label && <MiniBadge>{selectedPresetMeta.label}</MiniBadge>}
                   {lastResponse?.model && <MiniBadge>{lastResponse.model}</MiniBadge>}
                   {lastResponse?.fallback_used && (
-                    <span className="rounded-full border border-[#e11d2e]/20 bg-[#e11d2e]/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#ffb2bb]">
+                    <span className="rounded-full border border-[#E11D2E]/20 bg-[#E11D2E]/10 px-3 py-1 text-[10px] uppercase tracking-[0.2em] text-[#ffb4b9]">
                       Fallback Used
                     </span>
                   )}
                 </div>
               </div>
-
+ 
               <div className="mt-5 grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
                 <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#111315]">
                   <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a18f79]">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#A1A8B3]">
                       Source
                     </span>
                     {selectedFile && (
-                      <span className="text-[10px] uppercase tracking-[0.24em] text-[#6f6557]">
+                      <span className="text-[10px] uppercase tracking-[0.24em] text-[#6B7280]">
                         {selectedFile.name}
                       </span>
                     )}
@@ -1741,19 +2278,19 @@ export default function ColorMatchingStudio() {
                     {previewUrl ? (
                       <img src={previewUrl} alt="Source preview" className="h-full w-full object-contain" />
                     ) : (
-                      <div className="flex h-full min-h-[360px] items-center justify-center text-center text-sm text-[#6f6557]">
+                      <div className="flex h-full min-h-[360px] items-center justify-center text-center text-sm text-[#6B7280]">
                         <div className="space-y-2">
-                          <ImageIcon className="mx-auto h-10 w-10 text-[#e11d2d]" />
+                          <ImageIcon className="mx-auto h-10 w-10 text-[#E11D2E]" />
                           <p>Upload an image to begin.</p>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
-
+ 
                 <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#111315]">
                   <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#a18f79]">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.24em] text-[#A1A8B3]">
                       Output
                     </span>
                     {selectedResultUrl && (
@@ -1761,7 +2298,7 @@ export default function ColorMatchingStudio() {
                         <button
                           type="button"
                           onClick={() => void handleReuseGeneratedImage(selectedResultUrl)}
-                          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#d7c4a9] transition hover:border-[#e11d2e]/35 hover:text-white"
+                          className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#A1A8B3] transition hover:border-[#E11D2E]/40 hover:text-white"
                         >
                           <Upload className="h-3.5 w-3.5" />
                           Use as Input
@@ -1774,7 +2311,7 @@ export default function ColorMatchingStudio() {
                               `ai-color-matching-${selectedPresetMeta?.id || "output"}.png`
                             )
                           }
-                          className="inline-flex items-center gap-2 rounded-full border border-[#e11d2e]/30 bg-[#e11d2e]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#ffb2bb] transition hover:border-[#e11d2e]/50 hover:bg-[#e11d2e]/20 hover:text-white"
+                          className="inline-flex items-center gap-2 rounded-full border border-[#E11D2E]/30 bg-[#E11D2E]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#ffb4b9] transition hover:border-[#E11D2E]/50 hover:bg-[#E11D2E]/20 hover:text-white"
                         >
                           <Download className="h-3.5 w-3.5" />
                           Download
@@ -1786,9 +2323,9 @@ export default function ColorMatchingStudio() {
                     {selectedResultUrl ? (
                       <img src={selectedResultUrl} alt="Generated output" className="h-full w-full object-contain" />
                     ) : (
-                      <div className="flex h-full min-h-[360px] items-center justify-center text-center text-sm text-[#6f6557]">
+                      <div className="flex h-full min-h-[360px] items-center justify-center text-center text-sm text-[#6B7280]">
                         <div className="space-y-2">
-                          <Wand2 className="mx-auto h-10 w-10 text-[#e11d2e]" />
+                          <Wand2 className="mx-auto h-10 w-10 text-[#E11D2E]" />
                           <p>Generated output will appear here.</p>
                         </div>
                       </div>
@@ -1796,7 +2333,7 @@ export default function ColorMatchingStudio() {
                   </div>
                 </div>
               </div>
-
+ 
               {resultUrls.length > 0 && (
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {resultUrls.map((url, index) => (
@@ -1806,7 +2343,7 @@ export default function ColorMatchingStudio() {
                       onClick={() => setSelectedResultUrl(url)}
                       className={`overflow-hidden rounded-2xl border text-left transition ${
                         selectedResultUrl === url
-                          ? "border-[#e11d2e]/50 bg-white/8"
+                          ? "border-[#E11D2E]/50 bg-white/8"
                           : "border-white/10 bg-white/5 hover:border-white/20"
                       }`}
                     >
@@ -1814,7 +2351,7 @@ export default function ColorMatchingStudio() {
                       <div className="flex items-center justify-between gap-3 px-3 py-3">
                         <div>
                           <p className="text-sm font-semibold text-white">Variation {index + 1}</p>
-                          <p className="text-[10px] uppercase tracking-[0.18em] text-[#827666]">
+                          <p className="text-[10px] uppercase tracking-[0.18em] text-[#A1A8B3]">
                             {selectedPresetMeta?.label ?? "Custom"}
                           </p>
                         </div>
@@ -1824,7 +2361,7 @@ export default function ColorMatchingStudio() {
                             event.stopPropagation();
                             void handleDownload(url, `ai-color-matching-${index + 1}.png`);
                           }}
-                          className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#d7c4a9] transition hover:border-[#e11d2e]/35 hover:text-white"
+                          className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#A1A8B3] transition hover:border-[#E11D2E]/40 hover:text-white"
                         >
                           <Download className="h-3.5 w-3.5" />
                           Save
@@ -1835,15 +2372,202 @@ export default function ColorMatchingStudio() {
                 </div>
               )}
             </div>
-
             <div className="grid gap-4 md:grid-cols-4">
               <DetailCard label="File" value={selectedFile ? selectedFile.name : "Awaiting upload"} />
               <DetailCard label="Preset" value={selectedPresetMeta?.label ?? "Monotone"} />
               <DetailCard label="Target Color" value={activePaletteColor} />
               <DetailCard label="Palette" value={submittedPalette.join(" - ")} />
             </div>
+
+            <SectionCard
+              title="04 - Background"
+              description="Only background color changes. Motifs, print details, foreground colors, and linework stay preserved."
+            >
+              <div className="rounded-[24px] border border-white/10 bg-[#111315]/40 p-4">
+                <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
+                  <div>
+                    <p className="text-base font-semibold text-white">White Background</p>
+                    <p className="mt-1 text-[11px] leading-5 text-[#A1A8B3]">
+                      Choose a white base or enter a custom background hex.
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#A1A8B3]">
+                    {backgroundColor}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {BACKGROUND_WHITE_SWATCHES.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => {
+                        setBackgroundColor(color);
+                        setBackgroundHexInput(color);
+                      }}
+                      className={`h-14 rounded-2xl border transition ${
+                        backgroundColor === color
+                          ? "border-[#E11D2E] shadow-[0_0_0_2px_rgba(225,29,46,0.22)]"
+                          : "border-white/10 bg-white/5 hover:border-[#E11D2E]/50"
+                      }`}
+                      style={{ backgroundColor: color }}
+                      aria-label={`Select background ${color}`}
+                    />
+                  ))}
+                </div>
+
+                <div className="mt-4">
+                  <label className="text-sm font-semibold text-white" htmlFor="background-color-hex">
+                    Background color
+                  </label>
+                  <div className="mt-2 grid grid-cols-[minmax(0,1fr)_52px] gap-3">
+                    <input
+                      id="background-color-hex"
+                      type="text"
+                      value={backgroundHexInput}
+                      onChange={(event) => updateBackgroundColor(event.target.value)}
+                      onBlur={settleBackgroundColor}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") event.currentTarget.blur();
+                      }}
+                      placeholder="#FFFFFF"
+                      className="h-11 rounded-xl border border-white/10 bg-[#111315]/70 px-4 text-sm font-semibold uppercase text-white outline-none transition focus:border-[#E11D2E]/60"
+                      aria-label="Background hex color"
+                    />
+                    <input
+                      type="color"
+                      value={isValidHexColor(backgroundColor) ? backgroundColor.slice(0, 7) : "#FFFFFF"}
+                      onChange={(event) => updateBackgroundColor(event.target.value)}
+                      className="h-11 w-[52px] cursor-pointer rounded-xl border border-white/10 bg-white/5 p-1"
+                      aria-label="Pick background color"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => void handleBackgroundGenerate()}
+                  disabled={!selectedFile || isGenerating}
+                  className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-[#E11D2E] px-4 text-sm font-semibold text-white transition hover:bg-[#ff3347] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isGenerating ? "Changing Background" : "Change Background"}
+                </button>
+              </div>
+            </SectionCard>
           </section>
         </main>
+      </div>
+
+      {/* Promotional Info / Description Sections */}
+      <div className="mt-16 space-y-20 border-t border-[#2B3138]/40 pt-16 pb-8 max-w-7xl mx-auto w-full px-6">
+        {/* Section 1: AI Color Matching Studio */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+              AI Color Matching Studio
+            </h2>
+            <p className="text-sm text-[#A1A8B3] leading-relaxed">
+              Explore dynamic, production-ready color shifting. The AI Color Matching engine automatically aligns original design channels to your new target palettes, maintaining tone depth, texture layers, and printing ink coverage constraints.
+            </p>
+            <p className="text-sm text-[#A1A8B3] leading-relaxed">
+              By mapping and shifting colors across selected families, you can output clean variations of any textile pattern in seconds, matching your showroom display palettes or seasonal collection lookbooks.
+            </p>
+          </div>
+          <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl">
+            <img
+              src={gptImage2Showcase}
+              alt="GPT Image 2 Showcase"
+              className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            />
+          </div>
+        </div>
+
+        {/* Section 2: Palette Harmonization */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl order-2 md:order-1">
+            <img
+              src={flamingoShowcase}
+              alt="Flamingo Showcase"
+              className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            />
+          </div>
+          <div className="space-y-6 order-1 md:order-2">
+            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+              Palette Harmonization
+            </h2>
+            <p className="text-sm text-[#A1A8B3] leading-relaxed">
+              Achieve absolute consistency. Select from our curated preset families—including Pastel, Earthy, Playful, Dark, Interior, Fashion, or Ethnic styles—or type custom color lists. The AI maps contrast boundaries dynamically, ensuring every colorway option remains balanced and ready for rotary screenprinting.
+            </p>
+          </div>
+        </div>
+
+        {/* Section 3: Dynamic Variation Generation */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="space-y-6">
+            <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+              Dynamic Variation Generation
+            </h2>
+            <p className="text-sm text-[#A1A8B3] leading-relaxed">
+              Upload your design asset, choose a color mood or enter a custom list of inks, and hit generate. The studio produces multiple output variations side-by-side. You can expand variations, compare details, and download high-resolution files.
+            </p>
+          </div>
+          <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl">
+            <img
+              src={colorfulCharacterShowcase}
+              alt="Colorful Character Showcase"
+              className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="mt-12 border-t border-[#2B3138]/40 pt-10 pb-8 max-w-6xl mx-auto w-full px-6">
+        <h2 className="text-2xl font-extrabold text-center text-white tracking-tight mb-8">
+          AI Color Matching Studio: FAQs
+        </h2>
+        <div className="space-y-0">
+          {colorMatchingFaqs.map((faq, index) => {
+            const isOpen = openFaq === index;
+            return (
+              <div
+                key={index}
+                className="border-b border-[#2B3138]/30 transition-colors"
+              >
+                <button
+                  onClick={() => setOpenFaq(isOpen ? null : index)}
+                  className="w-full flex items-center justify-between py-3 text-left group"
+                >
+                  <span className="text-sm md:text-base font-bold text-[#F5F7FA] group-hover:text-[#E11D2E] transition-colors leading-relaxed pr-6">
+                    {faq.question}
+                  </span>
+                  <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full border border-[#2B3138]/60 group-hover:border-[#E11D2E]/40 text-[#A1A8B3] group-hover:text-[#E11D2E] transition-all duration-300">
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 transition-transform duration-300 ${
+                        isOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </span>
+                </button>
+                <AnimatePresence initial={false}>
+                  {isOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <p className="pb-4 text-sm leading-relaxed text-[#A1A8B3] pt-1">
+                        {faq.answer}
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

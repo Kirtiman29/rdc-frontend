@@ -45,7 +45,7 @@ export default defineConfig(({ mode }) => ({
             "/bitmap": createProxyOptions("http://localhost:8094"),
             "/wishlist": createProxyOptions("http://192.168.0.17:8093"),
             "/assets": createProxyOptions("http://192.168.0.17:8090"),
-            "/ai": createProxyOptions("http://192.168.0.17:8080"),
+            "/ai/": createProxyOptions("http://192.168.0.17:8080"),
             "/public": createProxyOptions("http://192.168.0.17:8080"),
             "/notifications": createProxyOptions("http://192.168.0.17:8080"),
             "/categories": createProxyOptions("http://192.168.0.17:8080"),

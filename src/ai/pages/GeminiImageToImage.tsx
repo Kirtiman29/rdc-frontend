@@ -28,6 +28,29 @@ import pattern2 from "@/assets/sample-pattern-2.jpg";
 import pattern3 from "@/assets/sample-pattern-3.jpg";
 import pattern4 from "@/assets/sample-pattern-4.jpg";
 
+import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
+import flamingoShowcase from "@/assets/flamingo-showcase.png";
+import colorfulCharacterShowcase from "@/assets/colorful-character-showcase.png";
+
+const faqs = [
+  {
+    question: "What is RDC Pattern Maker?",
+    answer: "The RDC Pattern Maker is an advanced visual variation engine powered by Gemini models. It takes an existing source design and uses your text prompt to intelligently modify elements, color schemes, or themes while respecting the design's structural flow.",
+  },
+  {
+    question: "How do the Edit Modes work?",
+    answer: "Auto dynamically determines the safe edit range. Edit targets specific parts of the layout described in your prompt, leaving other parts intact. Redesign reimagines the entire pattern from scratch, using the original image as a style/composition reference.",
+  },
+  {
+    question: "Can I use these pattern variations commercially?",
+    answer: "Yes, all variations generated within RDC AI Studio are completely royalty-free. You hold full rights to print, sell, publish, or distribute the outputs commercially for clothing, packaging, or digital media.",
+  },
+  {
+    question: "What image formats and sizes are supported?",
+    answer: "We support standard digital image formats including PNG, JPG, JPEG, and WEBP. For optimal processing and visual clarity, we recommend files under 10MB.",
+  },
+];
+
 type GeneratedImage = GenerateResponse["images"][number];
 
 const slideshowImages = [pattern1, pattern2, pattern3, pattern4];
@@ -78,6 +101,7 @@ export default function GeminiImageToImage() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   useEffect(() => {
     if (!isPlaying) return;
@@ -206,147 +230,226 @@ export default function GeminiImageToImage() {
           </div>
         </header>
 
-        <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-[24px] border border-[#2B3138] bg-[#181B1F]/92 p-5 shadow-2xl backdrop-blur-xl md:p-6">
-            <div className="grid gap-5 lg:grid-cols-[360px_1fr]">
-              <UploadPanel
-                previewUrl={previewUrl}
-                isDragOver={isDragOver}
-                onSelect={(incoming) => {
-                  setFile(incoming);
+        {/* Main Horizontal Generator Card */}
+        <div className="rounded-[24px] border border-[#2B3138] bg-[#181B1F]/92 p-5 shadow-2xl backdrop-blur-xl md:p-6 mb-6">
+          {/* Side-by-Side Reference & Prompt Columns */}
+          <div className="grid grid-cols-1 md:grid-cols-[440px_1fr] gap-8 mb-6">
+            {/* Left Side: Upload zone */}
+            <div className="flex flex-col space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#A1A8B3]">
+                Source Design / Reference Image
+              </span>
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragOver(false);
+                  const incoming = e.dataTransfer.files?.[0];
                   if (incoming) {
+                    setFile(incoming);
                     setGeneratedImages([]);
                     setStatus("Reference image loaded.");
                   }
                 }}
-                onDragOver={() => setIsDragOver(true)}
-                onDragLeave={() => setIsDragOver(false)}
-                onClear={() => setFile(null)}
-              />
-
-              <div className="space-y-5">
-                <div className="rounded-2xl border border-[#2B3138] bg-[#111315]/55 p-4">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="h-4 w-4 text-[#E11D2E]" />
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A1A8B3]">
-                      Prompt
-                    </p>
-                  </div>
-                  <textarea
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    placeholder='e.g. "Replace flowers with hibiscus while keeping layout same"'
-                    className="mt-3 h-36 w-full resize-none rounded-xl border border-[#2B3138] bg-[#0F1114] p-4 text-sm text-white placeholder:text-[#6B7280] outline-none transition focus:border-[#E11D2E]/50"
-                  />
-                </div>
-
-                <div className="grid gap-5 md:grid-cols-2">
-                  <FieldCard title="Aspect Ratio" icon={<Maximize className="h-4 w-4 text-[#E11D2E]" />}>
-                    <SelectField
-                      value={aspectRatio}
-                      onChange={(value) => setAspectRatio(value as GeminiImageToImageAspectRatio)}
-                      options={GEMINI_IMAGE_TO_IMAGE_ASPECT_RATIOS.map((ratio) => ({
-                        value: ratio,
-                        label: aspectRatioLabels[ratio],
-                      }))}
+                className={`group relative flex cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border-2 border-dashed transition-all duration-300 ${
+                  isDragOver
+                    ? "border-[#E11D2E] bg-[#E11D2E]/5"
+                    : "border-[#2B3138] bg-[#111315]/30 hover:border-[#E11D2E]/40 hover:bg-[#111315]/50"
+                } w-full max-w-[440px] aspect-square`}
+              >
+                {previewUrl ? (
+                  <div className="absolute inset-0 h-full w-full flex items-center justify-center overflow-hidden">
+                    <img
+                      src={previewUrl}
+                      alt="Preview"
+                      className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                     />
-                  </FieldCard>
-
-                  <FieldCard title="Num Images" icon={<ImageIcon className="h-4 w-4 text-[#E11D2E]" />}>
-                    <div className="flex items-center gap-2 rounded-xl border border-[#2B3138] bg-[#0F1114] p-2.5">
+                    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/0 transition-colors duration-300 group-hover:bg-black/50">
                       <button
                         type="button"
-                        onClick={() => changeNumImages(-1)}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#2B3138] bg-[#181B1F] text-[#F5F7FA] transition hover:border-[#E11D2E]/40"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFile(null);
+                        }}
+                        className="rounded-full bg-[#E11D2E] p-2.5 text-white hover:bg-[#ff3347] transition transform scale-90 group-hover:scale-100 duration-300 shadow-lg"
                       >
-                        <Minus className="h-4 w-4" />
-                      </button>
-                      <div className="flex-1 text-center text-sm font-semibold text-white">
-                        {numImages}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => changeNumImages(1)}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#2B3138] bg-[#181B1F] text-[#F5F7FA] transition hover:border-[#E11D2E]/40"
-                      >
-                        <Plus className="h-4 w-4" />
+                        <X className="h-4 w-4" />
                       </button>
                     </div>
-                  </FieldCard>
-                </div>
-
-                <div className="rounded-2xl border border-[#2B3138] bg-[#111315]/55 p-4">
-                  <div className="mb-3 flex items-center gap-2">
-                    <Wand2 className="h-4 w-4 text-[#E11D2E]" />
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A1A8B3]">
-                      Edit Mode
-                    </p>
                   </div>
+                ) : (
+                  <>
+                    <Upload className="h-5 w-5 text-[#A1A8B3] group-hover:text-[#E11D2E] transition-colors" />
+                    <div className="text-center px-4">
+                      <p className="text-xs font-bold text-[#A1A8B3] group-hover:text-white transition-colors">
+                        Drag & drop image here or <span className="text-[#E11D2E]">browse</span>
+                      </p>
+                      <p className="mt-0.5 text-[9px] text-[#6B7280]">Supports PNG, JPG • Max 10MB</p>
+                    </div>
+                  </>
+                )}
+                <input
+                  type="file"
+                  className="absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const incoming = e.target.files?.[0];
+                    if (incoming) {
+                      setFile(incoming);
+                      setGeneratedImages([]);
+                      setStatus("Reference image loaded.");
+                    }
+                  }}
+                />
+              </div>
+            </div>
 
-                  <div className="grid gap-3 md:grid-cols-3">
-                    {editModeOptions.map((option) => {
-                      const active = editMode === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setEditMode(option.value)}
-                          className={`rounded-2xl border p-4 text-left transition ${
-                            active
-                              ? "border-[#E11D2E]/50 bg-[#E11D2E]/12"
-                              : "border-[#2B3138] bg-[#0F1114] hover:border-[#E11D2E]/35"
-                          }`}
-                        >
-                          <div className="text-sm font-semibold text-white">{option.title}</div>
-                          <div className="mt-1 text-xs leading-5 text-[#A1A8B3]">
-                            {option.description}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-3 rounded-2xl border border-[#2B3138] bg-[#111315]/55 p-4 md:flex-row md:items-center md:justify-between">
-                  <p className="text-sm text-[#A1A8B3]">{status}</p>
-                  <button
-                    type="button"
-                    onClick={handleGenerate}
-                    disabled={isGenerating}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E11D2E] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#ff3347] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {isGenerating ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Wand2 className="h-4 w-4" />
-                    )}
-                    {isGenerating ? "Generating..." : "Generate"}
-                  </button>
-                </div>
+            {/* Right Side: Prompt Description */}
+            <div className="flex flex-col space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#A1A8B3]">
+                Prompt Description
+              </span>
+              <div className="relative w-full h-[440px]">
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder='e.g. "Replace flowers with hibiscus while keeping layout same"'
+                  className="no-scrollbar h-full w-full resize-none rounded-xl border border-[#2B3138] bg-[#111315]/60 p-4 pb-12 text-sm text-[#F5F7FA] placeholder:text-[#6B7280] transition-all focus:border-[#E11D2E]/50 focus:bg-[#111315]/80 focus:outline-none"
+                />
               </div>
             </div>
           </div>
 
-          <aside className="rounded-[24px] border border-[#2B3138] bg-[#181B1F]/92 p-5 shadow-2xl backdrop-blur-xl">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#A1A8B3]">
-              <ImageIcon className="h-4 w-4 text-[#E11D2E]" />
-              Results
-            </div>
+          {/* Middle Row: Aspect Ratio & Num Images */}
+          <div className="grid gap-6 md:grid-cols-2 mb-6">
+            <FieldCard title="Aspect Ratio" icon={<Maximize className="h-4 w-4 text-[#E11D2E]" />}>
+              <SelectField
+                value={aspectRatio}
+                onChange={(value) => setAspectRatio(value as GeminiImageToImageAspectRatio)}
+                options={GEMINI_IMAGE_TO_IMAGE_ASPECT_RATIOS.map((ratio) => ({
+                  value: ratio,
+                  label: aspectRatioLabels[ratio],
+                }))}
+              />
+            </FieldCard>
 
-            <div className="mt-4 overflow-hidden rounded-2xl border border-[#2B3138] bg-[#111315]">
-              {previewUrl ? (
-                <img src={previewUrl} alt="Reference preview" className="h-72 w-full object-cover" />
-              ) : (
-                <div className="flex h-72 items-center justify-center px-8 text-center text-sm text-[#6B7280]">
-                  Upload an image to begin.
+            <FieldCard title="Num Images" icon={<ImageIcon className="h-4 w-4 text-[#E11D2E]" />}>
+              <div className="flex items-center gap-2 rounded-xl border border-[#2B3138] bg-[#0F1114] p-2.5">
+                <button
+                  type="button"
+                  onClick={() => changeNumImages(-1)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#2B3138] bg-[#181B1F] text-[#F5F7FA] transition hover:border-[#E11D2E]/40"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <div className="flex-1 text-center text-sm font-semibold text-white">
+                  {numImages}
                 </div>
-              )}
+                <button
+                  type="button"
+                  onClick={() => changeNumImages(1)}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg border border-[#2B3138] bg-[#181F] text-[#F5F7FA] transition hover:border-[#E11D2E]/40"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </FieldCard>
+          </div>
+
+          {/* Bottom Section: Edit Mode preset buttons */}
+          <div className="rounded-2xl border border-[#2B3138] bg-[#111315]/55 p-4 mb-6">
+            <div className="mb-3 flex items-center gap-2">
+              <Wand2 className="h-4 w-4 text-[#E11D2E]" />
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A1A8B3]">
+                Edit Mode
+              </p>
             </div>
 
-            <div className="mt-4 space-y-3">
-              {generatedImages.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-[#2B3138] bg-[#111315]/60 px-6 py-10 text-center text-sm text-[#6B7280]">
-                  Generated outputs will appear here.
+            <div className="grid gap-3 md:grid-cols-3">
+              {editModeOptions.map((option) => {
+                const active = editMode === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setEditMode(option.value)}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      active
+                        ? "border-[#E11D2E]/50 bg-[#E11D2E]/12"
+                        : "border-[#2B3138] bg-[#0F1114] hover:border-[#E11D2E]/35"
+                    }`}
+                  >
+                    <div className="text-sm font-semibold text-white">{option.title}</div>
+                    <div className="mt-1 text-xs leading-5 text-[#A1A8B3]">
+                      {option.description}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Actions panel */}
+          <div className="flex flex-col gap-3 rounded-2xl border border-[#2B3138] bg-[#111315]/55 p-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-sm text-[#A1A8B3]">{status}</p>
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={isGenerating}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#E11D2E] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#ff3347] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isGenerating ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Wand2 className="h-4 w-4" />
+              )}
+              {isGenerating ? "Generating..." : "Generate"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main content below the slideshow (Results, Descriptions, FAQs) */}
+      <div className="relative z-10 mx-auto flex max-w-[1400px] flex-col gap-8 p-5 md:p-7 xl:p-8 pt-0">
+        {/* Results Area */}
+        {(previewUrl || generatedImages.length > 0 || isGenerating) && (
+          <div className="mt-8 border-t border-[#2B3138]/40 pt-8">
+            <h3 className="text-lg font-bold text-white tracking-wider uppercase mb-4 flex items-center gap-2">
+              <ImageIcon className="h-4 w-4 text-[#E11D2E]" />
+              Workspace Outputs & Previews
+            </h3>
+
+            <div className="grid gap-6 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {/* Card 1: Original reference preview */}
+              <div className="overflow-hidden rounded-2xl border border-[#2B3138] bg-[#181B1F]">
+                <div className="flex items-center justify-between border-b border-[#2B3138]/60 px-4 py-2.5">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-gray-400">Original</span>
+                  <span className="text-[10px] text-gray-500 uppercase font-bold">Reference Design</span>
+                </div>
+                <div className="relative h-72 w-full overflow-hidden bg-black/40">
+                  {previewUrl ? (
+                    <img src={previewUrl} alt="Reference preview" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center px-8 text-center text-sm text-[#6B7280]">
+                      No reference image uploaded.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Subsequent cards: Generated variations */}
+              {isGenerating ? (
+                <div className="flex h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-[#2B3138] bg-[#181B1F]/50 col-span-3">
+                  <Loader2 className="h-10 w-10 animate-spin text-[#E11D2E] mb-4" />
+                  <p className="text-sm font-bold uppercase tracking-wider text-white">Generating variations...</p>
+                  <p className="mt-1 text-xs text-[#A1A8B3]">Creating your textile design variants</p>
                 </div>
               ) : (
                 generatedImages.map((image, index) => {
@@ -354,20 +457,22 @@ export default function GeminiImageToImage() {
                   return (
                     <div
                       key={image.id}
-                      className="overflow-hidden rounded-2xl border border-[#2B3138] bg-[#111315]"
+                      className="group relative overflow-hidden rounded-2xl border border-[#2B3138] bg-[#181B1F] transition-all duration-300 hover:border-[#E11D2E]/50"
                     >
                       <button
                         type="button"
                         onClick={() => setSelectedImage(resolvedUrl)}
                         className="block w-full text-left"
                       >
-                        <img
-                          src={resolvedUrl}
-                          alt={`Generated output ${index + 1}`}
-                          className="h-56 w-full object-cover transition duration-500 hover:scale-[1.02]"
-                        />
+                        <div className="relative h-72 w-full overflow-hidden bg-black/40">
+                          <img
+                            src={resolvedUrl}
+                            alt={`Generated output ${index + 1}`}
+                            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.02]"
+                          />
+                        </div>
                       </button>
-                      <div className="flex items-center justify-between gap-3 px-4 py-3">
+                      <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-[#2B3138]/60">
                         <div>
                           <p className="text-sm font-semibold text-white">Variation {index + 1}</p>
                           <p className="text-[10px] uppercase tracking-[0.18em] text-[#6B7280]">
@@ -388,8 +493,126 @@ export default function GeminiImageToImage() {
                 })
               )}
             </div>
-          </aside>
-        </section>
+          </div>
+        )}
+
+        {/* Promotional Info / Description Sections */}
+        <div className="mt-16 space-y-20 border-t border-[#2B3138]/40 pt-16 pb-8">
+          {/* Section 1: Introducing GPT Image 2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                Introducing GPT Image 2
+              </h2>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                OpenAI's GPT Image 2 marks a major step forward in AI-powered image generation, turning simple prompts into detailed, production-ready visuals with greater accuracy, control, and creative range. Built to handle complex instructions, it can render precise cases like marketing campaigns, social media content, storyboarding, and educational graphics.
+              </p>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                With flexible aspect ratios and the ability to generate cohesive sets of visuals, it streamlines the path from concept to execution. Now available in Shutterstock's AI image generator, GPT Image 2 helps creators move from idea to high-quality visuals faster and more efficiently.
+              </p>
+            </div>
+            <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl">
+              <img
+                src={gptImage2Showcase}
+                alt="GPT Image 2 Showcase"
+                className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            </div>
+          </div>
+
+          {/* Section 2: More AI Images for Less */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl order-2 md:order-1">
+              <img
+                src={flamingoShowcase}
+                alt="Flamingo Showcase"
+                className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            </div>
+            <div className="space-y-6 order-1 md:order-2">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                More AI Images for Less
+              </h2>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Generate AI images at scale with our affordable <span className="text-white underline cursor-pointer hover:text-[#E11D2E] transition-colors">Generative AI Plus plan</span>. Get 100 generations a month, each producing four high-quality images, for up to 400 images total.
+              </p>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Want to test it out? Get started with two free image generations! Each AI-generation includes a high-res download, and full rights so you can use them commercially.
+              </p>
+            </div>
+          </div>
+
+          {/* Section 3: How the AI Image Generator Works */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+            <div className="space-y-6">
+              <h2 className="text-3xl font-extrabold text-white tracking-tight leading-tight">
+                How the AI Image Generator Works
+              </h2>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Our AI image generator, powered by models like Google's Gemini 3.1 Flash, Imagen 4 Ultra, and GPT Image 2 from OpenAI, lets you create high-quality AI generated images from just a few words.
+              </p>
+              <p className="text-sm text-[#A1A8B3] leading-relaxed">
+                Choose from a variety of <span className="text-white underline cursor-pointer hover:text-[#E11D2E] transition-colors">AI styles</span>—including Oil painting, Fish eye, or Motion blur—and select your preferred aspect ratio to match your creative vision.
+              </p>
+            </div>
+            <div className="relative group overflow-hidden rounded-[24px] border border-[#2B3138] bg-[#1C2025] p-2 transition-all duration-300 hover:border-[#E11D2E]/40 hover:shadow-2xl">
+              <img
+                src={colorfulCharacterShowcase}
+                alt="Colorful Character Showcase"
+                className="w-full h-[300px] md:h-[340px] rounded-[18px] object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-12 border-t border-[#2B3138]/40 pt-10 pb-8 max-w-6xl mx-auto w-full px-4">
+          <h2 className="text-2xl font-extrabold text-center text-white tracking-tight mb-8">
+            AI Pattern Maker: FAQs
+          </h2>
+          <div className="space-y-0">
+            {faqs.map((faq, index) => {
+              const isOpen = openFaq === index;
+              return (
+                <div
+                  key={index}
+                  className="border-b border-[#2B3138]/30 transition-colors"
+                >
+                  <button
+                    onClick={() => setOpenFaq(isOpen ? null : index)}
+                    className="w-full flex items-center justify-between py-3 text-left group"
+                  >
+                    <span className="text-sm md:text-base font-bold text-[#F5F7FA] group-hover:text-[#E11D2E] transition-colors leading-relaxed pr-6">
+                      {faq.question}
+                    </span>
+                    <span className="shrink-0 flex h-6 w-6 items-center justify-center rounded-full border border-[#2B3138]/60 group-hover:border-[#E11D2E]/40 text-[#A1A8B3] group-hover:text-[#E11D2E] transition-all duration-300">
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform duration-300 ${
+                          isOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </span>
+                  </button>
+                  <AnimatePresence initial={false}>
+                    {isOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <p className="pb-4 text-sm leading-relaxed text-[#A1A8B3] pt-1">
+                          {faq.answer}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -425,82 +648,6 @@ export default function GeminiImageToImage() {
   );
 }
 
-function UploadPanel({
-  previewUrl,
-  isDragOver,
-  onSelect,
-  onDragOver,
-  onDragLeave,
-  onClear,
-}: {
-  previewUrl: string | null;
-  isDragOver: boolean;
-  onSelect: (file: File | null) => void;
-  onDragOver: () => void;
-  onDragLeave: () => void;
-  onClear: () => void;
-}) {
-  return (
-    <div className="rounded-2xl border border-[#2B3138] bg-[#111315]/55 p-4">
-      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A1A8B3]">
-        Upload
-      </p>
-      <label
-        onDragOver={(e) => {
-          e.preventDefault();
-          onDragOver();
-        }}
-        onDragLeave={(e) => {
-          e.preventDefault();
-          onDragLeave();
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          onDragLeave();
-          onSelect(e.dataTransfer.files?.[0] || null);
-        }}
-        className={`mt-3 flex aspect-square cursor-pointer flex-col items-center justify-center gap-3 rounded-3xl border-2 border-dashed px-4 text-center transition ${
-          isDragOver
-            ? "border-[#E11D2E] bg-[#E11D2E]/8"
-            : "border-[#d9c8b5] bg-[#f6efe6] text-[#201914]"
-        }`}
-      >
-        {previewUrl ? (
-          <div className="relative h-full w-full overflow-hidden rounded-[22px]">
-            <img src={previewUrl} alt="Reference preview" className="h-full w-full object-cover" />
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onClear();
-              }}
-              className="absolute right-3 top-3 rounded-full bg-black/70 p-2 text-white transition hover:bg-[#E11D2E]"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        ) : (
-          <>
-            <Upload className="h-8 w-8 text-[#8a6f56]" />
-            <div>
-              <p className="text-sm font-semibold">Drop textile image here</p>
-              <p className="mt-1 text-[11px] uppercase tracking-[0.22em] text-[#8a6f56]">
-                PNG · JPG · JPEG · WEBP
-              </p>
-            </div>
-          </>
-        )}
-        <input
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={(e) => onSelect(e.target.files?.[0] || null)}
-        />
-      </label>
-    </div>
-  );
-}
 
 function FieldCard({
   title,
