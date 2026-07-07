@@ -20,7 +20,14 @@ import {
 } from "lucide-react";
 
 import { getToken } from "@/api/apiClient";
-import { bitmapApi, type BitmapUploadResponse } from "@/api/bitmapApi";
+import AiCreditCost from "@/ai/components/AiCreditCost";
+import {
+  bitmapApi,
+  getBitmapErrorMessage,
+  type BitmapBinaryResponse,
+  type BitmapUploadResponse,
+} from "@/api/bitmapApi";
+import { getMyCredits } from "@/api/subscriptionApi";
 
 import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
 import flamingoShowcase from "@/assets/flamingo-showcase.png";
@@ -142,19 +149,7 @@ const formatBytes = (bytes: number) => {
 const stripFileExtension = (name: string) => name.replace(/\.[^.]+$/, "");
 
 const getErrorMessage = (error: unknown) => {
-  if (error instanceof Error) {
-    if (/subscription/i.test(error.message)) {
-      return "An active subscription is required to use Bitmap Studio.";
-    }
-
-    if (/unauthorized|401/i.test(error.message)) {
-      return "Please sign in to upload and process bitmap files.";
-    }
-
-    return error.message;
-  }
-
-  return "Bitmap request failed.";
+  return getBitmapErrorMessage(error);
 };
 
 const buildPresets = (preset: BitmapPresetId, intensity: number, fileId: string) => {
@@ -312,6 +307,7 @@ export default function BitmapStudio() {
   const [isUploading, setIsUploading] = useState(false);
   const [isRendering, setIsRendering] = useState(false);
   const [isDownloadingPsd, setIsDownloadingPsd] = useState(false);
+  const [availableCredits, setAvailableCredits] = useState<number | null>(null);
   const workflowMode: WorkflowMode = "multicolor";
   const [dotScreenEnabled, setDotScreenEnabled] = useState(true);
   const [grayscaleEnabled, setGrayscaleEnabled] = useState(true);
@@ -351,8 +347,55 @@ export default function BitmapStudio() {
     };
   }, []);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadCredits = async () => {
+      if (!hasAuth) {
+        if (active) {
+          setAvailableCredits(null);
+        }
+        return;
+      }
+
+      try {
+        const credits = await getMyCredits();
+        if (active && Number.isFinite(credits)) {
+          setAvailableCredits(credits);
+        }
+      } catch {
+        if (active) {
+          setAvailableCredits(null);
+        }
+      }
+    };
+
+    void loadCredits();
+
+    return () => {
+      active = false;
+    };
+  }, [hasAuth]);
+
   const setBanner = (text: string, type: NonNullable<Notice>["type"] = "info") => {
     setNotice({ text, type });
+  };
+
+  const syncAvailableCredits = (remainingCredits?: number | null) => {
+    if (typeof remainingCredits === "number" && Number.isFinite(remainingCredits)) {
+      setAvailableCredits(remainingCredits);
+    }
+  };
+
+  const refreshCredits = async () => {
+    try {
+      const credits = await getMyCredits();
+      if (Number.isFinite(credits)) {
+        setAvailableCredits(credits);
+      }
+    } catch {
+      // Ignore refresh failure.
+    }
   };
 
   const clearGeneratedPreview = () => {
@@ -518,23 +561,33 @@ export default function BitmapStudio() {
         return;
       }
 
-      let blob: Blob;
+      let previewResponse: BitmapBinaryResponse;
       switch (request.endpoint) {
         case "separationProof":
-          blob = await bitmapApi.previewSeparationProof(request.params, token || undefined);
+          previewResponse = await bitmapApi.previewSeparationProof(request.params, token || undefined);
           break;
         default:
-          blob = await bitmapApi.previewDither(request.params, token || undefined);
+          previewResponse = await bitmapApi.previewDither(request.params, token || undefined);
       }
 
       if (resultUrlRef.current) {
         URL.revokeObjectURL(resultUrlRef.current);
       }
 
-      const nextPreviewUrl = URL.createObjectURL(blob);
+      syncAvailableCredits(previewResponse.remainingCredits);
+      if (previewResponse.remainingCredits === null) {
+        await refreshCredits();
+      }
+
+      const nextPreviewUrl = URL.createObjectURL(previewResponse.blob);
       resultUrlRef.current = nextPreviewUrl;
       setResultPreviewUrl(nextPreviewUrl);
-      setBanner("Preview ready for review.", "success");
+      setBanner(
+        typeof previewResponse.remainingCredits === "number"
+          ? `Preview ready for review. ${previewResponse.remainingCredits} credits remaining.`
+          : "Preview ready for review.",
+        "success"
+      );
     } catch (error) {
       setBanner(getErrorMessage(error), "error");
     } finally {
@@ -576,9 +629,18 @@ export default function BitmapStudio() {
         return;
       }
 
-      const blob = await bitmapApi.exportPsd({ ...request.params, dpi: psdDpi }, token || undefined);
-      downloadBlob(blob, psdFileName);
-      setBanner(`${psdDpi} DPI PSD download started.`, "success");
+      const exportResponse = await bitmapApi.exportPsd({ ...request.params, dpi: psdDpi }, token || undefined);
+      syncAvailableCredits(exportResponse.remainingCredits);
+      if (exportResponse.remainingCredits === null) {
+        await refreshCredits();
+      }
+      downloadBlob(exportResponse.blob, psdFileName);
+      setBanner(
+        typeof exportResponse.remainingCredits === "number"
+          ? `${psdDpi} DPI PSD download started. ${exportResponse.remainingCredits} credits remaining.`
+          : `${psdDpi} DPI PSD download started.`,
+        "success"
+      );
     } catch (error) {
       setBanner(getErrorMessage(error), "error");
     } finally {
@@ -607,9 +669,12 @@ export default function BitmapStudio() {
               <p className="mt-4 max-w-2xl text-sm leading-7 text-[#A1A8B3] md:text-base">
                 Professional bitmap prep with only the controls that matter for textile production.
               </p>
-              <p className="mt-3 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-[#A1A8B3]">
-                Subscription access only. No AI credits or design quota are consumed.
-              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <p className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-[#A1A8B3]">
+                  Subscription access only. No AI credits or design quota are consumed.
+                </p>
+                <AiCreditCost credits={10} label="Deduction" />
+              </div>
             </div>
           </div>
 
@@ -674,6 +739,9 @@ export default function BitmapStudio() {
                 onChange={(value) => setPsdDpi(Number(value))}
                 className="w-[120px]"
               />
+              <div className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] uppercase tracking-[0.25em] text-[#A1A8B3]">
+                Credits: {availableCredits === null ? "--" : availableCredits}
+              </div>
               <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] uppercase tracking-[0.25em] text-[#A1A8B3]">
                 {resultPreviewUrl ? "Preview ready" : "No preview yet"}
               </span>

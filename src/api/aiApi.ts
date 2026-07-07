@@ -1,5 +1,8 @@
 import axios from "axios";
 import { applyIndustrialInterceptors, getAssetUrl } from "./apiClient";
+import { getMyCredits } from "./subscriptionApi";
+import { generateGeminiImageToImage as generateGeminiImageToImageRequest } from "./imageToImageApi";
+import { fetchHistory } from "./historyApi";
 import { createApiUrl, serviceOrigins } from "./serviceConfig";
 
 const ADMIN_SERVICE_URL = (
@@ -536,34 +539,6 @@ export type GeminiImageToImageAspectRatio =
   (typeof GEMINI_IMAGE_TO_IMAGE_ASPECT_RATIOS)[number];
 export type GeminiImageToImageMode = "auto" | "edit" | "redesign";
 
-const normalizeGeminiImageToImageEndpoint = (value: string) => {
-  const trimmed = value.replace(/\/+$/, "");
-
-  if (/\/gemini-image\/image-to-image$/i.test(trimmed)) {
-    return trimmed;
-  }
-
-  if (/\/api\/gemini\/img-to-img$/i.test(trimmed)) {
-    return trimmed.replace(/\/api\/gemini\/img-to-img$/i, "/gemini-image/image-to-image");
-  }
-
-  if (/\/img-to-img$/i.test(trimmed)) {
-    return trimmed.replace(/\/img-to-img$/i, "/gemini-image/image-to-image");
-  }
-
-  return `${trimmed}/gemini-image/image-to-image`;
-};
-
-const GEMINI_IMAGE_TO_IMAGE_ENDPOINT = normalizeGeminiImageToImageEndpoint(
-  import.meta.env.VITE_GEMINI_IMAGE_TO_IMAGE_ENDPOINT ||
-    "http://192.168.0.154:8000"
-);
-const GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY = (
-  import.meta.env.VITE_GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY ||
-  import.meta.env.VITE_INTERNAL_KEY ||
-  ""
-).trim();
-
 export interface AiToolPayload {
   toolName: AiToolName;
   inputUrl: string | null;
@@ -619,7 +594,7 @@ interface GeminiImageToImageOptions extends Omit<GeminiGenerateOptions, "prompt"
   targetElement?: string;
   replacement?: string;
   preserve?: string;
-  changeStrength?: number;
+  changeStrength?: number;  
   referenceStrength?: number;
   promptStrength?: number;
   motifScale?: number | string;
@@ -1014,93 +989,6 @@ export const generateGeminiImageToImage = async ({
   return mapAiResponseToGenerateResponse(response, inputUrl, style);
 };
 
-type GeminiImageToImageApiResponse = {
-  success?: boolean;
-  message?: string;
-  outputUrl?: string;
-  output_url?: string;
-  output_image?: string;
-  outputImage?: string;
-  image?: string;
-  imageUrl?: string;
-  image_url?: string;
-  imageBase64?: string;
-  image_base64?: string;
-  mimeType?: string;
-  mime_type?: string;
-  filename?: string;
-  images?: Array<{
-    outputUrl?: string;
-    output_url?: string;
-    output_image?: string;
-    outputImage?: string;
-    image?: string;
-    imageUrl?: string;
-    image_url?: string;
-    url?: string;
-    imageBase64?: string;
-    image_base64?: string;
-    mimeType?: string;
-    mime_type?: string;
-    filename?: string;
-  }>;
-  data?: unknown;
-  result?: unknown;
-  remainingCredits?: number | null;
-};
-
-const toDataUrl = (base64: string, mimeType: string) => {
-  if (/^data:/i.test(base64)) {
-    return base64;
-  }
-
-  return `data:${mimeType};base64,${base64}`;
-};
-
-const mimeTypeToExtension = (mimeType: string) => {
-  if (mimeType.includes("jpeg") || mimeType.includes("jpg")) return "jpg";
-  if (mimeType.includes("webp")) return "webp";
-  if (mimeType.includes("gif")) return "gif";
-  return "png";
-};
-
-const normalizeGeminiImgToImgOutputUrl = (url: string) => {
-  if (!url) return "";
-  if (/^(data:|blob:|https?:\/\/)/i.test(url)) return url;
-
-  try {
-    return new URL(url, GEMINI_IMAGE_TO_IMAGE_ENDPOINT).toString();
-  } catch {
-    return url;
-  }
-};
-
-const resolveGeminiImgToImgImageUrl = (item: GeminiImageToImageApiResponse, fallbackMimeType = "image/png") => {
-  const candidate =
-    item.outputUrl ||
-    item.output_url ||
-    item.output_image ||
-    item.outputImage ||
-    item.imageUrl ||
-    item.image_url ||
-    item.image;
-
-  if (candidate && /^(\s*data:|\s*blob:|\s*https?:\/\/)/i.test(candidate)) {
-    return candidate.trim();
-  }
-
-  if (candidate && !/^[A-Za-z0-9+/=]+$/.test(candidate.trim())) {
-    return normalizeGeminiImgToImgOutputUrl(candidate.trim());
-  }
-
-  const mimeType = item.mimeType || item.mime_type || fallbackMimeType;
-  const base64 = item.imageBase64 || item.image_base64 || candidate || "";
-
-  if (!base64) return "";
-
-  return toDataUrl(base64, mimeType);
-};
-
 export const generateGeminiImgToImg = async ({
   file,
   prompt,
@@ -1124,142 +1012,40 @@ export const generateGeminiImgToImg = async ({
     throw new Error("prompt is required for Gemini image to image.");
   }
 
-  if (!GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY) {
-    throw new Error(
-      "VITE_GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY is required to call the Gemini image-to-image backend."
-    );
-  }
-
   const formData = new FormData();
   formData.append("file", file);
   formData.append("prompt", trimmedPrompt);
   formData.append("mode", mode);
-  formData.append("aspect_ratio", aspectRatio);
+
+  if (aspectRatio && aspectRatio !== "auto") {
+    formData.append("aspect_ratio", aspectRatio);
+  }
+
   formData.append("num_images", String(numImages));
 
-  const response = await fetch(GEMINI_IMAGE_TO_IMAGE_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "X-INTERNAL-KEY": GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY,
-    },
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => "");
-    throw new Error(errorText || `Gemini image-to-image request failed (${response.status}).`);
-  }
-
-  const data = (await response.json()) as GeminiImageToImageApiResponse;
-  const mimeType = data.mimeType || data.mime_type || "image/png";
-  const directImage = resolveGeminiImgToImgImageUrl(data, mimeType);
-  const nestedSources = [data.data, data.result].filter(Boolean);
-
-  const payloads: Array<Record<string, unknown>> = [];
-
-  for (const item of data.images || []) {
-    if (typeof item === "string") {
-      payloads.push({ image: item });
-      continue;
-    }
-
-    if (isRecord(item)) {
-      payloads.push(item);
+  const data = await generateGeminiImageToImageRequest(formData);
+  if (typeof data.remaining_credits === "number") {
+    dispatchCreditsUpdated(data.remaining_credits);
+  } else {
+    try {
+      const credits = await getMyCredits();
+      dispatchCreditsUpdated(credits);
+    } catch {
+      // Ignore refresh failures; the generation already succeeded.
     }
   }
-
-  if (payloads.length === 0) {
-    for (const source of nestedSources) {
-      if (!isRecord(source)) continue;
-
-      if (Array.isArray(source.images)) {
-        for (const item of source.images) {
-          if (typeof item === "string") {
-            payloads.push({ image: item });
-          } else if (isRecord(item)) {
-            payloads.push(item);
-          }
-        }
-      }
-
-      const nestedImage =
-        resolveGeminiImgToImgImageUrl(
-          {
-            outputUrl: source.outputUrl as string | undefined,
-            output_url: source.output_url as string | undefined,
-            output_image: source.output_image as string | undefined,
-            outputImage: source.outputImage as string | undefined,
-            image: source.image as string | undefined,
-            imageUrl: source.imageUrl as string | undefined,
-            image_url: source.image_url as string | undefined,
-            imageBase64: source.imageBase64 as string | undefined,
-            image_base64: source.image_base64 as string | undefined,
-            mimeType: source.mimeType as string | undefined,
-            mime_type: source.mime_type as string | undefined,
-            filename: source.filename as string | undefined,
-          },
-          mimeType
-        );
-
-      if (nestedImage) {
-        payloads.push({
-          image: nestedImage,
-          filename: source.filename,
-          mimeType: source.mimeType,
-        });
-      }
-    }
-  }
-
-  if (payloads.length === 0 && directImage) {
-    payloads.push({
-      image: directImage,
-      filename: data.filename,
-      mimeType,
-    });
-  }
-
-  if (payloads.length === 0) {
-    const fallbackUrls: string[] = [];
-    readUrlsFromValue(data, fallbackUrls);
-
-    for (const url of fallbackUrls) {
-      payloads.push({ image: url, filename: data.filename, mimeType });
-    }
-  }
-
-  const images = payloads
-    .map((item, index) => {
-      const itemMimeType = String(item.mimeType || item.mime_type || mimeType || "image/png");
-      const rawUrl =
-        String(item.image || item.imageUrl || item.image_url || item.outputUrl || item.output_url || item.output_image || "");
-      const resolvedUrl = resolveGeminiImgToImgImageUrl(
-        {
-          outputUrl: rawUrl,
-          mimeType: itemMimeType,
-          filename: typeof item.filename === "string" ? item.filename : undefined,
-        },
-        itemMimeType
-      );
-
-      if (!resolvedUrl) return null;
-
-      return {
-        id: index + 1,
-        filename:
-          typeof item.filename === "string" && item.filename.trim()
-            ? item.filename.trim()
-            : `gemini-img-to-img-${index + 1}.${mimeTypeToExtension(itemMimeType)}`,
-        url: resolvedUrl,
-        input_image: "",
-        style: String(mode),
-      };
-    })
-    .filter(Boolean) as GenerateResponse["images"];
+  const urls = [...(data.image_urls ?? []), ...(data.output_url ? [data.output_url] : [])].filter(Boolean);
+  const images = [...new Set(urls)].map((url, index) => ({
+    id: index + 1,
+    filename: `gemini-img-to-img-${index + 1}.png`,
+    url,
+    input_image: "",
+    style: mode,
+  }));
 
   return {
     status: data.success === false ? "error" : "success",
-    remainingCredits: data.remainingCredits ?? null,
+    remainingCredits: data.remaining_credits ?? null,
     images,
   };
 };
@@ -1444,7 +1230,16 @@ export const generateSeamlessPattern = async (
   }
 };
 
-export const getHistory = async (_style?: string): Promise<unknown[]> => [];
+export const getHistory = async (style?: string): Promise<unknown[]> => {
+  const response = await fetchHistory({
+    source: "all",
+    style: style?.trim() || undefined,
+    limit: 20,
+    offset: 0,
+  });
+
+  return response.data;
+};
 
 export const checkAIHealth = async () => ({
   status: "ok",

@@ -7,11 +7,13 @@ import {
   CloudUpload,
   Download,
   Image as ImageIcon,
+  Maximize2,
   Palette,
   Sparkles,
   Trash2,
   Upload,
   Wand2,
+  X,
 } from "lucide-react";
 
 import { separateColors } from "@/api/colorSeparationApi";
@@ -33,6 +35,9 @@ const ALLOWED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".ti
 const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024;
 const BACKGROUND_WHITE_SWATCHES = ["#FFFFFF", "#F7F3EA", "#F2F2EF", "#FFF8E7"] as const;
 const MAX_DETECTED_IMAGE_COLORS = 8;
+const DEFAULT_EDIT_STRENGTH = 0.7;
+const DEFAULT_REFERENCE_STRENGTH = 0.7;
+const DEFAULT_PROMPT_STRENGTH = 0.7;
 
 const PASTEL_MOOD_PALETTES = [
   {
@@ -463,11 +468,25 @@ const getPresetCategoryTitle = (preset: PresetId) =>
   "";
 
 const getBackendPreset = (preset: PresetId) => {
+  if (preset === "monotone" || preset === "pastel" || preset === "natural" || preset === "natural_white") {
+    return preset;
+  }
+
   if (preset === "dusty" || preset === "dark_dusty") return "dark_dusty";
   if (["fresh", "candy", "ice_cream", "kids"].includes(preset)) return "pastel";
+  if (preset === "mens_casual" || preset === "womens_casual") return "natural";
+  if (
+    preset === "mens_formal" ||
+    preset === "mens_party" ||
+    preset === "mens_ethnic" ||
+    preset === "womens_formal" ||
+    preset === "womens_party"
+  ) {
+    return "dark";
+  }
   if (["home_decor", "home_furnishing", "wallpaper", "earthy"].includes(preset)) return "natural";
   if (preset === "dark" || preset.startsWith("dark_")) return "dark";
-  return preset;
+  return "natural";
 };
 
 const isNaturalBasicPreset = (preset: PresetId) =>
@@ -549,7 +568,7 @@ const rgbToHex = ({ r, g, b }: { r: number; g: number; b: number }) =>
     .join("")
     .toUpperCase()}`;
 
-const mixHexColor = (color: string, target: "#000000" | "#FFFFFF", amount: number) => {
+const mixHexColor = (color: string, target: string, amount: number) => {
   const base = hexToRgb(color);
   const targetRgb = hexToRgb(target);
   if (!base || !targetRgb) return normalizeHexColor(color).slice(0, 7);
@@ -760,17 +779,34 @@ const colorMatchingFaqs = [
   },
 ];
 
+type PastelMoodId = string;
+type DarkMoodId = string;
+type EarthyMoodId = string;
+type PlayfulMoodId = string;
+type InteriorMoodId = string;
+type FashionMoodId = string;
+
 export default function ColorMatchingStudio() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<PresetId>("monotone");
   const [selectedShadeIndex, setSelectedShadeIndex] = useState(0);
   const [openCategory, setOpenCategory] = useState(getPresetCategoryTitle("monotone"));
-  const [selectedPastelMoodId, setSelectedPastelMoodId] = useState(PASTEL_MOOD_PALETTES[0].id);
-  const [selectedDarkMoodId, setSelectedDarkMoodId] = useState(DARK_MOOD_PALETTES[0].id);
-  const [selectedEarthyMoodId, setSelectedEarthyMoodId] = useState(EARTHY_MOOD_PALETTES[0].id);
-  const [selectedPlayfulMoodId, setSelectedPlayfulMoodId] = useState(PLAYFUL_MOOD_PALETTES[0].id);
-  const [selectedInteriorMoodId, setSelectedInteriorMoodId] = useState(INTERIOR_MOOD_PALETTES[0].id);
-  const [selectedFashionMoodId, setSelectedFashionMoodId] = useState(FASHION_MOOD_PALETTES[0].id);
+  const [selectedPastelMoodId, setSelectedPastelMoodId] = useState<PastelMoodId>(
+    PASTEL_MOOD_PALETTES[0].id
+  );
+  const [selectedDarkMoodId, setSelectedDarkMoodId] = useState<DarkMoodId>(DARK_MOOD_PALETTES[0].id);
+  const [selectedEarthyMoodId, setSelectedEarthyMoodId] = useState<EarthyMoodId>(
+    EARTHY_MOOD_PALETTES[0].id
+  );
+  const [selectedPlayfulMoodId, setSelectedPlayfulMoodId] = useState<PlayfulMoodId>(
+    PLAYFUL_MOOD_PALETTES[0].id
+  );
+  const [selectedInteriorMoodId, setSelectedInteriorMoodId] = useState<InteriorMoodId>(
+    INTERIOR_MOOD_PALETTES[0].id
+  );
+  const [selectedFashionMoodId, setSelectedFashionMoodId] = useState<FashionMoodId>(
+    FASHION_MOOD_PALETTES[0].id
+  );
   const [backgroundColor, setBackgroundColor] = useState("#FFFFFF");
   const [backgroundHexInput, setBackgroundHexInput] = useState("#FFFFFF");
   const [detectedImageColors, setDetectedImageColors] = useState<string[]>([]);
@@ -792,6 +828,7 @@ export default function ColorMatchingStudio() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [resultUrls, setResultUrls] = useState<string[]>([]);
   const [selectedResultUrl, setSelectedResultUrl] = useState<string | null>(null);
+  const [fullscreenImageUrl, setFullscreenImageUrl] = useState<string | null>(null);
   const [lastResponse, setLastResponse] = useState<GenerateResponse | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -907,6 +944,19 @@ export default function ColorMatchingStudio() {
   }, [resultUrls, selectedResultUrl]);
 
   useEffect(() => {
+    if (!fullscreenImageUrl) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setFullscreenImageUrl(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [fullscreenImageUrl]);
+
+  useEffect(() => {
     return () => {
       if (previewRef.current) {
         URL.revokeObjectURL(previewRef.current);
@@ -917,6 +967,7 @@ export default function ColorMatchingStudio() {
   const clearResult = () => {
     setResultUrls([]);
     setSelectedResultUrl(null);
+    setFullscreenImageUrl(null);
     setLastResponse(null);
   };
 
@@ -1319,11 +1370,20 @@ export default function ColorMatchingStudio() {
       throw new Error("Please upload a textile image first.");
     }
 
+    const prompt =
+      `Match the source textile to the ${submittedPaletteLabel}. ` +
+      `Use target color ${activePaletteColor} and palette ${submittedPalette.join(", ")}. ` +
+      "Preserve motifs, layout, linework, texture, and print details.";
+
     const form = new FormData();
     form.append("file", selectedFile);
+    form.append("prompt", prompt);
     form.append("color_preset", getBackendPreset(selectedPreset));
     form.append("target_color", activePaletteColor);
     form.append("color_palette", submittedPalette.join(", "));
+    form.append("change_strength", String(DEFAULT_EDIT_STRENGTH));
+    form.append("reference_strength", String(DEFAULT_REFERENCE_STRENGTH));
+    form.append("prompt_strength", String(DEFAULT_PROMPT_STRENGTH));
     form.append("num_images", "1");
     form.append("enhance_prompt", "false");
 
@@ -1450,9 +1510,9 @@ export default function ColorMatchingStudio() {
       form.append("preserve", "textile pattern, motif edges, linework, texture, layout, non-selected colors");
       form.append("target_color", mappings[0].target);
       form.append("color_palette", mappings.map((mapping) => mapping.target).join(", "));
-      form.append("change_strength", "medium");
-      form.append("reference_strength", "medium");
-      form.append("prompt_strength", "medium");
+      form.append("change_strength", String(DEFAULT_EDIT_STRENGTH));
+      form.append("reference_strength", String(DEFAULT_REFERENCE_STRENGTH));
+      form.append("prompt_strength", String(DEFAULT_PROMPT_STRENGTH));
       form.append("num_images", "1");
       form.append("enhance_prompt", "false");
 
@@ -1513,9 +1573,9 @@ export default function ColorMatchingStudio() {
       form.append("target_color", targetHex);
       form.append("replacement", `${sourceHex} to ${targetHex}`);
       form.append("preserve", "all other colors, textile pattern, motif edges, linework, texture, layout");
-      form.append("change_strength", "medium");
-      form.append("reference_strength", "medium");
-      form.append("prompt_strength", "medium");
+      form.append("change_strength", String(DEFAULT_EDIT_STRENGTH));
+      form.append("reference_strength", String(DEFAULT_REFERENCE_STRENGTH));
+      form.append("prompt_strength", String(DEFAULT_PROMPT_STRENGTH));
       form.append("num_images", "1");
       form.append("enhance_prompt", "false");
 
@@ -2250,7 +2310,16 @@ export default function ColorMatchingStudio() {
                   <p className="mt-1 text-sm leading-6 text-[#A1A8B3]">{status}</p>
                 </div>
  
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleGenerate()}
+                    disabled={!selectedFile || isGenerating}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#E11D2E] px-5 text-sm font-semibold text-white transition hover:bg-[#ff3347] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Wand2 className="h-4 w-4" />
+                    {isGenerating ? "Generating" : "Generate"}
+                  </button>
                   <MiniBadge>Preset Mode</MiniBadge>
                   {selectedPresetMeta?.label && <MiniBadge>{selectedPresetMeta.label}</MiniBadge>}
                   {lastResponse?.model && <MiniBadge>{lastResponse.model}</MiniBadge>}
@@ -2321,7 +2390,18 @@ export default function ColorMatchingStudio() {
                   </div>
                   <div className="relative min-h-[360px] bg-black/25 p-4">
                     {selectedResultUrl ? (
-                      <img src={selectedResultUrl} alt="Generated output" className="h-full w-full object-contain" />
+                      <button
+                        type="button"
+                        onClick={() => setFullscreenImageUrl(selectedResultUrl)}
+                        className="group relative flex h-full min-h-[360px] w-full items-center justify-center overflow-hidden rounded-2xl border border-transparent transition hover:border-[#E11D2E]/40"
+                        aria-label="Open generated output fullscreen"
+                      >
+                        <img src={selectedResultUrl} alt="Generated output" className="h-full w-full object-contain" />
+                        <span className="absolute right-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/70 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white opacity-0 transition group-hover:opacity-100">
+                          <Maximize2 className="h-3.5 w-3.5" />
+                          Fullscreen
+                        </span>
+                      </button>
                     ) : (
                       <div className="flex h-full min-h-[360px] items-center justify-center text-center text-sm text-[#6B7280]">
                         <div className="space-y-2">
@@ -2337,37 +2417,49 @@ export default function ColorMatchingStudio() {
               {resultUrls.length > 0 && (
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   {resultUrls.map((url, index) => (
-                    <button
+                    <div
                       key={`${url}-${index}`}
-                      type="button"
-                      onClick={() => setSelectedResultUrl(url)}
                       className={`overflow-hidden rounded-2xl border text-left transition ${
                         selectedResultUrl === url
                           ? "border-[#E11D2E]/50 bg-white/8"
                           : "border-white/10 bg-white/5 hover:border-white/20"
                       }`}
                     >
-                      <img src={url} alt={`Output ${index + 1}`} className="h-36 w-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedResultUrl(url);
+                          setFullscreenImageUrl(url);
+                        }}
+                        className="group relative block w-full overflow-hidden"
+                        aria-label={`Open output variation ${index + 1} fullscreen`}
+                      >
+                        <img src={url} alt={`Output ${index + 1}`} className="h-36 w-full object-cover transition group-hover:scale-[1.02]" />
+                        <span className="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-black/70 text-white opacity-0 transition group-hover:opacity-100">
+                          <Maximize2 className="h-4 w-4" />
+                        </span>
+                      </button>
                       <div className="flex items-center justify-between gap-3 px-3 py-3">
-                        <div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedResultUrl(url)}
+                          className="min-w-0 text-left"
+                        >
                           <p className="text-sm font-semibold text-white">Variation {index + 1}</p>
                           <p className="text-[10px] uppercase tracking-[0.18em] text-[#A1A8B3]">
                             {selectedPresetMeta?.label ?? "Custom"}
                           </p>
-                        </div>
+                        </button>
                         <button
                           type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleDownload(url, `ai-color-matching-${index + 1}.png`);
-                          }}
+                          onClick={() => void handleDownload(url, `ai-color-matching-${index + 1}.png`)}
                           className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#A1A8B3] transition hover:border-[#E11D2E]/40 hover:text-white"
                         >
                           <Download className="h-3.5 w-3.5" />
                           Save
                         </button>
                       </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -2457,6 +2549,72 @@ export default function ColorMatchingStudio() {
           </section>
         </main>
       </div>
+
+      <AnimatePresence>
+        {fullscreenImageUrl && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setFullscreenImageUrl(null)}
+          >
+            <motion.div
+              className="relative flex h-full w-full max-w-7xl flex-col gap-3"
+              initial={{ scale: 0.98, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.98, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">Generated Preview</p>
+                  <p className="mt-1 text-xs text-[#A1A8B3]">{selectedPresetMeta?.label ?? "Custom"} output</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleReuseGeneratedImage(fullscreenImageUrl)}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/10 px-4 text-xs font-semibold text-white transition hover:border-[#E11D2E]/40 hover:bg-white/15"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Use as Input
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void handleDownload(
+                        fullscreenImageUrl,
+                        `ai-color-matching-${selectedPresetMeta?.id || "output"}.png`
+                      )
+                    }
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[#E11D2E]/30 bg-[#E11D2E]/15 px-4 text-xs font-semibold text-white transition hover:bg-[#E11D2E]/25"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFullscreenImageUrl(null)}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white transition hover:border-[#E11D2E]/40 hover:bg-white/15"
+                    aria-label="Close fullscreen preview"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-hidden rounded-2xl border border-white/10 bg-[#0E1012]">
+                <img
+                  src={fullscreenImageUrl}
+                  alt="Generated output fullscreen"
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Promotional Info / Description Sections */}
       <div className="mt-16 space-y-20 border-t border-[#2B3138]/40 pt-16 pb-8 max-w-7xl mx-auto w-full px-6">

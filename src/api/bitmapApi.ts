@@ -1,3 +1,5 @@
+import axios from "axios";
+
 import { getToken } from "@/api/apiClient";
 
 type BitmapParamValue = string | number | boolean | null | undefined;
@@ -9,6 +11,8 @@ export type BitmapUploadResponse = {
   path: string;
   sizeBytes: number;
   bitmapId: number | null;
+  remainingCredits?: number | null;
+  creditsRequired?: number | null;
 };
 
 export type BitmapAnalysisResponse = {
@@ -22,32 +26,44 @@ export type BitmapAnalysisResponse = {
     colorSaturationScore: number | null;
     [key: string]: unknown;
   };
+  remainingCredits?: number | null;
+  creditsRequired?: number | null;
+};
+
+export type BitmapBinaryResponse = {
+  blob: Blob;
+  remainingCredits: number | null;
+  creditsRequired: number | null;
+};
+
+export type BitmapGeminiImageToImageResponse = {
+  success: boolean;
+  message?: string;
+  output_url?: string;
+  image_urls?: string[];
+  remaining_credits?: number;
+  credits_required?: number;
+  final_prompt?: string;
+  prompt_enhanced?: boolean;
+  fallback_used?: boolean;
 };
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
-const resolveBitmapBaseUrl = () => {
-  const envBase = trimTrailingSlash(import.meta.env.VITE_BITMAP_SERVICE_URL || "");
-  if (envBase) {
-    return envBase;
-  }
+const SUBSCRIPTION_BASE_URL = trimTrailingSlash(
+  import.meta.env.VITE_SUBSCRIPTION_SERVICE_URL || "http://localhost:8094"
+);
 
-  if (import.meta.env.DEV) {
-    return "/api/bitmap";
-  }
+const BITMAP_API = `${SUBSCRIPTION_BASE_URL}/api/bitmap`;
 
-  return "https://ruchitadesigncompany.in/api/bitmap";
-};
+const bitmapClient = axios.create({
+  baseURL: BITMAP_API,
+});
 
-const BITMAP_BASE_URL = resolveBitmapBaseUrl();
-
-const buildBitmapUrl = (path: string) => {
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
-  return `${BITMAP_BASE_URL}${cleanPath}`;
-};
+const getAccessToken = (token?: string) => token || getToken() || localStorage.getItem("token") || "";
 
 const getAuthHeaders = (token?: string) => {
-  const accessToken = token || getToken();
+  const accessToken = getAccessToken(token);
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 };
 
@@ -62,11 +78,50 @@ const toFormBody = (params: BitmapParamMap) => {
   return formBody;
 };
 
-const createBitmapError = async (response: Response) => {
-  const rawBody = await response.text().catch(() => "");
-  let payload: unknown = null;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
-  if (rawBody) {
+const toNullableString = (value: unknown) => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+};
+
+const toBoolean = (value: unknown) =>
+  value === true || value === "true" || value === 1 || value === "1" || value === "yes";
+
+const parseHeaderNumber = (value: unknown) => {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
+  if (typeof raw !== "string") return null;
+  const parsed = Number(raw.trim());
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const parseResponseCredits = (headers: unknown) => {
+  const record = isRecord(headers) ? headers : {};
+  return {
+    remainingCredits: parseHeaderNumber(record["x-remaining-credits"]),
+    creditsRequired: parseHeaderNumber(record["x-credits-required"]),
+  };
+};
+
+const resolveServiceImageUrl = (url?: string | null) => {
+  if (!url) return "";
+  if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
+  const normalized = url.startsWith("/") ? url : `/${url}`;
+  return `${SUBSCRIPTION_BASE_URL}${normalized}`;
+};
+
+const createBitmapError = async (error: unknown) => {
+  if (!axios.isAxiosError(error)) {
+    return new Error(error instanceof Error ? error.message : "Something went wrong");
+  }
+
+  const rawBody = error.response?.data;
+  let payload: unknown = rawBody;
+
+  if (typeof rawBody === "string") {
     try {
       payload = JSON.parse(rawBody);
     } catch {
@@ -74,51 +129,18 @@ const createBitmapError = async (response: Response) => {
     }
   }
 
-  const record = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : null;
-  const bodyText =
-    typeof payload === "string"
-      ? payload
-      : typeof rawBody === "string" && rawBody.trim()
-        ? rawBody.trim()
-        : "";
-  const message =
-    (record && typeof record.message === "string" && record.message) ||
-    (record && typeof record.detail === "string" && record.detail) ||
-    (record && typeof record.error === "string" && record.error) ||
-    bodyText ||
-    `Bitmap request failed (${response.status})`;
+  const detail =
+    (isRecord(payload) && typeof payload.detail === "string" && payload.detail) ||
+    (isRecord(payload) && typeof payload.message === "string" && payload.message) ||
+    (isRecord(payload) && typeof payload.error === "string" && payload.error) ||
+    (typeof payload === "string" ? payload : "") ||
+    `Bitmap request failed (${error.response?.status || error.message || "unknown"})`;
 
-  const error = new Error(message);
-  (error as Error & { status?: number }).status = response.status;
-  return error;
-};
-
-const fetchBitmap = async (path: string, init: RequestInit) => {
-  const attempt = async (candidatePath: string) => fetch(buildBitmapUrl(candidatePath), init);
-  const firstResponse = await attempt(path);
-
-  if (firstResponse.ok) {
-    return firstResponse;
-  }
-
-  const shouldRetryWithTrailingSlash =
-    firstResponse.status === 404 || firstResponse.status === 405;
-  const alternatePath = path.endsWith("/") ? path.replace(/\/+$/, "") : `${path}/`;
-
-  if (shouldRetryWithTrailingSlash && alternatePath !== path) {
-    const secondResponse = await attempt(alternatePath);
-    if (secondResponse.ok) {
-      return secondResponse;
-    }
-    throw await createBitmapError(secondResponse);
-  }
-
-  throw await createBitmapError(firstResponse);
+  return new Error(detail);
 };
 
 const normalizeUploadResponse = (payload: unknown): BitmapUploadResponse => {
-  const record = (payload && typeof payload === "object" ? payload : {}) as Record<string, unknown>;
-
+  const record = isRecord(payload) ? payload : {};
   return {
     message: typeof record.message === "string" ? record.message : "Upload successful",
     filename: typeof record.filename === "string" ? record.filename : "",
@@ -135,14 +157,24 @@ const normalizeUploadResponse = (payload: unknown): BitmapUploadResponse => {
         : typeof record.bitmap_id === "number"
           ? record.bitmap_id
           : null,
+    remainingCredits:
+      typeof record.remainingCredits === "number"
+        ? record.remainingCredits
+        : typeof record.remaining_credits === "number"
+          ? record.remaining_credits
+          : null,
+    creditsRequired:
+      typeof record.creditsRequired === "number"
+        ? record.creditsRequired
+        : typeof record.credits_required === "number"
+          ? record.credits_required
+          : null,
   };
 };
 
 const normalizeAnalysisResponse = (payload: unknown): BitmapAnalysisResponse => {
-  const record = (payload && typeof payload === "object" ? payload : {}) as Record<string, unknown>;
-  const analysisRecord = (record.analysis && typeof record.analysis === "object"
-    ? record.analysis
-    : {}) as Record<string, unknown>;
+  const record = isRecord(payload) ? payload : {};
+  const analysisRecord = (isRecord(record.analysis) ? record.analysis : {}) as Record<string, unknown>;
 
   return {
     status: typeof record.status === "string" ? record.status : "success",
@@ -179,86 +211,158 @@ const normalizeAnalysisResponse = (payload: unknown): BitmapAnalysisResponse => 
             ? analysisRecord.color_saturation_score
             : null,
     },
+    remainingCredits:
+      typeof record.remainingCredits === "number"
+        ? record.remainingCredits
+        : typeof record.remaining_credits === "number"
+          ? record.remaining_credits
+          : null,
+    creditsRequired:
+      typeof record.creditsRequired === "number"
+        ? record.creditsRequired
+        : typeof record.credits_required === "number"
+          ? record.credits_required
+          : null,
+  };
+};
+
+const normalizeGeminiResponse = (payload: unknown): BitmapGeminiImageToImageResponse => {
+  const record = isRecord(payload) ? payload : {};
+  const imageUrls = Array.isArray(record.image_urls)
+    ? record.image_urls
+        .map((item) => (typeof item === "string" ? resolveServiceImageUrl(item) : ""))
+        .filter(Boolean)
+    : [];
+
+  const outputUrl = typeof record.output_url === "string" ? resolveServiceImageUrl(record.output_url) : "";
+
+  return {
+    success:
+      typeof record.success === "boolean"
+        ? record.success
+        : toBoolean(record.success),
+    message: typeof record.message === "string" ? record.message : undefined,
+    output_url: outputUrl || undefined,
+    image_urls: imageUrls.length > 0 ? imageUrls : undefined,
+    remaining_credits:
+      typeof record.remaining_credits === "number"
+        ? record.remaining_credits
+        : typeof record.remainingCredits === "number"
+          ? record.remainingCredits
+          : undefined,
+    credits_required:
+      typeof record.credits_required === "number"
+        ? record.credits_required
+        : typeof record.creditsRequired === "number"
+          ? record.creditsRequired
+          : undefined,
+    final_prompt: toNullableString(record.final_prompt) || undefined,
+    prompt_enhanced: typeof record.prompt_enhanced === "boolean" ? record.prompt_enhanced : toBoolean(record.prompt_enhanced),
+    fallback_used: typeof record.fallback_used === "boolean" ? record.fallback_used : toBoolean(record.fallback_used),
   };
 };
 
 const postForm = async (path: string, params: BitmapParamMap, token?: string) => {
-  const response = await fetchBitmap(path, {
-    method: "POST",
+  return bitmapClient.post(path, toFormBody(params), {
     headers: {
       ...getAuthHeaders(token),
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: toFormBody(params),
+  });
+};
+
+const postBinary = async (path: string, params: BitmapParamMap, token?: string): Promise<BitmapBinaryResponse> => {
+  const response = await bitmapClient.post(path, toFormBody(params), {
+    headers: {
+      ...getAuthHeaders(token),
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    responseType: "blob",
   });
 
-  return response;
+  const credits = parseResponseCredits(response.headers);
+  return {
+    blob: response.data,
+    remainingCredits: credits.remainingCredits,
+    creditsRequired: credits.creditsRequired,
+  };
+};
+
+const postMultipart = async (path: string, formData: FormData, token?: string) => {
+  return bitmapClient.post(path, formData, {
+    headers: {
+      ...getAuthHeaders(token),
+    },
+  });
+};
+
+export const getBitmapErrorMessage = (err: unknown) => {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data;
+    if (isRecord(data)) {
+      return (
+        (typeof data.message === "string" && data.message) ||
+        (typeof data.detail === "string" && data.detail) ||
+        "Something went wrong"
+      );
+    }
+  }
+
+  if (err instanceof Error && err.message.trim()) {
+    return err.message.trim();
+  }
+
+  return "Something went wrong";
 };
 
 export const bitmapApi = {
   async health(token?: string) {
-    const response = await fetchBitmap("/health", {
-      method: "GET",
-      headers: {
-        ...getAuthHeaders(token),
-      },
+    const response = await bitmapClient.get("/health", {
+      headers: getAuthHeaders(token),
     });
 
-    return response.ok;
+    return response.status >= 200 && response.status < 300;
   },
 
   async upload(file: File, token?: string) {
-    const response = await fetchBitmap("/upload", {
-      method: "POST",
-      headers: {
-        ...getAuthHeaders(token),
-      },
-      body: (() => {
-        const formData = new FormData();
-        formData.append("file", file);
-        return formData;
-      })(),
-    });
+    const formData = new FormData();
+    formData.append("file", file);
 
-    if (!response.ok) {
-      throw await createBitmapError(response);
-    }
-
-    return normalizeUploadResponse(await response.json());
+    const response = await postMultipart("/upload", formData, token);
+    return normalizeUploadResponse(response.data);
   },
 
   async analyze(filename: string, token?: string) {
     const response = await postForm("/analyze", { filename }, token);
-    return normalizeAnalysisResponse(await response.json());
+    return normalizeAnalysisResponse(response.data);
   },
 
   async previewHalftone(params: BitmapParamMap, token?: string) {
-    const response = await postForm("/preview/halftone", params, token);
-    return response.blob();
+    return postBinary("/preview/halftone", params, token);
   },
 
   async previewDither(params: BitmapParamMap, token?: string) {
-    const response = await postForm("/preview/dither", params, token);
-    return response.blob();
+    return postBinary("/preview/dither", params, token);
   },
 
   async previewSeparationProof(params: BitmapParamMap, token?: string) {
-    const response = await postForm("/preview/separation-proof", params, token);
-    return response.blob();
+    return postBinary("/preview/separation-proof", params, token);
   },
 
   async exportSeparationZip(params: BitmapParamMap, token?: string) {
-    const response = await postForm("/export/separation-zip", params, token);
-    return response.blob();
+    return postBinary("/export/separation-zip", params, token);
   },
 
   async exportPsd(params: BitmapParamMap, token?: string) {
-    const response = await postForm("/export/psd", params, token);
-    return response.blob();
+    return postBinary("/export/psd", params, token);
   },
 
   async exportCmyk(params: BitmapParamMap, token?: string) {
-    const response = await postForm("/export/cmyk", params, token);
-    return response.blob();
+    return postBinary("/export/cmyk", params, token);
+  },
+
+  async geminiImageToImage(formData: FormData, token?: string) {
+    const response = await postMultipart("/gemini-image/image-to-image", formData, token);
+    return normalizeGeminiResponse(response.data);
   },
 };

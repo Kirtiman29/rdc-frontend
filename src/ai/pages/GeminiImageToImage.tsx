@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Link, useLocation } from "react-router-dom";
+import AiCreditCost from "@/ai/components/AiCreditCost";
 import {
   GEMINI_IMAGE_TO_IMAGE_ASPECT_RATIOS,
   generateGeminiImgToImg,
@@ -68,6 +69,13 @@ const aspectRatioLabels: Record<GeminiImageToImageAspectRatio, string> = {
   "16:9": "16:9",
   "21:9": "21:9",
 };
+
+const ALLOWED_GEMINI_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+];
+const ALLOWED_GEMINI_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
 
 const editModeOptions: Array<{
   value: GeminiImageToImageMode;
@@ -163,6 +171,14 @@ export default function GeminiImageToImage() {
     }
   };
 
+  const isAllowedUpload = (incoming: File) => {
+    const normalizedName = incoming.name.toLowerCase();
+    return (
+      ALLOWED_GEMINI_IMAGE_TYPES.includes(incoming.type) ||
+      ALLOWED_GEMINI_IMAGE_EXTENSIONS.some((extension) => normalizedName.endsWith(extension))
+    );
+  };
+
   const changeNumImages = (delta: number) => {
     setNumImages((current) => Math.max(1, Math.min(4, current + delta)));
   };
@@ -210,6 +226,9 @@ export default function GeminiImageToImage() {
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[#A1A8B3]">
               {pageIntro}
             </p>
+            <div className="mt-3">
+              <AiCreditCost credits={8} label="Deduction" />
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -253,6 +272,11 @@ export default function GeminiImageToImage() {
                   setIsDragOver(false);
                   const incoming = e.dataTransfer.files?.[0];
                   if (incoming) {
+                    if (!isAllowedUpload(incoming)) {
+                      setStatus("Please upload a PNG, JPG, JPEG, or WEBP image.");
+                      return;
+                    }
+
                     setFile(incoming);
                     setGeneratedImages([]);
                     setStatus("Reference image loaded.");
@@ -298,10 +322,16 @@ export default function GeminiImageToImage() {
                 <input
                   type="file"
                   className="absolute inset-0 z-20 h-full w-full cursor-pointer opacity-0"
-                  accept="image/*"
+                  accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
                   onChange={(e) => {
                     const incoming = e.target.files?.[0];
                     if (incoming) {
+                      if (!isAllowedUpload(incoming)) {
+                        setStatus("Please upload a PNG, JPG, JPEG, or WEBP image.");
+                        e.target.value = "";
+                        return;
+                      }
+
                       setFile(incoming);
                       setGeneratedImages([]);
                       setStatus("Reference image loaded.");

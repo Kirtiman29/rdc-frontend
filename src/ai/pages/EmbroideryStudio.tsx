@@ -525,11 +525,17 @@ const formatValue = (value: string) =>
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
+const getEmbroideryServiceBase = () =>
+  trimTrailingSlash(
+    import.meta.env.VITE_EMBROIDERY_SERVICE_URL ||
+      import.meta.env.VITE_AI_SERVICE_URL ||
+      import.meta.env.VITE_API_BASE_URL ||
+      "http://192.168.0.154:8000"
+  );
+
 const resolveEmbroideryApiUrl = () => {
-  const envBase = trimTrailingSlash(import.meta.env.VITE_EMBROIDERY_SERVICE_URL || "");
-  if (envBase) return `${envBase}/api/embroidery-preview`;
-  if (import.meta.env.DEV) return "/api/embroidery-preview";
-  return "https://ruchitadesigncompany.in/api/embroidery-preview";
+  const envBase = getEmbroideryServiceBase();
+  return `${envBase}/api/embroidery-preview`;
 };
 
 const getResponseImageUrl = (imageUrl: string) => {
@@ -537,8 +543,7 @@ const getResponseImageUrl = (imageUrl: string) => {
     return imageUrl;
   }
 
-  const envBase = trimTrailingSlash(import.meta.env.VITE_EMBROIDERY_SERVICE_URL || "");
-  const origin = envBase || (import.meta.env.DEV ? "" : "https://ruchitadesigncompany.in");
+  const origin = getEmbroideryServiceBase();
   return `${origin}${imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`}`;
 };
 
