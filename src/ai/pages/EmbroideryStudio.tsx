@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState, type CSSProperties } from "react";
+import { getToken } from "@/api/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
@@ -15,6 +16,9 @@ import {
 import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
 import flamingoShowcase from "@/assets/flamingo-showcase.png";
 import colorfulCharacterShowcase from "@/assets/colorful-character-showcase.png";
+import AiCreditCost from "@/ai/components/AiCreditCost";
+
+const EMBROIDERY_PREVIEW_CREDIT_COST = 10;
 
 type TabId = "cultural" | "technique" | "stitches" | "specialty";
 type SelectionCategory = "cultural" | "technique" | "stitch" | "specialty";
@@ -533,8 +537,14 @@ const getEmbroideryServiceBase = () =>
       "http://192.168.0.154:8000"
   );
 
+const getSubscriptionServiceBase = () =>
+  trimTrailingSlash(
+    import.meta.env.VITE_SUBSCRIPTION_SERVICE_URL ||
+      "http://localhost:8094"
+  );
+
 const resolveEmbroideryApiUrl = () => {
-  const envBase = getEmbroideryServiceBase();
+  const envBase = getSubscriptionServiceBase();
   return `${envBase}/api/embroidery-preview`;
 };
 
@@ -814,10 +824,26 @@ export default function EmbroideryStudio() {
       formData.append("thickness", thickness);
       if (customPrompt.trim()) formData.append("custom_prompt", customPrompt.trim());
 
+      const token = getToken() || localStorage.getItem("token") || "";
       const response = await fetch(resolveEmbroideryApiUrl(), {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
+
+      const remainingCreditsHeader = response.headers.get("x-remaining-credits");
+      if (remainingCreditsHeader) {
+        const remaining = parseInt(remainingCreditsHeader, 10);
+        if (!isNaN(remaining)) {
+          window.dispatchEvent(
+            new CustomEvent("ai-credits-updated", {
+              detail: remaining,
+            })
+          );
+        }
+      }
 
       const payload = await response.json().catch(() => null);
       if (!response.ok) {
@@ -866,6 +892,9 @@ export default function EmbroideryStudio() {
             <div>
               <h1 className="text-xl font-bold tracking-normal text-white">Embroidery AI Studio</h1>
               <p className="text-sm text-[#A1A8B3]">Transform artwork into global embroidery mockups.</p>
+              <div className="mt-3">
+                <AiCreditCost credits={EMBROIDERY_PREVIEW_CREDIT_COST} label="Embroidery Preview" />
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2 rounded-full border border-[#2B3138] bg-[#1C2025] px-3 py-2 text-xs font-semibold text-[#A1A8B3]">

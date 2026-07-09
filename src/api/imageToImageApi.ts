@@ -47,7 +47,12 @@ export function normalizeBackendImageUrl(url?: string) {
   try {
     const parsed = new URL(url);
 
-    if (parsed.hostname === "192.168.0.155" || parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+    if (
+      (parsed.hostname === "192.168.0.154" && parsed.port === "8002") ||
+      parsed.hostname === "192.168.0.155" ||
+      parsed.hostname === "localhost" ||
+      parsed.hostname === "127.0.0.1"
+    ) {
       return `${API_BASE_URL}${parsed.pathname}${parsed.search}${parsed.hash}`;
     }
   } catch {
@@ -58,28 +63,8 @@ export function normalizeBackendImageUrl(url?: string) {
 }
 
 export async function generateImage(form: FormData): Promise<GenerateResponse> {
-  if (!INTERNAL_KEY) {
-    throw new Error(
-      "VITE_GEMINI_IMAGE_TO_IMAGE_INTERNAL_KEY or VITE_INTERNAL_KEY is required for Gemini image-to-image requests."
-    );
-  }
-
-  const response = await fetch(`${API_BASE_URL}/gemini-image/image-to-image`, {
-    method: "POST",
-    headers: {
-      "X-Internal-Key": INTERNAL_KEY,
-    },
-    body: form,
-  });
-
-  const raw = await response.text();
-  const data = parseJson(raw);
-
-  if (!response.ok) {
-    throw new Error(extractErrorMessage(data, response.status));
-  }
-
-  return (typeof data === "object" && data ? data : {}) as GenerateResponse;
+  const data = await generateGeminiImageToImage(form);
+  return data as unknown as GenerateResponse;
 }
 
 export type GeminiImageToImageServiceResponse = {
@@ -115,6 +100,13 @@ export async function generateGeminiImageToImage(
     );
 
     const data = (response.data ?? { success: false }) as GeminiImageToImageServiceResponse;
+    if (typeof data.remaining_credits === "number") {
+      window.dispatchEvent(
+        new CustomEvent("ai-credits-updated", {
+          detail: data.remaining_credits,
+        })
+      );
+    }
     return {
       ...data,
       output_url: resolveSubscriptionImageUrl(data.output_url),

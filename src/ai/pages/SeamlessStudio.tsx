@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { getToken } from "@/api/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
@@ -17,6 +18,9 @@ import {
 import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
 import flamingoShowcase from "@/assets/flamingo-showcase.png";
 import colorfulCharacterShowcase from "@/assets/colorful-character-showcase.png";
+import AiCreditCost from "@/ai/components/AiCreditCost";
+
+const SEAMLESS_PATTERN_CREDIT_COST = 7;
 
 type Mode = "auto" | "manual";
 
@@ -61,13 +65,17 @@ const resolveSeamlessBaseUrl = () => {
   if (envBase) return envBase;
   if (import.meta.env.DEV) {
     const host = window.location.hostname || "127.0.0.1";
-    return `http://${host}:8022`;
+    return `http://${host}:8002`;
   }
   return "https://ruchitadesigncompany.in";
 };
 
+const resolveSubscriptionBaseUrl = () => {
+  return trimTrailingSlash(import.meta.env.VITE_SUBSCRIPTION_SERVICE_URL || "http://localhost:8094");
+};
+
 const buildSeamlessUrl = (path: string) => {
-  const base = resolveSeamlessBaseUrl();
+  const base = resolveSubscriptionBaseUrl();
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 };
 
@@ -292,10 +300,26 @@ export default function SeamlessStudio() {
         formData.append("vertical_band", String(verticalBand));
       }
 
+      const token = getToken() || localStorage.getItem("token") || "";
       const response = await fetch(buildSeamlessUrl(endpoint), {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
+
+      const remainingCreditsHeader = response.headers.get("x-remaining-credits");
+      if (remainingCreditsHeader) {
+        const remaining = parseInt(remainingCreditsHeader, 10);
+        if (!isNaN(remaining)) {
+          window.dispatchEvent(
+            new CustomEvent("ai-credits-updated", {
+              detail: remaining,
+            })
+          );
+        }
+      }
 
       const payload = (await response.json().catch(() => null)) as SeamlessResponse | null;
       const hasTile = Boolean(payload?.tile_url);
@@ -366,6 +390,9 @@ export default function SeamlessStudio() {
               <div>
                 <h1 className="text-xl font-bold tracking-normal text-white">Seamless Pattern Studio</h1>
                 <p className="text-sm text-[#A1A8B3]">Generate repeat-ready textile tiles from uploaded artwork.</p>
+                <div className="mt-3">
+                  <AiCreditCost credits={SEAMLESS_PATTERN_CREDIT_COST} label="Pattern Generation" />
+                </div>
               </div>
             </div>
           </div>

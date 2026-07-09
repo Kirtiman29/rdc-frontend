@@ -11,6 +11,11 @@ const ADMIN_SERVICE_URL = (
   "http://localhost:8080"
 ).replace(/\/+$/, "");
 
+const GEMINI_IMAGE_OUTPUT_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  "http://192.168.0.154:8000"
+).replace(/\/+$/, "");
+
 const AI_SERVICE_URL = (import.meta.env.VITE_AI_SERVICE_URL || "").replace(/\/+$/, "");
 
 const ASSET_SERVICE_URL = (
@@ -678,6 +683,30 @@ export const normalizeAiOutputUrl = (url?: string | null) => {
   return normalizeAiOutputUrlFromBase(ADMIN_SERVICE_URL, url);
 };
 
+export const normalizeGeminiImageOutputUrl = (url?: string | null) => {
+  if (!url) return "";
+  if (/^(data:|blob:)/i.test(url)) return url;
+
+  try {
+    const parsedUrl = new URL(url, "http://placeholder.local");
+
+    if (parsedUrl.hostname === "192.168.0.154" && parsedUrl.port === "8002") {
+      return joinUrl(
+        GEMINI_IMAGE_OUTPUT_BASE_URL,
+        `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`
+      );
+    }
+
+    if (/^https?:\/\//i.test(url)) {
+      return url;
+    }
+  } catch {
+    // Fall back to the base URL join below.
+  }
+
+  return joinUrl(GEMINI_IMAGE_OUTPUT_BASE_URL, url);
+};
+
 export const getAIImageUrl = (url: string) => normalizeAiOutputUrl(url);
 
 const assertAllowedAspectRatio = <TAspectRatio extends string>(
@@ -1034,7 +1063,9 @@ export const generateGeminiImgToImg = async ({
       // Ignore refresh failures; the generation already succeeded.
     }
   }
-  const urls = [...(data.image_urls ?? []), ...(data.output_url ? [data.output_url] : [])].filter(Boolean);
+  const urls = [...(data.image_urls ?? []), ...(data.output_url ? [data.output_url] : [])]
+    .map((url) => normalizeGeminiImageOutputUrl(url))
+    .filter(Boolean);
   const images = [...new Set(urls)].map((url, index) => ({
     id: index + 1,
     filename: `gemini-img-to-img-${index + 1}.png`,

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { extractGeneratedImageUrls, type AiToolResponse } from "./aiApi";
+import {
+  extractGeneratedImageUrls,
+  normalizeGeminiImageOutputUrl,
+  type AiToolResponse,
+} from "./aiApi";
 
 describe("extractGeneratedImageUrls", () => {
   it("prefers outputData.generated_images over the single preview outputUrl", () => {
@@ -88,5 +92,15 @@ describe("extractGeneratedImageUrls", () => {
       "http://192.168.0.154:8000/generated/image_1.png",
       "http://192.168.0.154:8000/generated/image_2.png",
     ]);
+  });
+
+  it("rewrites Gemini img-img output URLs from the legacy 8002 host to 8000", () => {
+    expect(
+      normalizeGeminiImageOutputUrl(
+        "http://192.168.0.154:8002/gemini-generated/gemini_i2i_60fbd0210c754e2c9be3eb29d6c0966a.png"
+      )
+    ).toBe(
+      "http://192.168.0.154:8000/gemini-generated/gemini_i2i_60fbd0210c754e2c9be3eb29d6c0966a.png"
+    );
   });
 });

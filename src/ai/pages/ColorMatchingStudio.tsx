@@ -23,6 +23,11 @@ import { PRESET_CATEGORIES, type GenerateResponse, type PresetId } from "@/types
 import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
 import flamingoShowcase from "@/assets/flamingo-showcase.png";
 import colorfulCharacterShowcase from "@/assets/colorful-character-showcase.png";
+import AiCreditCost from "@/ai/components/AiCreditCost";
+
+const PRESET_MATCHING_CREDIT_COST = 5;
+const BACKGROUND_RECOLOR_CREDIT_COST = 10;
+const PRECISE_COLOR_CHANGE_CREDIT_COST = 15;
 
 const ALLOWED_IMAGE_TYPES = [
   "image/png",
@@ -728,15 +733,20 @@ const getFriendlyError = (error: unknown) => {
 function SectionCard({
   title,
   description,
+  trailing,
   children,
 }: {
   title: string;
   description?: string;
+  trailing?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <section className="rounded-[28px] border border-white/10 bg-white/[0.03] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.15)] backdrop-blur-xl md:p-5">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#E11D2E]">{title}</p>
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#E11D2E]">{title}</p>
+        {trailing && <div className="shrink-0">{trailing}</div>}
+      </div>
       {description && <p className="mt-2 text-sm leading-6 text-[#A1A8B3]">{description}</p>}
       <div className="mt-4">{children}</div>
     </section>
@@ -1650,6 +1660,11 @@ export default function ColorMatchingStudio() {
               <p className="mt-3 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-[#A1A8B3]">
                 Preserve motifs, print details, linework, texture, and layout while changing colorways.
               </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <AiCreditCost credits={PRESET_MATCHING_CREDIT_COST} label="Preset Matching" />
+                <AiCreditCost credits={BACKGROUND_RECOLOR_CREDIT_COST} label="Background Recolor" />
+                <AiCreditCost credits={PRECISE_COLOR_CHANGE_CREDIT_COST} label="Precise Color Change" />
+              </div>
             </div>
           </div>
 
@@ -1759,6 +1774,9 @@ export default function ColorMatchingStudio() {
             <SectionCard
               title="02 - Detected Colors"
               description="Detected image colors appear here after upload. Edit targets and change one color or all edited mappings."
+              trailing={
+                <AiCreditCost credits={PRECISE_COLOR_CHANGE_CREDIT_COST} label="Precise Color Change" />
+              }
             >
               <div className="overflow-hidden rounded-[24px] border border-white/10 bg-[#111315]/40">
                 <button
@@ -1896,6 +1914,7 @@ export default function ColorMatchingStudio() {
             <SectionCard
               title="03 - Quick Presets"
               description="Select a preset and tweak individual swatches if needed."
+              trailing={<AiCreditCost credits={PRESET_MATCHING_CREDIT_COST} label="Preset Matching" />}
             >
               <div className="space-y-3">
                 {PRESET_CATEGORIES.map((category) => {
@@ -2474,6 +2493,7 @@ export default function ColorMatchingStudio() {
             <SectionCard
               title="04 - Background"
               description="Only background color changes. Motifs, print details, foreground colors, and linework stay preserved."
+              trailing={<AiCreditCost credits={BACKGROUND_RECOLOR_CREDIT_COST} label="Background Recolor" />}
             >
               <div className="rounded-[24px] border border-white/10 bg-[#111315]/40 p-4">
                 <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-3">
