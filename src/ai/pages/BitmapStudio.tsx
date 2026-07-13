@@ -532,7 +532,7 @@ export default function BitmapStudio() {
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <p className="inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-medium text-[#A1A8B3]">
-                  Subscription access only. No AI credits or design quota are consumed.
+                  Subscription access only. Bitmap processing consumes AI credits after successful output.
                 </p>
                 <AiCreditCost credits={10} label="Deduction" />
               </div>

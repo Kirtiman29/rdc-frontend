@@ -142,7 +142,7 @@ const rewriteLegacyAiHost = (url: string) => {
 
 const shouldUseAiServiceForOutput = (url: string) =>
   Boolean(AI_SERVICE_URL) &&
-  /^(?:patterns|output|files(?:\/|$)|static(?:\/|$)|storage(?:\/|$)|mixed-images(?:\/|$))/i.test(
+  /^(?:patterns|output|files(?:\/|$)|static(?:\/|$)|storage(?:\/|$)|mixed-images(?:\/|$)|gemini-generated(?:\/|$)|embroidery(?:\/|$)|random-placement-files(?:\/|$))/i.test(
     getUrlPath(url).replace(/^\/+/, "")
   );
 

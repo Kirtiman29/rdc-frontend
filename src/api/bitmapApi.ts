@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { getToken } from "@/api/apiClient";
+import { AI_CREDITS_UPDATED_EVENT } from "@/api/aiApi";
 
 type BitmapParamValue = string | number | boolean | null | undefined;
 type BitmapParamMap = Record<string, BitmapParamValue>;
@@ -104,6 +105,16 @@ const parseResponseCredits = (headers: unknown) => {
     remainingCredits: parseHeaderNumber(record["x-remaining-credits"]),
     creditsRequired: parseHeaderNumber(record["x-credits-required"]),
   };
+};
+
+const dispatchCreditsUpdated = (remainingCredits?: number | null) => {
+  if (typeof window === "undefined" || typeof remainingCredits !== "number") return;
+
+  window.dispatchEvent(
+    new CustomEvent<number>(AI_CREDITS_UPDATED_EVENT, {
+      detail: remainingCredits,
+    })
+  );
 };
 
 const resolveServiceImageUrl = (url?: string | null) => {
@@ -281,6 +292,8 @@ const postBinary = async (path: string, params: BitmapParamMap, token?: string):
   });
 
   const credits = parseResponseCredits(response.headers);
+  dispatchCreditsUpdated(credits.remainingCredits);
+
   return {
     blob: response.data,
     remainingCredits: credits.remainingCredits,
