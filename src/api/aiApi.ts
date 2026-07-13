@@ -557,6 +557,12 @@ export interface AiToolResponse<TData = unknown> {
   outputUrl: string | null;
   outputData: TData | null;
   remainingCredits: number | null;
+  jobId?: number | string | null;
+  status?: string | null;
+  workerType?: string | null;
+  outputKey?: string | null;
+  errorMessage?: string | null;
+  queued?: boolean | null;
 }
 
 export interface GenerateResponse {

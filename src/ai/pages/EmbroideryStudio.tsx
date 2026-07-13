@@ -833,19 +833,30 @@ export default function EmbroideryStudio() {
         body: formData,
       });
 
-      const remainingCreditsHeader = response.headers.get("x-remaining-credits");
-      if (remainingCreditsHeader) {
-        const remaining = parseInt(remainingCreditsHeader, 10);
-        if (!isNaN(remaining)) {
+      const dispatchCreditsUpdate = (remainingCredits: unknown) => {
+        const remaining =
+          typeof remainingCredits === "number"
+            ? remainingCredits
+            : typeof remainingCredits === "string"
+              ? parseInt(remainingCredits, 10)
+              : NaN;
+
+        if (!Number.isNaN(remaining)) {
           window.dispatchEvent(
             new CustomEvent("ai-credits-updated", {
               detail: remaining,
             })
           );
         }
+      };
+
+      const remainingCreditsHeader = response.headers.get("x-remaining-credits");
+      if (remainingCreditsHeader) {
+        dispatchCreditsUpdate(remainingCreditsHeader);
       }
 
       const payload = await response.json().catch(() => null);
+      dispatchCreditsUpdate(payload?.remaining_credits ?? payload?.remainingCredits);
       if (!response.ok) {
         throw new Error(payload?.detail || payload?.message || `Embroidery preview failed (${response.status})`);
       }
@@ -873,12 +884,34 @@ export default function EmbroideryStudio() {
 
   const downloadResult = () => {
     if (!resultUrl) return;
-    const link = document.createElement("a");
-    link.href = resultUrl;
-    link.download = `${selectedCultural}_embroidery_preview.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    void (async () => {
+      const filename = `${selectedCultural}_embroidery_preview.png`;
+
+      try {
+        const response = await fetch(resultUrl);
+        if (!response.ok) {
+          throw new Error(`Download failed (${response.status})`);
+        }
+
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      } catch {
+        const link = document.createElement("a");
+        link.href = resultUrl;
+        link.download = filename;
+        link.rel = "noreferrer";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    })();
   };
 
   return (

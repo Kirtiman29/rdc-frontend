@@ -1,10 +1,12 @@
 import axios, { AxiosProgressEvent } from "axios";
 import { getToken } from "./apiClient";
 import {
+  aiStudioApi,
   invokeAiTool,
   normalizeAiOutputUrl,
   uploadAiInputAsset,
 } from "./aiApi";
+import type { AiToolResponse } from "./aiApi";
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -32,6 +34,19 @@ const getDefaultApiBaseUrl = () => {
   return `${protocol}//${hostname}:8000`;
 };
 
+const getDefaultBitmapBaseUrl = () => {
+  if (typeof window === "undefined") {
+    return "http://localhost:8002";
+  }
+
+  const { protocol, hostname } = window.location;
+
+  if (!hostname || hostname === "localhost" || hostname === "127.0.0.1") {
+    return "http://localhost:8002";
+  }
+
+  return `${protocol}//${hostname}:8002`;
+};
 export const API_BASE_URL =
   normalizeBaseUrl(import.meta.env.VITE_COLOR_SEPARATION_API_BASE_URL) ||
   normalizeBaseUrl(import.meta.env.VITE_API_BASE_URL) ||
@@ -42,6 +57,14 @@ const FASTAPI_PUBLIC_URL =
   normalizeBaseUrl(import.meta.env.VITE_AI_SERVICE_URL) ||
   "http://192.168.0.154:8000";
 
+const BITMAP_PUBLIC_URL =
+  normalizeBaseUrl(import.meta.env.VITE_COLOR_SEPARATION_OUTPUT_BASE_URL) ||
+  normalizeBaseUrl(import.meta.env.VITE_BITMAP_OUTPUT_BASE_URL) ||
+  getDefaultBitmapBaseUrl();
+
+const COLOR_SEPARATION_DETAIL_BASE_URL =
+  normalizeBaseUrl(import.meta.env.VITE_COLOR_SEPARATION_DETAIL_BASE_URL) ||
+  BITMAP_PUBLIC_URL;
 export const COLOR_SEPARATION_ENDPOINT =
   import.meta.env.VITE_COLOR_SEPARATION_ENDPOINT || "/color-separation/";
 
@@ -55,6 +78,22 @@ export const COLOR_SEPARATION_TIMEOUT_SECONDS = Math.max(
   1,
   Math.round(COLOR_SEPARATION_TIMEOUT_MS / 1000)
 );
+
+const COLOR_SEPARATION_POLL_INTERVAL_MS =
+  parsePositiveInteger(import.meta.env.VITE_COLOR_SEPARATION_POLL_INTERVAL_MS) || 2000;
+
+const COLOR_SEPARATION_COMPLETED_STATUSES = new Set(["COMPLETED", "SUCCESS"]);
+const COLOR_SEPARATION_ACTIVE_STATUSES = new Set([
+  "CREATED",
+  "QUEUED",
+  "GPU_STARTING",
+  "PROCESSING",
+]);
+const COLOR_SEPARATION_FAILED_STATUSES = new Set([
+  "FAILED",
+  "FAILED_RETRY_LIMIT",
+  "ERROR",
+]);
 
 export type ColorSeparationLayer = {
   layer_index: number;
@@ -254,6 +293,166 @@ export function getColorSeparationErrorMessage(error: unknown) {
   return "Something went wrong while processing this artwork.";
 }
 
+type ColorSeparationAiResponse = AiToolResponse<
+  ColorSeparationResponse | UnknownRecord
+>;
+
+const abortColorSeparationError = () =>
+  new DOMException("Color separation was cancelled.", "AbortError");
+
+const waitForColorSeparationPoll = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(abortColorSeparationError());
+      return;
+    }
+
+    const timeout = window.setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        window.clearTimeout(timeout);
+        reject(abortColorSeparationError());
+      },
+      { once: true }
+    );
+  });
+
+const normalizeJobStatus = (value: unknown) =>
+  typeof value === "string" ? value.trim().toUpperCase() : "";
+
+const readNestedRecordValue = (source: unknown, key: string): unknown => {
+  if (!isRecord(source)) return undefined;
+
+  const directValue = source[key];
+  if (directValue !== undefined && directValue !== null) return directValue;
+
+  for (const nestedKey of ["outputData", "data", "job", "result"]) {
+    const nestedValue = source[nestedKey];
+    if (isRecord(nestedValue)) {
+      const value = nestedValue[key];
+      if (value !== undefined && value !== null) return value;
+    }
+  }
+
+  return undefined;
+};
+
+const readColorSeparationJobId = (response: ColorSeparationAiResponse) => {
+  const jobId =
+    readNestedRecordValue(response, "jobId") ?? readNestedRecordValue(response, "id");
+  if (typeof jobId === "number" && Number.isFinite(jobId)) return String(jobId);
+  if (typeof jobId === "string" && jobId.trim()) return jobId.trim();
+  return null;
+};
+
+const readColorSeparationStatus = (response: ColorSeparationAiResponse) =>
+  normalizeJobStatus(readNestedRecordValue(response, "status"));
+
+const readColorSeparationOutputPath = (response: ColorSeparationAiResponse) => {
+  const outputPath =
+    readNestedRecordValue(response, "outputKey") ??
+    readNestedRecordValue(response, "outputUrl") ??
+    readNestedRecordValue(response, "reconstructed_preview") ??
+    readNestedRecordValue(response, "photoshop_package") ??
+    readNestedRecordValue(response, "photoshop_psd");
+
+  return typeof outputPath === "string" && outputPath ? outputPath : null;
+};
+
+const hasDetailedColorSeparationPayload = (value: unknown) =>
+  isRecord(value) && Array.isArray(value.layers);
+
+const isQueuedColorSeparationResponse = (response: ColorSeparationAiResponse) => {
+  if (response.queued) return true;
+  const status = readColorSeparationStatus(response);
+  return COLOR_SEPARATION_ACTIVE_STATUSES.has(status);
+};
+
+const fetchColorSeparationJob = async (jobId: string) =>
+  aiStudioApi.get<ColorSeparationAiResponse, ColorSeparationAiResponse>(
+    `/jobs/${encodeURIComponent(jobId)}`
+  );
+
+const toBitmapColorSeparationJobId = (jobId: string) =>
+  jobId.startsWith("job-") ? jobId : `job-${jobId}`;
+
+const fetchDetailedColorSeparationJob = async (jobId: string) => {
+  const bitmapJobId = toBitmapColorSeparationJobId(jobId);
+  const url = `${COLOR_SEPARATION_DETAIL_BASE_URL}/color-separation/jobs/${encodeURIComponent(bitmapJobId)}`;
+  const response = await axios.get<ColorSeparationResponse>(url);
+  return response.data;
+};
+const waitForColorSeparationJob = async (
+  jobId: string,
+  signal?: AbortSignal
+): Promise<ColorSeparationAiResponse> => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < COLOR_SEPARATION_TIMEOUT_MS) {
+    if (signal?.aborted) {
+      throw abortColorSeparationError();
+    }
+
+    const response = await fetchColorSeparationJob(jobId);
+    const status = readColorSeparationStatus(response);
+
+    if (import.meta.env.DEV) {
+      console.log("Color separation job status", { jobId, status, response });
+    }
+
+    if (COLOR_SEPARATION_COMPLETED_STATUSES.has(status)) {
+      return response;
+    }
+
+    if (COLOR_SEPARATION_FAILED_STATUSES.has(status) || response.success === false) {
+      throw new Error(
+        response.errorMessage || response.message || "Color separation failed."
+      );
+    }
+
+    await waitForColorSeparationPoll(COLOR_SEPARATION_POLL_INTERVAL_MS, signal);
+  }
+
+  throw new Error(
+    `Color separation did not finish within ${COLOR_SEPARATION_TIMEOUT_SECONDS}s.`
+  );
+};
+
+const buildColorSeparationFallbackPayload = (
+  response: ColorSeparationAiResponse,
+  inputUrl: string,
+  numColors?: number | "" | null
+) => {
+  const outputPath = fixFastApiOutputPath(readColorSeparationOutputPath(response));
+  const requestedColors =
+    numColors !== "" && numColors !== null && numColors !== undefined
+      ? Number(numColors)
+      : 0;
+
+  return {
+    job_id: readColorSeparationJobId(response),
+    status: readColorSeparationStatus(response) || (response.success ? "success" : "error"),
+    reconstructable: Boolean(outputPath),
+    original_image: inputUrl,
+    reconstructed_preview: outputPath,
+    photoshop_package: outputPath,
+    photoshop_psd: outputPath,
+    photoshop_psd_ready: Boolean(outputPath),
+    num_colors: Number.isFinite(requestedColors) ? requestedColors : 0,
+    detected_colors: [],
+    layers: outputPath
+      ? [
+          {
+            layer_index: 1,
+            layer_name: "Color Separation Result",
+            layer_path: outputPath,
+          },
+        ]
+      : [],
+  };
+};
+
 export async function separateColors(
   file: File,
   numColors?: number | "" | null,
@@ -264,7 +463,7 @@ export async function separateColors(
   void options.colorCountField;
 
   if (signal?.aborted) {
-    throw new DOMException("Color separation was cancelled.", "AbortError");
+    throw abortColorSeparationError();
   }
 
   if (import.meta.env.DEV) {
@@ -277,10 +476,10 @@ export async function separateColors(
   const inputUrl = await uploadAiInputAsset(file);
 
   if (signal?.aborted) {
-    throw new DOMException("Color separation was cancelled.", "AbortError");
+    throw abortColorSeparationError();
   }
 
-  const response = await invokeAiTool<ColorSeparationResponse>({
+  let response = await invokeAiTool<ColorSeparationResponse | UnknownRecord>({
     toolName: "COLOR_SEPARATION",
     inputUrl,
     params: {
@@ -295,30 +494,50 @@ export async function separateColors(
     console.log("Color separation response", response);
   }
 
-  if (!response.success) {
-    throw new Error(response.message || "Color separation failed.");
+  const initialStatus = readColorSeparationStatus(response);
+  if (!response.success && !COLOR_SEPARATION_ACTIVE_STATUSES.has(initialStatus)) {
+    throw new Error(
+      response.errorMessage || response.message || "Color separation failed."
+    );
   }
 
-  const previewUrl = fixFastApiOutputPath(response.outputUrl);
+  let queuedJobId: string | null = null;
 
-  const normalizedPayload =
-    response.outputData || {
-      status: response.success ? "success" : "error",
-      reconstructable: false,
-      original_image: inputUrl,
-      reconstructed_preview: previewUrl,
-      num_colors: 0,
-      detected_colors: [],
-      layers: previewUrl
-        ? [
-            {
-              layer_index: 1,
-              layer_name: "Reconstructed Preview",
-              layer_path: previewUrl,
-            },
-          ]
-        : [],
-    };
+  if (isQueuedColorSeparationResponse(response)) {
+    const jobId = readColorSeparationJobId(response);
+    if (!jobId) {
+      throw new Error("Color separation job was queued but no job id was returned.");
+    }
+
+    queuedJobId = jobId;
+    response = await waitForColorSeparationJob(jobId, signal);
+  }
+
+  const finalStatus = readColorSeparationStatus(response);
+  if (COLOR_SEPARATION_FAILED_STATUSES.has(finalStatus) || response.success === false) {
+    throw new Error(
+      response.errorMessage || response.message || "Color separation failed."
+    );
+  }
+
+  let normalizedPayload: unknown = hasDetailedColorSeparationPayload(response.outputData)
+    ? response.outputData
+    : null;
+
+  const completedJobId = queuedJobId || readColorSeparationJobId(response);
+  if (!normalizedPayload && completedJobId) {
+    try {
+      normalizedPayload = await fetchDetailedColorSeparationJob(completedJobId);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.warn("Unable to fetch detailed color separation result", error);
+      }
+    }
+  }
+
+  if (!normalizedPayload) {
+    normalizedPayload = buildColorSeparationFallbackPayload(response, inputUrl, numColors);
+  }
 
   return normalizeColorSeparationResponse(normalizedPayload);
 }
@@ -342,6 +561,10 @@ export const getFullImageUrl = (path?: string | null) => {
     try {
       const url = new URL(fixedPath);
 
+      if (url.pathname.startsWith("/storage/")) {
+        return `${BITMAP_PUBLIC_URL}${url.pathname}${url.search}${url.hash}`;
+      }
+
       if (url.pathname.startsWith("/static/")) {
         return `${FASTAPI_PUBLIC_URL}${url.pathname}${url.search}${url.hash}`;
       }
@@ -350,6 +573,14 @@ export const getFullImageUrl = (path?: string | null) => {
     } catch {
       return fixedPath;
     }
+  }
+
+  if (fixedPath.startsWith("/storage/")) {
+    return `${BITMAP_PUBLIC_URL}${fixedPath}`;
+  }
+
+  if (fixedPath.startsWith("storage/")) {
+    return `${BITMAP_PUBLIC_URL}/${fixedPath}`;
   }
 
   if (fixedPath.startsWith("/static/")) {

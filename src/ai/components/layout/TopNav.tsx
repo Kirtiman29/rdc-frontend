@@ -40,10 +40,10 @@ const colorItems = [
 ];
 
 const toolsItems = [
+  { label: "Embroidery", path: "/ai-studio/embroidery" },
   { label: "Brush Effect", path: "/ai-studio/generate?mode=brush" },
   { label: "Texture", path: "/ai-studio/generate?mode=texture" },
   { label: "Fabric Texture", path: "/ai-studio/generate?mode=fabric-texture" },
-  { label: "Embroidery", path: "/ai-studio/embroidery" },
 ];
 
 interface DropdownNavItemProps {

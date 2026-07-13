@@ -16,7 +16,6 @@ import {
   XCircle,
   ChevronRight,
   Zap,
-  Clock,
   ChevronDown,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -373,7 +372,6 @@ function ControlPanel({
 }) {
   // AI suggestions based on image complexity (mock for now)
   const suggestedColors = imageMetadata ? Math.min(Math.max(Math.floor((imageMetadata.width * imageMetadata.height) / 100000) + 2, 3), 8) : 5;
-  const estimatedTime = mode === 'auto' ? '15-30s' : '5-15s';
   const loadingProgressPercent = Math.min(
     95,
     (loadingSeconds / COLOR_SEPARATION_TIMEOUT_SECONDS) * 100
@@ -459,22 +457,6 @@ function ControlPanel({
         <p className="mt-3 text-xs leading-relaxed text-gray-600">
           Manual mode enables this field. Auto Detect uses AI optimization.
         </p>
-      </div>
-
-      <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur">
-        <PanelHeading icon={<Layers3 size={18} />} title="Processing Info" description="AI-powered analysis with quality predictions." />
-
-        <div className="mt-6 grid gap-3">
-          <MetaTile label="Output Format" value="Transparent PNG" />
-          <MetaTile label="AI Engine" value="Precision Textile" />
-          <MetaTile label="Quality Mode" value={mode === 'auto' ? 'Optimized' : 'Custom'} />
-          <MetaTile label="Est. Time" value={estimatedTime} />
-        </div>
-
-        <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
-          <Clock size={14} />
-          <span>{mode === 'auto' ? 'Slower but optimal results' : 'Faster with custom control'}</span>
-        </div>
       </div>
 
       <div className="rounded-[28px] border border-white/10 bg-white/[0.03] p-6 backdrop-blur">

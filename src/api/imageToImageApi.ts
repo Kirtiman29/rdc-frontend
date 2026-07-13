@@ -3,7 +3,11 @@ import axios from "axios";
 import { getToken } from "@/api/apiClient";
 import type { GenerateResponse, PresetId } from "@/types/textile";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://192.168.0.154:8000").replace(/\/+$/, "");
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_AI_SERVICE_URL ||
+  "http://192.168.0.154:8000"
+).replace(/\/+$/, "");
 const SUBSCRIPTION_BASE_URL = (import.meta.env.VITE_SUBSCRIPTION_SERVICE_URL || "http://localhost:8094").replace(
   /\/+$/,
   ""
@@ -49,6 +53,7 @@ export function normalizeBackendImageUrl(url?: string) {
 
     if (
       (parsed.hostname === "192.168.0.154" && parsed.port === "8002") ||
+      parsed.hostname === "host.docker.internal" ||
       parsed.hostname === "192.168.0.155" ||
       parsed.hostname === "localhost" ||
       parsed.hostname === "127.0.0.1"
@@ -90,7 +95,7 @@ export async function generateGeminiImageToImage(
 
   const postRequest = async (payload: FormData) => {
     const response = await axios.post<GeminiImageToImageServiceResponse>(
-      `${SUBSCRIPTION_BASE_URL}/api/gemini-image/image-to-image`,
+      `${SUBSCRIPTION_BASE_URL}/gemini-image/image-to-image`,
       payload,
       {
         headers: {
@@ -109,10 +114,10 @@ export async function generateGeminiImageToImage(
     }
     return {
       ...data,
-      output_url: resolveSubscriptionImageUrl(data.output_url),
+      output_url: normalizeBackendImageUrl(data.output_url),
       image_urls: Array.isArray(data.image_urls)
         ? data.image_urls
-            .map((url) => resolveSubscriptionImageUrl(url))
+            .map((url) => normalizeBackendImageUrl(url))
             .filter((url): url is string => Boolean(url))
         : undefined,
     };
@@ -180,14 +185,10 @@ export function buildBackgroundForm(params: {
   const finalPrompt = params.prompt?.trim() ? `${params.prompt.trim()}. ${instruction}` : instruction;
 
   const form = new FormData();
-  form.append("file", params.file);
+  form.append("file", params.file, params.file.name || "background-input.png");
   form.append("prompt", finalPrompt);
-  form.append("edit_mode", "precise_edit");
-  form.append("edit_type", "change color");
-  form.append("target_element", "background");
+  form.append("color_preset", "natural");
   form.append("target_color", params.backgroundColor);
-  form.append("replacement", `background color ${params.backgroundColor}`);
-  form.append("preserve", "motifs, foreground colors, linework, print details, texture, pattern layout");
   form.append("change_strength", String(DEFAULT_EDIT_STRENGTH));
   form.append("reference_strength", String(DEFAULT_REFERENCE_STRENGTH));
   form.append("prompt_strength", String(DEFAULT_PROMPT_STRENGTH));

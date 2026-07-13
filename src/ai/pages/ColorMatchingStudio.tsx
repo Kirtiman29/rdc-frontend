@@ -795,9 +795,11 @@ type EarthyMoodId = string;
 type PlayfulMoodId = string;
 type InteriorMoodId = string;
 type FashionMoodId = string;
+type ColorMatchingAction = "preset" | "background" | "detected";
 
 export default function ColorMatchingStudio() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [activeAction, setActiveAction] = useState<ColorMatchingAction>("preset");
   const [selectedPreset, setSelectedPreset] = useState<PresetId>("monotone");
   const [selectedShadeIndex, setSelectedShadeIndex] = useState(0);
   const [openCategory, setOpenCategory] = useState(getPresetCategoryTitle("monotone"));
@@ -1066,6 +1068,7 @@ export default function ColorMatchingStudio() {
   };
 
   const handlePastelMoodChange = (moodId: string) => {
+    setActiveAction("preset");
     const mood = PASTEL_MOOD_PALETTES.find((item) => item.id === moodId) ?? PASTEL_MOOD_PALETTES[0];
 
     setSelectedPastelMoodId(mood.id);
@@ -1091,6 +1094,7 @@ export default function ColorMatchingStudio() {
   };
 
   const handleDarkMoodChange = (moodId: string) => {
+    setActiveAction("preset");
     const mood = darkMoodOptions.find((item) => item.id === moodId) ?? darkMoodOptions[0] ?? DARK_MOOD_PALETTES[0];
 
     setSelectedDarkMoodId(mood.id);
@@ -1116,6 +1120,7 @@ export default function ColorMatchingStudio() {
   };
 
   const handleEarthyMoodChange = (moodId: string) => {
+    setActiveAction("preset");
     const mood = EARTHY_MOOD_PALETTES.find((item) => item.id === moodId) ?? EARTHY_MOOD_PALETTES[0];
 
     setSelectedEarthyMoodId(mood.id);
@@ -1141,6 +1146,7 @@ export default function ColorMatchingStudio() {
   };
 
   const handlePlayfulMoodChange = (moodId: string) => {
+    setActiveAction("preset");
     const mood = playfulMoodOptions.find((item) => item.id === moodId) ?? playfulMoodOptions[0] ?? PLAYFUL_MOOD_PALETTES[0];
 
     setSelectedPlayfulMoodId(mood.id);
@@ -1166,6 +1172,7 @@ export default function ColorMatchingStudio() {
   };
 
   const handleInteriorMoodChange = (moodId: string) => {
+    setActiveAction("preset");
     const mood = interiorMoodOptions.find((item) => item.id === moodId) ?? interiorMoodOptions[0] ?? INTERIOR_MOOD_PALETTES[0];
 
     setSelectedInteriorMoodId(mood.id);
@@ -1191,6 +1198,7 @@ export default function ColorMatchingStudio() {
   };
 
   const handleFashionMoodChange = (moodId: string) => {
+    setActiveAction("preset");
     const mood = fashionMoodOptions.find((item) => item.id === moodId) ?? fashionMoodOptions[0] ?? FASHION_MOOD_PALETTES[0];
 
     setSelectedFashionMoodId(mood.id);
@@ -1229,6 +1237,7 @@ export default function ColorMatchingStudio() {
   };
 
   const selectPaletteShade = (index: number, color: string) => {
+    setActiveAction("preset");
     const nextColor = normalizeHexColor(color).slice(0, 7);
 
     setSelectedShadeIndex(index);
@@ -1241,6 +1250,7 @@ export default function ColorMatchingStudio() {
   };
 
   const updateCustomTargetColor = (value: string) => {
+    setActiveAction("preset");
     setCustomHexInput(value.toUpperCase());
 
     const nextColor = normalizeHexColor(value);
@@ -1265,6 +1275,7 @@ export default function ColorMatchingStudio() {
   };
 
   const selectSubmittedPaletteColor = (index: number) => {
+    setActiveAction("preset");
     setSelectedColorPaletteIndex(index);
     setEditingColorPaletteIndex(null);
     window.requestAnimationFrame(() => {
@@ -1273,12 +1284,14 @@ export default function ColorMatchingStudio() {
   };
 
   const editSubmittedPaletteHex = (index: number, color: string) => {
+    setActiveAction("preset");
     setSelectedColorPaletteIndex(index);
     setEditingColorPaletteIndex(index);
     setEditingColorPaletteHex(color);
   };
 
   const updateSubmittedPaletteColor = (value: string) => {
+    setActiveAction("preset");
     if (selectedColorPaletteIndex === null) return;
 
     const nextColor = normalizeHexColor(value);
@@ -1298,6 +1311,7 @@ export default function ColorMatchingStudio() {
   };
 
   const updateSubmittedPaletteHex = (value: string) => {
+    setActiveAction("preset");
     setEditingColorPaletteHex(value.toUpperCase());
 
     if (editingColorPaletteIndex === null) return;
@@ -1333,6 +1347,7 @@ export default function ColorMatchingStudio() {
   };
 
   const updateDetectedPaletteTarget = (sourceColor: string, value: string) => {
+    setActiveAction("detected");
     const normalized = normalizeHexColor(value);
     const nextColor = isValidHexColor(normalized) ? normalized.slice(0, 7) : value.toUpperCase();
 
@@ -1344,6 +1359,7 @@ export default function ColorMatchingStudio() {
   };
 
   const settleDetectedPaletteHex = (sourceColor: string) => {
+    setActiveAction("detected");
     const rawValue = detectedColorTargets[sourceColor] || sourceColor;
     const normalized = normalizeHexColor(rawValue);
 
@@ -1401,6 +1417,8 @@ export default function ColorMatchingStudio() {
   };
 
   const handleGenerate = async () => {
+    setActiveAction("preset");
+
     if (!selectedFile) {
       setStatus("Please upload an image first.");
       return;
@@ -1432,6 +1450,7 @@ export default function ColorMatchingStudio() {
   };
 
   const updateBackgroundColor = (value: string) => {
+    setActiveAction("background");
     setBackgroundHexInput(value.toUpperCase());
 
     const nextColor = normalizeHexColor(value);
@@ -1441,6 +1460,7 @@ export default function ColorMatchingStudio() {
   };
 
   const settleBackgroundColor = () => {
+    setActiveAction("background");
     const nextColor = normalizeHexColor(backgroundHexInput);
 
     if (!isValidHexColor(nextColor)) {
@@ -1454,6 +1474,8 @@ export default function ColorMatchingStudio() {
   };
 
   const handleBackgroundGenerate = async () => {
+    setActiveAction("background");
+
     if (!selectedFile) {
       setStatus("Please upload an image first.");
       return;
@@ -1491,6 +1513,8 @@ export default function ColorMatchingStudio() {
   };
 
   const handleDetectedColorChangesGenerate = async () => {
+    setActiveAction("detected");
+
     if (!selectedFile) {
       setStatus("Please upload an image first.");
       return;
@@ -1546,6 +1570,8 @@ export default function ColorMatchingStudio() {
   };
 
   const handleDetectedSingleColorGenerate = async (sourceColor: string) => {
+    setActiveAction("detected");
+
     if (!selectedFile) {
       setStatus("Please upload an image first.");
       return;
@@ -1606,6 +1632,20 @@ export default function ColorMatchingStudio() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleActiveGenerate = async () => {
+    if (activeAction === "background") {
+      await handleBackgroundGenerate();
+      return;
+    }
+
+    if (activeAction === "detected") {
+      await handleDetectedColorChangesGenerate();
+      return;
+    }
+
+    await handleGenerate();
   };
 
   const handleDownload = async (url: string, filename: string) => {
@@ -1820,7 +1860,10 @@ export default function ColorMatchingStudio() {
                             <button
                               key={`detected-swatch-${color}`}
                               type="button"
-                              onClick={() => setSelectedDetectedColor(color)}
+                              onClick={() => {
+                                setActiveAction("detected");
+                                setSelectedDetectedColor(color);
+                              }}
                               className={`flex items-center gap-2 rounded-xl border p-2 text-left transition ${
                                 selectedDetectedColor === color
                                   ? "border-[#E11D2E]/50 bg-[#E11D2E]/10"
@@ -1845,7 +1888,10 @@ export default function ColorMatchingStudio() {
                                     ? "border-[#E11D2E]/40 bg-[#E11D2E]/10"
                                     : "border-white/10 bg-[#0E1012]"
                                 }`}
-                                onClick={() => setSelectedDetectedColor(color)}
+                                onClick={() => {
+                                  setActiveAction("detected");
+                                  setSelectedDetectedColor(color);
+                                }}
                               >
                                 <div className="grid gap-3 sm:grid-cols-[auto_minmax(0,1fr)_44px_auto] sm:items-center">
                                   <div className="flex items-center gap-2">
@@ -1948,6 +1994,7 @@ export default function ColorMatchingStudio() {
                                   key={preset.id}
                                   type="button"
                                   onClick={() => {
+                                    setActiveAction("preset");
                                     setSelectedPreset(preset.id);
                                     setSelectedShadeIndex(0);
                                     setOpenCategory(category.title);
@@ -2332,14 +2379,26 @@ export default function ColorMatchingStudio() {
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => void handleGenerate()}
+                    onClick={() => void handleActiveGenerate()}
                     disabled={!selectedFile || isGenerating}
                     className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[#E11D2E] px-5 text-sm font-semibold text-white transition hover:bg-[#ff3347] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Wand2 className="h-4 w-4" />
-                    {isGenerating ? "Generating" : "Generate"}
+                    {isGenerating
+                      ? "Generating"
+                      : activeAction === "background"
+                        ? "Change Background"
+                        : activeAction === "detected"
+                          ? "Change Colors"
+                          : "Generate"}
                   </button>
-                  <MiniBadge>Preset Mode</MiniBadge>
+                  <MiniBadge>
+                    {activeAction === "background"
+                      ? "Background Mode"
+                      : activeAction === "detected"
+                        ? "Detected Color Mode"
+                        : "Preset Mode"}
+                  </MiniBadge>
                   {selectedPresetMeta?.label && <MiniBadge>{selectedPresetMeta.label}</MiniBadge>}
                   {lastResponse?.model && <MiniBadge>{lastResponse.model}</MiniBadge>}
                   {lastResponse?.fallback_used && (
@@ -2514,6 +2573,7 @@ export default function ColorMatchingStudio() {
                       key={color}
                       type="button"
                       onClick={() => {
+                        setActiveAction("background");
                         setBackgroundColor(color);
                         setBackgroundHexInput(color);
                       }}

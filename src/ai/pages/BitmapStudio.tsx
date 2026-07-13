@@ -3,20 +3,19 @@ import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
+  AlertCircle,
   BadgeCheck,
   ChevronDown,
   CloudUpload,
   Download,
   FileImage,
   ImageUp,
-  Layers3,
   Loader2,
   Palette,
   ScanLine,
   Sparkles,
   SlidersHorizontal,
   Trash2,
-  Wand2,
 } from "lucide-react";
 
 import { getToken } from "@/api/apiClient";
@@ -57,11 +56,8 @@ type Notice = {
   type: "info" | "success" | "error";
   text: string;
 } | null;
-
-type BitmapPresetId = "luxury-fabric" | "soft-vintage" | "embroidery" | "newspaper" | "sharp-print" | "custom";
 type WorkflowMode = "single" | "multicolor";
 type HalftoneShape = "circle" | "square" | "diamond" | "line";
-type DitherAlgorithm = "floyd-steinberg" | "atkinson" | "bayer4" | "threshold";
 
 const DEFAULT_MANUAL_SPOT_COLORS = "#f7d7dc,#e8a9b4,#c86f84,#8d4259";
 
@@ -69,68 +65,11 @@ const ALLOWED_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".ti
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/bmp", "image/tiff"];
 const DEFAULT_SCREEN_DPI_OPTIONS = ["300", "520", "600"];
 
-const presetCards: Array<{
-  id: BitmapPresetId;
-  title: string;
-  badge: string;
-  description: string;
-  accent: string;
-}> = [
-  {
-    id: "luxury-fabric",
-    title: "Luxury Fabric",
-    badge: "Stipple / Print",
-    description: "Rich contrast and cleaner edges for premium textile artwork.",
-    accent: "#E11D2E",
-  },
-  {
-    id: "soft-vintage",
-    title: "Soft Vintage",
-    badge: "Halftone / Retro",
-    description: "A softer dot screen for warm poster-style imagery.",
-    accent: "#3B82F6",
-  },
-  {
-    id: "embroidery",
-    title: "Embroidery",
-    badge: "Bayer Matrix",
-    description: "Structured bitmap output with a stitched, production-friendly feel.",
-    accent: "#14B8A6",
-  },
-  {
-    id: "newspaper",
-    title: "Newspaper",
-    badge: "Coarse Dot",
-    description: "Bold editorial screening with a crisp, high-visibility finish.",
-    accent: "#F59E0B",
-  },
-  {
-    id: "sharp-print",
-    title: "Sharp Print",
-    badge: "Threshold / Line",
-    description: "Clean hard edges for logos, labels, and dense line work.",
-    accent: "#A855F7",
-  },
-];
-
 const shapeOptions: HalftoneShape[] = ["circle", "square", "diamond", "line"];
 
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
 const spacingFromFrequency = (frequency: number) => clamp(32 - frequency * 0.3, 5, 30);
-
-const getPresetDitherAlgorithm = (preset: BitmapPresetId): DitherAlgorithm => {
-  switch (preset) {
-    case "luxury-fabric":
-      return "floyd-steinberg";
-    case "embroidery":
-      return "bayer4";
-    case "sharp-print":
-      return "threshold";
-    default:
-      return "atkinson";
-  }
-};
 
 const formatBytes = (bytes: number) => {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
@@ -152,102 +91,6 @@ const getErrorMessage = (error: unknown) => {
   return getBitmapErrorMessage(error);
 };
 
-const buildPresets = (preset: BitmapPresetId, intensity: number, fileId: string) => {
-  switch (preset) {
-    case "luxury-fabric":
-      return {
-        endpoint: "dither" as const,
-        params: {
-          filename: fileId,
-          algorithm: "floyd-steinberg",
-          contrast: Number((34 + intensity * 0.5).toFixed(2)),
-          brightness: Number((-10 + (50 - intensity) * 0.08).toFixed(2)),
-          preprocess: "textile_print",
-          edge_strength: Number((50 + intensity * 0.32).toFixed(2)),
-          ink_boost: Number((28 + intensity * 0.35).toFixed(2)),
-          background_cleanup: true,
-          dpi: 300,
-        },
-      };
-    case "soft-vintage": {
-      const spacing = 6 + intensity * 0.2;
-      return {
-        endpoint: "halftone" as const,
-        params: {
-          filename: fileId,
-          spacing: Number(spacing.toFixed(2)),
-          dot_size: Number((spacing * 0.82).toFixed(2)),
-          angle: 45,
-          shape: "circle",
-          grayscale_mode: "luminance_bt709",
-          brightness: -4,
-          contrast: 18,
-          preprocess: "textile_print",
-          edge_strength: 42,
-          ink_boost: 22,
-          background_cleanup: true,
-          binarize: true,
-          dpi: 300,
-        },
-      };
-    }
-    case "embroidery":
-      return {
-        endpoint: "dither" as const,
-        params: {
-          filename: fileId,
-          algorithm: "bayer4",
-          contrast: 28,
-          brightness: -2,
-          preprocess: "textile_print",
-          edge_strength: 48,
-          ink_boost: 30,
-          background_cleanup: true,
-          dpi: 300,
-        },
-      };
-    case "newspaper": {
-      const spacing = 12 + intensity * 0.22;
-      return {
-        endpoint: "halftone" as const,
-        params: {
-          filename: fileId,
-          spacing: Number(spacing.toFixed(2)),
-          dot_size: Number((4 + intensity * 0.04).toFixed(2)),
-          angle: 15,
-          shape: "square",
-          grayscale_mode: "luminance_bt709",
-          brightness: 0,
-          contrast: 10,
-          preprocess: "textile_print",
-          edge_strength: 34,
-          ink_boost: 18,
-          background_cleanup: true,
-          binarize: true,
-          dpi: 300,
-        },
-      };
-    }
-    case "sharp-print":
-      return {
-        endpoint: "dither" as const,
-        params: {
-          filename: fileId,
-          algorithm: "threshold",
-          threshold_val: Math.round(24 + intensity * 2),
-          contrast: 42,
-          brightness: -8,
-          preprocess: "textile_print",
-          edge_strength: 58,
-          ink_boost: 34,
-          background_cleanup: true,
-          dpi: 300,
-        },
-      };
-    default:
-      return null;
-  }
-};
 
 const buildCustomParams = ({
   fileId,
@@ -313,7 +156,6 @@ export default function BitmapStudio() {
   const [grayscaleEnabled, setGrayscaleEnabled] = useState(true);
   const [spotColorCount, setSpotColorCount] = useState(6);
   const [manualSpotColors, setManualSpotColors] = useState(DEFAULT_MANUAL_SPOT_COLORS);
-  const [preset, setPreset] = useState<BitmapPresetId>("luxury-fabric");
   const [intensity, setIntensity] = useState(50);
   const [frequency, setFrequency] = useState(40);
   const [angle, setAngle] = useState(45);
@@ -323,6 +165,9 @@ export default function BitmapStudio() {
   const [psdDpi, setPsdDpi] = useState(520);
   const [dotShape, setDotShape] = useState<HalftoneShape>("circle");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [dpiDialogOpen, setDpiDialogOpen] = useState(false);
+  const [pendingDpiFile, setPendingDpiFile] = useState<File | null>(null);
+  const [pendingDpiInput, setPendingDpiInput] = useState(String(dpi));
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const sourceUrlRef = useRef<string | null>(null);
@@ -330,8 +175,6 @@ export default function BitmapStudio() {
   const token = getToken();
   const hasAuth = Boolean(token);
   const currentFileId = uploadResponse?.filename || "";
-  const activePreset = presetCards.find((item) => item.id === preset) || presetCards[0];
-  const activePresetLabel = preset === "custom" ? "Custom Workspace" : activePreset.title;
   const downloadFileName = `${stripFileExtension(currentFileId || selectedFile?.name || "bitmap")}-preview.png`;
   const psdFileName = `${stripFileExtension(currentFileId || selectedFile?.name || "bitmap")}-${psdDpi}dpi.psd`;
 
@@ -376,6 +219,21 @@ export default function BitmapStudio() {
       active = false;
     };
   }, [hasAuth]);
+
+  useEffect(() => {
+    if (!dpiDialogOpen) {
+      return;
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeDpiDialog();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [dpiDialogOpen]);
 
   const setBanner = (text: string, type: NonNullable<Notice>["type"] = "info") => {
     setNotice({ text, type });
@@ -442,7 +300,47 @@ export default function BitmapStudio() {
     }
   };
 
-  const handleFileSelection = async (file?: File) => {
+  const registerDpiOption = (value: number) => {
+    setDpi(value);
+    setScreenDpiOptions((currentOptions) => {
+      const nextOption = String(value);
+      if (currentOptions.includes(nextOption)) {
+        return currentOptions;
+      }
+
+      return [...currentOptions, nextOption].sort((left, right) => Number(left) - Number(right));
+    });
+  };
+
+  const openDpiDialog = (file: File) => {
+    setPendingDpiFile(file);
+    setPendingDpiInput(String(dpi));
+    setDpiDialogOpen(true);
+  };
+
+  const closeDpiDialog = () => {
+    setDpiDialogOpen(false);
+    setPendingDpiFile(null);
+    setPendingDpiInput(String(dpi));
+  };
+
+  const confirmDpiSelection = async () => {
+    if (!pendingDpiFile) return;
+
+    const parsedDpi = Number(pendingDpiInput);
+    if (!Number.isFinite(parsedDpi) || parsedDpi <= 0) {
+      setBanner("Please enter a valid image DPI before uploading.", "error");
+      return;
+    }
+
+    const normalizedDpi = Math.round(parsedDpi);
+    registerDpiOption(normalizedDpi);
+    setBanner(`Image DPI set to ${normalizedDpi}.`, "info");
+    closeDpiDialog();
+    await syncLocalFile(pendingDpiFile);
+  };
+
+  const handleFileSelection = (file?: File) => {
     if (!file) return;
 
     const normalizedName = file.name.toLowerCase();
@@ -455,29 +353,7 @@ export default function BitmapStudio() {
       return;
     }
 
-    const imageDpiRaw = window.prompt("How much DPI is this image?", String(dpi));
-    if (imageDpiRaw !== null) {
-      const parsedDpi = Number(imageDpiRaw);
-
-      if (!Number.isFinite(parsedDpi) || parsedDpi <= 0) {
-        setBanner("Please enter a valid image DPI before uploading.", "error");
-        return;
-      }
-
-      const normalizedDpi = Math.round(parsedDpi);
-      setDpi(normalizedDpi);
-      setScreenDpiOptions((currentOptions) => {
-        const nextOption = String(normalizedDpi);
-        if (currentOptions.includes(nextOption)) {
-          return currentOptions;
-        }
-
-        return [...currentOptions, nextOption].sort((left, right) => Number(left) - Number(right));
-      });
-      setBanner(`Image DPI set to ${normalizedDpi}.`, "info");
-    }
-
-    await syncLocalFile(file);
+    openDpiDialog(file);
   };
 
   const buildActiveRequest = () => {
@@ -489,7 +365,7 @@ export default function BitmapStudio() {
     const selectedDotSize = Number((selectedSpacing * (dotSize / 100)).toFixed(2));
     const proofOverrides = {
       algorithm: dotScreenEnabled ? "halftone" : "dither",
-      dither_algo: dotScreenEnabled ? "atkinson" : getPresetDitherAlgorithm(preset),
+      dither_algo: "atkinson",
       shape: dotShape,
       spacing: selectedSpacing,
       dot_size: selectedDotSize,
@@ -501,38 +377,23 @@ export default function BitmapStudio() {
       manual_spot_colors: manualSpotColors,
     };
 
-    if (preset === "custom") {
-      return {
-        endpoint: "separationProof" as const,
-        params: {
-          ...buildCustomParams({
-            fileId: currentFileId,
-            workflowMode,
-            dotScreenEnabled,
-            grayscaleEnabled,
-            spotColorCount,
-            manualSpotColors,
-            frequency,
-            angle,
-            dotShape,
-            dotSize,
-            dpi,
-            intensity,
-          }),
-          ...proofOverrides,
-        },
-      };
-    }
-
-    const presetRequest = buildPresets(preset, intensity, currentFileId);
-    if (!presetRequest) {
-      return null;
-    }
-
     return {
       endpoint: "separationProof" as const,
       params: {
-        ...presetRequest.params,
+        ...buildCustomParams({
+          fileId: currentFileId,
+          workflowMode,
+          dotScreenEnabled,
+          grayscaleEnabled,
+          spotColorCount,
+          manualSpotColors,
+          frequency,
+          angle,
+          dotShape,
+          dotSize,
+          dpi,
+          intensity,
+        }),
         ...proofOverrides,
       },
     };
@@ -699,24 +560,155 @@ export default function BitmapStudio() {
 
         {notice && (
           <div
-            className={`inline-flex max-w-3xl items-center gap-2 rounded-2xl border px-4 py-3 text-sm ${
+            className={`relative max-w-4xl overflow-hidden rounded-[24px] border bg-[#181B1F]/90 p-4 shadow-[0_18px_60px_rgba(0,0,0,0.22)] backdrop-blur ${
               notice.type === "success"
-                ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-200"
+                ? "border-emerald-500/20"
                 : notice.type === "error"
-                  ? "border-[#E11D2E]/25 bg-[#E11D2E]/10 text-[#ffb4b9]"
-                  : "border-white/10 bg-white/[0.04] text-[#D1D5DB]"
+                  ? "border-[#E11D2E]/25"
+                  : "border-white/10"
             }`}
           >
-            <BadgeCheck className="h-4 w-4 shrink-0" />
-            <span>{notice.text}</span>
+            <div
+              className={`absolute inset-x-0 top-0 h-0.5 ${
+                notice.type === "success"
+                  ? "bg-emerald-400"
+                  : notice.type === "error"
+                    ? "bg-[#E11D2E]"
+                    : "bg-white/20"
+              }`}
+            />
+            <div className="flex items-start gap-3">
+              <div
+                className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border ${
+                  notice.type === "success"
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+                    : notice.type === "error"
+                      ? "border-[#E11D2E]/20 bg-[#E11D2E]/10 text-[#ffb4b9]"
+                      : "border-white/10 bg-white/[0.04] text-[#D1D5DB]"
+                }`}
+              >
+                {notice.type === "success" ? (
+                  <BadgeCheck className="h-4 w-4" />
+                ) : notice.type === "error" ? (
+                  <AlertCircle className="h-4 w-4" />
+                ) : (
+                  <Sparkles className="h-4 w-4 text-[#E11D2E]" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.32em] text-[#8A909A]">
+                    Bitmap status
+                  </p>
+                  <span
+                    className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] ${
+                      notice.type === "success"
+                        ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-200"
+                        : notice.type === "error"
+                          ? "border-[#E11D2E]/20 bg-[#E11D2E]/10 text-[#ffb4b9]"
+                          : "border-white/10 bg-white/[0.04] text-[#A1A8B3]"
+                    }`}
+                  >
+                    {notice.type}
+                  </span>
+                </div>
+                <p className="mt-1.5 text-sm leading-6 text-[#E7EAF0]">{notice.text}</p>
+              </div>
+            </div>
           </div>
         )}
 
         {!hasAuth && (
-          <div className="rounded-2xl border border-[#E11D2E]/25 bg-[#E11D2E]/10 px-4 py-3 text-sm text-[#ffb4b9]">
-            You can preview the local file, but backend upload and rendering require an authenticated session.
+          <div className="rounded-[24px] border border-[#E11D2E]/20 bg-[#181B1F]/90 px-4 py-3 text-sm text-[#ffb4b9] shadow-[0_18px_60px_rgba(0,0,0,0.18)] backdrop-blur">
+            <span className="inline-flex rounded-full border border-[#E11D2E]/20 bg-[#E11D2E]/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#ffb4b9]">
+              Auth required
+            </span>
+            <span className="ml-3 align-middle">
+              You can preview the local file, but backend upload and rendering require an authenticated session.
+            </span>
           </div>
         )}
+
+        <AnimatePresence>
+          {dpiDialogOpen && pendingDpiFile && (
+            <motion.div
+              className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                initial={{ opacity: 0, y: 24, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.98 }}
+                transition={{ duration: 0.18, ease: "easeOut" }}
+                className="w-full max-w-lg overflow-hidden rounded-[28px] border border-white/10 bg-[#181B1F] shadow-[0_30px_120px_rgba(0,0,0,0.55)]"
+              >
+                <div className="border-b border-white/5 bg-[#1C2025] px-6 py-5">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#E11D2E]/20 bg-[#E11D2E]/10 text-[#E11D2E]">
+                      <FileImage className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[#8A909A]">
+                        Bitmap import
+                      </p>
+                      <h3 className="mt-1 text-lg font-semibold text-white">How much DPI is this image?</h3>
+                      <p className="mt-1 text-sm leading-6 text-[#A1A8B3]">
+                        Enter the source image DPI before upload so Bitmap Studio can match the print workflow.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-5 px-6 py-5">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#8A909A]">
+                      Selected file
+                    </p>
+                    <p className="mt-1 break-all text-sm font-medium text-white">{pendingDpiFile.name}</p>
+                  </div>
+
+                  <label className="block">
+                    <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.22em] text-[#8A909A]">
+                      Image DPI
+                    </span>
+                    <input
+                      autoFocus
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={pendingDpiInput}
+                      onChange={(event) => setPendingDpiInput(event.target.value)}
+                      className="w-full rounded-2xl border border-white/10 bg-[#111315] px-4 py-3 text-sm text-white outline-none transition placeholder:text-[#4B5563] focus:border-[#E11D2E]/40"
+                      placeholder="300"
+                    />
+                    <p className="mt-2 text-xs leading-relaxed text-[#6B7280]">
+                      The value will be saved as the active bitmap DPI and added to the DPI list if it is new.
+                    </p>
+                  </label>
+                </div>
+
+                <div className="flex flex-col gap-3 border-t border-white/5 bg-[#111315] px-6 py-4 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeDpiDialog}
+                    className="inline-flex h-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-5 text-sm font-semibold text-[#A1A8B3] transition hover:border-white/20 hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void confirmDpiSelection()}
+                    className="inline-flex h-11 items-center justify-center rounded-xl bg-[#E11D2E] px-5 text-sm font-semibold text-white transition hover:bg-[#ff3347]"
+                  >
+                    Confirm DPI
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Design Workspace: Upload & Live Preview Side-by-Side in one box */}
         <div className="rounded-[28px] border border-[#2B3138] bg-[#181B1F]/92 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-6 mb-6">
@@ -892,7 +884,7 @@ export default function BitmapStudio() {
                   <div className="relative z-10 flex h-full items-center justify-center text-center text-sm text-[#6B7280]">
                     <div className="space-y-2 py-20">
                       <Palette className="mx-auto h-10 w-10 text-[#E11D2E]" />
-                      <p>Upload an asset and select a preset to generate the textile print simulation.</p>
+                      <p>Upload an asset and review the default bitmap settings to generate the textile print simulation.</p>
                     </div>
                   </div>
                 )}
@@ -901,202 +893,60 @@ export default function BitmapStudio() {
           </div>
         </div>
 
-        {/* Bottom Section: Remaining Options (Style Presets & Print Parameters stacked) */}
+        {/* Bottom Section: Default bitmap controls */}
         <div className="space-y-6 mb-6">
           <Panel
-            title="1. Bitmap Style Preset"
-            description="Choose a concise preset that matches the target print style."
-            icon={<Layers3 className="h-4 w-4" />}
-          >
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {presetCards.map((item) => {
-                const selected = preset === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => setPreset(item.id)}
-                    className={`flex flex-col items-center justify-between rounded-2xl border p-3.5 text-center transition ${
-                      selected
-                        ? "border-[#E11D2E]/35 bg-[#E11D2E]/10"
-                        : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
-                    }`}
-                  >
-                    <span
-                      className="flex h-8 w-8 items-center justify-center rounded-xl border mb-2"
-                      style={{
-                        color: item.accent,
-                        borderColor: selected ? `${item.accent}55` : "rgba(255,255,255,0.08)",
-                        backgroundColor: selected ? `${item.accent}15` : "rgba(255,255,255,0.04)",
-                      }}
-                    >
-                      <Wand2 className="h-3.5 w-3.5" />
-                    </span>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-bold text-white leading-snug">{item.title}</p>
-                      <p className="text-[8px] uppercase tracking-wider text-[#A1A8B3] leading-none">{item.badge}</p>
-                    </div>
-                  </button>
-                );
-              })}
-
-              <button
-                type="button"
-                onClick={() => setPreset("custom")}
-                className={`flex flex-col items-center justify-between rounded-2xl border p-3.5 text-center transition ${
-                  preset === "custom"
-                    ? "border-[#E11D2E]/35 bg-[#E11D2E]/10"
-                    : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.05]"
-                }`}
-              >
-                <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-[#A1A8B3] mb-2">
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                </span>
-                <div className="space-y-0.5">
-                  <p className="text-xs font-bold text-white leading-snug">Custom Work</p>
-                  <p className="text-[8px] uppercase tracking-wider text-[#A1A8B3] leading-none">Manual tuning</p>
-                </div>
-              </button>
-            </div>
-          </Panel>
-
-          <Panel
-            title={preset === "custom" ? "2. Print Customization" : "2. Print Parameters"}
-            description={preset === "custom" ? "Full custom control options." : "Adjust intensity for preset print style."}
-            icon={<ScanLine className="h-4 w-4" />}
+            title="1. Default Print Setup"
+            description="Default bitmap controls tuned for consistent textile prep."
+            icon={<SlidersHorizontal className="h-4 w-4" />}
           >
             <div className="space-y-5">
-              {preset === "custom" ? (
-                <>
-                  <div className="grid gap-4">
-                    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-2">
-                      <div className="mb-2 px-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#6B7280]">
-                        Workflow Mode
-                      </div>
-                      <div className="rounded-xl border border-white/10 bg-[#0E1012] px-3 py-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-white">Multi-Color</p>
-                            <p className="text-xs text-[#A1A8B3]">Single-color mode has been removed.</p>
-                          </div>
-                          <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-emerald-200">
-                            Active
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-                      <label className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                        <span>
-                          <span className="block text-sm font-semibold text-white">Dot Screen</span>
-                          <span className="text-xs text-[#A1A8B3]">Enable halftone bitmap conversion.</span>
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={dotScreenEnabled}
-                          onChange={(event) => setDotScreenEnabled(event.target.checked)}
-                          className="h-5 w-5 rounded border-white/20 bg-transparent accent-[#E11D2E]"
-                        />
-                      </label>
-
-                      <label className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                        <span>
-                          <span className="block text-sm font-semibold text-white">Grayscale</span>
-                          <span className="text-xs text-[#A1A8B3]">Use smooth gray separations for print.</span>
-                        </span>
-                        <input
-                          type="checkbox"
-                          checked={grayscaleEnabled}
-                          onChange={(event) => setGrayscaleEnabled(event.target.checked)}
-                          className="h-5 w-5 rounded border-white/20 bg-transparent accent-[#E11D2E]"
-                        />
-                      </label>
-                    </div>
+              <div className="grid gap-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-2">
+                  <div className="mb-2 px-2 pt-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-[#6B7280]">
+                    Workflow Mode
                   </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <LabeledSelect
-                      label="Screen DPI"
-                      value={String(dpi)}
-                      options={screenDpiOptions}
-                      onChange={(value) => setDpi(Number(value))}
-                    />
-                    <RangeField label="Shading Balance" value={intensity} min={0} max={100} onChange={setIntensity} unit="%" />
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <RangeField label="Frequency" value={frequency} min={20} max={90} onChange={setFrequency} unit="LPI" />
-                    <RangeField label="Dot Size" value={dotSize} min={0} max={100} onChange={setDotSize} unit="%" />
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <RangeField label="Angle" value={angle} min={0} max={90} onChange={setAngle} unit="deg" />
-
-                    <label className="grid gap-2">
-                      <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">Dot Shape</span>
-                      <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2">
-                        {shapeOptions.map((shape) => {
-                          const active = dotShape === shape;
-                          return (
-                            <button
-                              key={shape}
-                              type="button"
-                              onClick={() => setDotShape(shape)}
-                              className={`rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
-                                active ? "bg-[#E11D2E] text-white" : "text-[#A1A8B3] hover:text-white"
-                              }`}
-                            >
-                              {shape}
-                            </button>
-                          );
-                        })}
+                  <div className="rounded-xl border border-white/10 bg-[#0E1012] px-3 py-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-white">Multi-Color</p>
+                        <p className="text-xs text-[#A1A8B3]">Default bitmap workspace is active.</p>
                       </div>
-                    </label>
-                  </div>
-
-                  {workflowMode === "multicolor" && (
-                    <div className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.03] p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-white">Color Separation</p>
-                          <p className="text-xs text-[#A1A8B3]">Keep the stack lean and readable.</p>
-                        </div>
-                        <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-[#A1A8B3]">
-                          Optional
-                        </span>
-                      </div>
-
-                      <RangeField
-                        label="Layers"
-                        value={spotColorCount}
-                        min={1}
-                        max={8}
-                        onChange={setSpotColorCount}
-                      />
-                      <span className="text-xs text-[#6B7280]">
-                        This counts artwork color layers only. Base and patch layers are added separately.
+                      <span className="rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.25em] text-emerald-200">
+                        Active
                       </span>
-
-                      <label className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                        <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
-                          Manual Spot Colors
-                        </span>
-                        <textarea
-                          value={manualSpotColors}
-                          onChange={(event) => setManualSpotColors(event.target.value)}
-                          rows={3}
-                          className="w-full resize-none rounded-xl border border-white/10 bg-[#0E1012] px-3 py-2 text-sm text-white outline-none transition focus:border-[#E11D2E]/40"
-                          placeholder="#f7d7dc,#e8a9b4,#c86f84,#8d4259"
-                        />
-                        <span className="text-xs text-[#6B7280]">
-                          Use comma-separated hex values for the separation stack.
-                        </span>
-                      </label>
                     </div>
-                  )}
-                </>
-              ) : (
+                  </div>
+                </div>
+
+                <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                  <label className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                    <span>
+                      <span className="block text-sm font-semibold text-white">Dot Screen</span>
+                      <span className="text-xs text-[#A1A8B3]">Enable halftone bitmap conversion.</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={dotScreenEnabled}
+                      onChange={(event) => setDotScreenEnabled(event.target.checked)}
+                      className="h-5 w-5 rounded border-white/20 bg-transparent accent-[#E11D2E]"
+                    />
+                  </label>
+
+                  <label className="flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
+                    <span>
+                      <span className="block text-sm font-semibold text-white">Grayscale</span>
+                      <span className="text-xs text-[#A1A8B3]">Use smooth gray separations for print.</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={grayscaleEnabled}
+                      onChange={(event) => setGrayscaleEnabled(event.target.checked)}
+                      className="h-5 w-5 rounded border-white/20 bg-transparent accent-[#E11D2E]"
+                    />
+                  </label>
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <LabeledSelect
                     label="Screen DPI"
@@ -1106,7 +956,77 @@ export default function BitmapStudio() {
                   />
                   <RangeField label="Shading Balance" value={intensity} min={0} max={100} onChange={setIntensity} unit="%" />
                 </div>
-              )}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <RangeField label="Frequency" value={frequency} min={20} max={90} onChange={setFrequency} unit="LPI" />
+                  <RangeField label="Dot Size" value={dotSize} min={0} max={100} onChange={setDotSize} unit="%" />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <RangeField label="Angle" value={angle} min={0} max={90} onChange={setAngle} unit="deg" />
+
+                  <label className="grid gap-2">
+                    <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">Dot Shape</span>
+                    <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-2">
+                      {shapeOptions.map((shape) => {
+                        const active = dotShape === shape;
+                        return (
+                          <button
+                            key={shape}
+                            type="button"
+                            onClick={() => setDotShape(shape)}
+                            className={`rounded-xl px-3 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+                              active ? "bg-[#E11D2E] text-white" : "text-[#A1A8B3] hover:text-white"
+                            }`}
+                          >
+                            {shape}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </label>
+                </div>
+
+                {workflowMode === "multicolor" && (
+                  <div className="space-y-4 rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-white">Color Separation</p>
+                        <p className="text-xs text-[#A1A8B3]">Keep the stack lean and readable.</p>
+                      </div>
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.25em] text-[#A1A8B3]">
+                        Optional
+                      </span>
+                    </div>
+
+                    <RangeField
+                      label="Layers"
+                      value={spotColorCount}
+                      min={1}
+                      max={8}
+                      onChange={setSpotColorCount}
+                    />
+                    <span className="text-xs text-[#6B7280]">
+                      This counts artwork color layers only. Base and patch layers are added separately.
+                    </span>
+
+                    <label className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                      <span className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B7280]">
+                        Manual Spot Colors
+                      </span>
+                      <textarea
+                        value={manualSpotColors}
+                        onChange={(event) => setManualSpotColors(event.target.value)}
+                        rows={3}
+                        className="w-full resize-none rounded-xl border border-white/10 bg-[#0E1012] px-3 py-2 text-sm text-white outline-none transition focus:border-[#E11D2E]/40"
+                        placeholder="#f7d7dc,#e8a9b4,#c86f84,#8d4259"
+                      />
+                      <span className="text-xs text-[#6B7280]">
+                        Use comma-separated hex values for the separation stack.
+                      </span>
+                    </label>
+                  </div>
+                )}
 
               <button
                 type="button"
@@ -1118,13 +1038,14 @@ export default function BitmapStudio() {
                 Generate Preview
               </button>
             </div>
+          </div>
           </Panel>
         </div>
 
         {/* Selected file summary card info */}
         <section className="grid gap-4 md:grid-cols-3 mt-4">
           <InfoCard label="File" value={selectedFile ? selectedFile.name : "Awaiting upload"} />
-          <InfoCard label="Preset" value={activePresetLabel} />
+          <InfoCard label="Setup" value="Default bitmap workspace" />
           <InfoCard label="Mode" value="Multi-Color" />
         </section>
 

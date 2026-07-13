@@ -201,7 +201,7 @@ export default function GeminiImageMix() {
                 RDC AI Studio
               </div>
               <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-white">
-                Pattern Mixer: Gemini Model
+                Pattern Mixer
               </h1>
             </div>
 
