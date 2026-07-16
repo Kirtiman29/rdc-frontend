@@ -207,7 +207,7 @@ export default function GeminiTextToImage() {
                 RDC AI Studio
               </div>
               <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-white">
-                AI Text to Image: Gemini Model
+                AI Text to Image
               </h1>
             </div>
 

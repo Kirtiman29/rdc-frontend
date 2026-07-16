@@ -36,7 +36,7 @@ const AI_INPUT_UPLOAD_ENDPOINTS = [AI_INPUT_UPLOAD_ENDPOINT, DEFAULT_AI_INPUT_UP
   .filter((value, index, items) => items.indexOf(value) === index);
 
 const AI_USE_BASE_URL = createApiUrl(serviceOrigins.admin, "ai");
-const SEAMLESS_PATTERN_TOOL_NAME = (import.meta.env.VITE_SEAMLESS_PATTERN_TOOL_NAME || "PATTERN_GENERATOR").trim();
+const SEAMLESS_PATTERN_TOOL_NAME = (import.meta.env.VITE_SEAMLESS_PATTERN_TOOL_NAME || "SEAMLESS_PATTERN").trim();
 const LEGACY_SEAMLESS_PATTERN_ENDPOINT = (
   import.meta.env.VITE_SEAMLESS_PATTERN_ENDPOINT || "/pattern/generate-seamless"
 ).trim();
@@ -128,10 +128,15 @@ const rewriteLegacyAiHost = (url: string) => {
     const parsedUrl = new URL(url);
     if (
       parsedUrl.hostname === "192.168.0.155" ||
+      parsedUrl.hostname === "host.docker.internal" ||
       parsedUrl.hostname === "localhost" ||
       parsedUrl.hostname === "127.0.0.1"
     ) {
-      return joinUrl(AI_SERVICE_URL || parsedUrl.origin, `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`);
+      const localOrigin =
+        parsedUrl.hostname === "host.docker.internal" ?
+          `${parsedUrl.protocol}//localhost${parsedUrl.port ? `:${parsedUrl.port}` : ""}`
+        : parsedUrl.origin;
+      return joinUrl(AI_SERVICE_URL || localOrigin, `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`);
     }
   } catch {
     // Ignore malformed URLs and fall back to the default logic below.
@@ -683,7 +688,20 @@ export interface GenerateSeamlessResponse {
   success: boolean;
   message: string;
   output_image: string;
+  tile_url?: string;
+  preview_url?: string;
+  validation?: unknown;
+  remainingCredits?: number | null;
 }
+
+type SeamlessOutputData = {
+  output_image?: string;
+  image?: string;
+  image_url?: string;
+  tile_url?: string;
+  preview_url?: string;
+  validation?: unknown;
+};
 
 export const normalizeAiOutputUrl = (url?: string | null) => {
   return normalizeAiOutputUrlFromBase(ADMIN_SERVICE_URL, url);
@@ -853,6 +871,53 @@ export const invokeAiTool = async <TData = unknown>(
     ...response,
     outputUrl: normalizeAiOutputUrl(response.outputUrl),
   };
+};
+
+const AI_JOB_TERMINAL_STATUSES = new Set(["COMPLETED", "FAILED", "FAILED_RETRY_LIMIT"]);
+
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+export const getAiJobStatus = async <TData = unknown>(
+  jobId: number | string
+): Promise<AiToolResponse<TData>> => {
+  const response = await aiStudioApi.get<AiToolResponse<TData>, AiToolResponse<TData>>(
+    `/jobs/${encodeURIComponent(String(jobId))}`
+  );
+  dispatchCreditsUpdated(response.remainingCredits);
+
+  return {
+    ...response,
+    outputUrl: normalizeAiOutputUrl(response.outputUrl || response.outputKey),
+  };
+};
+
+export const waitForAiJobCompletion = async <TData = unknown>(
+  jobId: number | string,
+  {
+    intervalMs = 2500,
+    timeoutMs = 600000,
+  }: {
+    intervalMs?: number;
+    timeoutMs?: number;
+  } = {}
+): Promise<AiToolResponse<TData>> => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const response = await getAiJobStatus<TData>(jobId);
+    const status = String(response.status || "").toUpperCase();
+
+    if (AI_JOB_TERMINAL_STATUSES.has(status)) {
+      if (status !== "COMPLETED") {
+        throw new Error(response.errorMessage || response.message || "AI job failed.");
+      }
+      return response;
+    }
+
+    await sleep(intervalMs);
+  }
+
+  throw new Error("AI job is still processing. Please check again shortly.");
 };
 
 export const enhancePrompt = async (
@@ -1228,35 +1293,58 @@ export const upscaleBatch = async () => {
   throw new Error("Batch upscale should be executed client-side through repeated UPSCALE requests.");
 };
 
+const inferSeamlessPreviewUrl = (tileUrl: string) => {
+  if (!tileUrl) return "";
+  return tileUrl.replace(/_seamless(\.[a-z0-9]+)(\?.*)?$/i, "_preview$1$2");
+};
+
 export const generateSeamlessPattern = async (
-  file: File
+  file: File,
+  options: {
+    mode?: "auto" | "manual";
+    horizontalBand?: number;
+    verticalBand?: number;
+  } = {}
 ): Promise<GenerateSeamlessResponse> => {
   try {
     const inputUrl = await uploadAiInputAsset(file);
-    const response = await invokeAiTool<{
-      output_image?: string;
-      image?: string;
-      image_url?: string;
-    }>({
+    const params: Record<string, unknown> = {};
+    if (options.mode === "manual") {
+      params.horizontal_band = options.horizontalBand;
+      params.vertical_band = options.verticalBand;
+    }
+
+    let response = await invokeAiTool<SeamlessOutputData>({
       toolName: SEAMLESS_PATTERN_TOOL_NAME,
       inputUrl,
-      params: {},
+      params,
     });
+
+    if (response.queued && response.jobId) {
+      response = await waitForAiJobCompletion<SeamlessOutputData>(response.jobId);
+    }
 
     const outputImage =
       response.outputUrl ||
+      response.outputKey ||
       extractOutputUrls(response)[0] ||
       normalizeAiOutputUrl(
-        response.outputData?.output_image ||
+        response.outputData?.tile_url ||
+          response.outputData?.output_image ||
           response.outputData?.image ||
           response.outputData?.image_url ||
           ""
       );
+    const previewUrl = normalizeAiOutputUrl(response.outputData?.preview_url || "") || inferSeamlessPreviewUrl(outputImage);
 
     return {
       success: response.success && Boolean(outputImage),
       message: response.message,
       output_image: outputImage,
+      tile_url: outputImage,
+      preview_url: previewUrl,
+      validation: response.outputData?.validation,
+      remainingCredits: response.remainingCredits,
     };
   } catch (error) {
     if (!shouldFallbackToLegacySeamlessPattern(error)) {

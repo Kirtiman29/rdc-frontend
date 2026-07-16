@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
-import { getToken } from "@/api/apiClient";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ChevronDown,
@@ -19,6 +18,7 @@ import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
 import flamingoShowcase from "@/assets/flamingo-showcase.png";
 import colorfulCharacterShowcase from "@/assets/colorful-character-showcase.png";
 import AiCreditCost from "@/ai/components/AiCreditCost";
+import { generateSeamlessPattern, normalizeAiOutputUrl } from "@/api/aiApi";
 
 const SEAMLESS_PATTERN_CREDIT_COST = 7;
 
@@ -45,6 +45,7 @@ type SeamlessResponse = {
   message?: string;
   warning?: string;
   detail?: string | { message?: string };
+  output_image?: string;
   tile_url?: string;
   preview_url?: string;
   validation?: ValidationPayload;
@@ -70,17 +71,10 @@ const resolveSeamlessBaseUrl = () => {
   return "https://ruchitadesigncompany.in";
 };
 
-const resolveSubscriptionBaseUrl = () => {
-  return trimTrailingSlash(import.meta.env.VITE_SUBSCRIPTION_SERVICE_URL || "http://localhost:8094");
-};
-
-const buildSeamlessUrl = (path: string) => {
-  const base = resolveSubscriptionBaseUrl();
-  return `${base}${path.startsWith("/") ? path : `/${path}`}`;
-};
-
 const normalizeAssetUrl = (url: string) => {
-  if (/^https?:\/\//i.test(url) || url.startsWith("blob:") || url.startsWith("data:")) return url;
+  if (/^https?:\/\//i.test(url) || url.startsWith("blob:") || url.startsWith("data:")) {
+    return normalizeAiOutputUrl(url);
+  }
   return `${resolveSeamlessBaseUrl()}${url.startsWith("/") ? url : `/${url}`}`;
 };
 
@@ -100,13 +94,13 @@ const formatBytes = (bytes: number) => {
   return `${size.toFixed(size >= 10 || unit === 0 ? 0 : 1)} ${units[unit]}`;
 };
 
-const getErrorMessage = (payload: SeamlessResponse | null, response: Response) => {
+const getErrorMessage = (payload: SeamlessResponse | null) => {
   if (payload?.message) return payload.message;
   if (typeof payload?.detail === "string") return payload.detail;
   if (payload?.detail && typeof payload.detail === "object" && payload.detail.message) {
     return payload.detail.message;
   }
-  return `Generation failed (${response.status}). Check backend logs.`;
+  return "Generation failed. Check backend logs.";
 };
 
 const validationBadges = (validation?: ValidationPayload) => {
@@ -177,7 +171,7 @@ export default function SeamlessStudio() {
   const [notice, setNotice] = useState<Notice>(null);
   const [lightbox, setLightbox] = useState<{ src: string; label: string; checker?: boolean } | null>(null);
 
-  const endpointLabel = useMemo(() => resolveSeamlessBaseUrl(), []);
+  const endpointLabel = useMemo(() => "Java AI gateway", []);
   const badges = validationBadges(validation);
 
   useEffect(() => {
@@ -291,48 +285,23 @@ export default function SeamlessStudio() {
     }, 220);
 
     try {
-      const formData = new FormData();
-      formData.append("image", selectedFile);
+      const payload = (await generateSeamlessPattern(selectedFile, {
+        mode,
+        horizontalBand,
+        verticalBand,
+      })) as SeamlessResponse;
+      const tile = payload.tile_url || payload.output_image || "";
+      const hasTile = Boolean(tile);
 
-      const endpoint = mode === "manual" ? "/generate-seamless-custom" : "/generate-seamless";
-      if (mode === "manual") {
-        formData.append("horizontal_band", String(horizontalBand));
-        formData.append("vertical_band", String(verticalBand));
-      }
-
-      const token = getToken() || localStorage.getItem("token") || "";
-      const response = await fetch(buildSeamlessUrl(endpoint), {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      const remainingCreditsHeader = response.headers.get("x-remaining-credits");
-      if (remainingCreditsHeader) {
-        const remaining = parseInt(remainingCreditsHeader, 10);
-        if (!isNaN(remaining)) {
-          window.dispatchEvent(
-            new CustomEvent("ai-credits-updated", {
-              detail: remaining,
-            })
-          );
-        }
-      }
-
-      const payload = (await response.json().catch(() => null)) as SeamlessResponse | null;
-      const hasTile = Boolean(payload?.tile_url);
-
-      if (!response.ok || (!payload?.success && !hasTile)) {
-        throw new Error(getErrorMessage(payload, response));
+      if (!payload?.success && !hasTile) {
+        throw new Error(getErrorMessage(payload));
       }
 
       setProgress(100);
       setStepIndex(STEPS.length - 1);
       setValidation(payload?.validation);
 
-      if (payload?.tile_url) setTileUrl(cacheBust(normalizeAssetUrl(payload.tile_url)));
+      if (tile) setTileUrl(cacheBust(normalizeAssetUrl(tile)));
       if (payload?.preview_url) setPreviewUrl(cacheBust(normalizeAssetUrl(payload.preview_url)));
 
       if (payload?.warning || payload?.message) {
