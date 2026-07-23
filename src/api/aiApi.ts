@@ -13,7 +13,8 @@ const ADMIN_SERVICE_URL = (
 
 const GEMINI_IMAGE_OUTPUT_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
-  "http://192.168.0.154:8000"
+  import.meta.env.VITE_AI_SERVICE_URL ||
+  "http://localhost:8000"
 ).replace(/\/+$/, "");
 
 const AI_SERVICE_URL = (import.meta.env.VITE_AI_SERVICE_URL || "").replace(/\/+$/, "");
@@ -123,15 +124,18 @@ const getUrlPath = (url: string) => {
   }
 };
 
+const isLocalOrPrivateHost = (hostname: string) =>
+  hostname === "localhost" ||
+  hostname === "127.0.0.1" ||
+  hostname === "host.docker.internal" ||
+  /^192\.168\./.test(hostname) ||
+  /^10\./.test(hostname) ||
+  /^172\.(1[6-9]|2\d|3[0-1])\./.test(hostname);
+
 const rewriteLegacyAiHost = (url: string) => {
   try {
     const parsedUrl = new URL(url);
-    if (
-      parsedUrl.hostname === "192.168.0.155" ||
-      parsedUrl.hostname === "host.docker.internal" ||
-      parsedUrl.hostname === "localhost" ||
-      parsedUrl.hostname === "127.0.0.1"
-    ) {
+    if (isLocalOrPrivateHost(parsedUrl.hostname)) {
       const localOrigin =
         parsedUrl.hostname === "host.docker.internal" ?
           `${parsedUrl.protocol}//localhost${parsedUrl.port ? `:${parsedUrl.port}` : ""}`
@@ -714,7 +718,7 @@ export const normalizeGeminiImageOutputUrl = (url?: string | null) => {
   try {
     const parsedUrl = new URL(url, "http://placeholder.local");
 
-    if (parsedUrl.hostname === "192.168.0.154" && parsedUrl.port === "8002") {
+    if (isLocalOrPrivateHost(parsedUrl.hostname)) {
       return joinUrl(
         GEMINI_IMAGE_OUTPUT_BASE_URL,
         `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`

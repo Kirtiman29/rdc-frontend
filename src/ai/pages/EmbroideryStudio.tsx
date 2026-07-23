@@ -531,10 +531,10 @@ const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
 const getEmbroideryServiceBase = () =>
   trimTrailingSlash(
-    import.meta.env.VITE_EMBROIDERY_SERVICE_URL ||
+      import.meta.env.VITE_EMBROIDERY_SERVICE_URL ||
       import.meta.env.VITE_AI_SERVICE_URL ||
       import.meta.env.VITE_API_BASE_URL ||
-      "http://192.168.0.154:8000"
+      "http://localhost:8000"
   );
 
 const getSubscriptionServiceBase = () =>
@@ -549,11 +549,31 @@ const resolveEmbroideryApiUrl = () => {
 };
 
 const getResponseImageUrl = (imageUrl: string) => {
-  if (/^https?:\/\//i.test(imageUrl) || imageUrl.startsWith("blob:") || imageUrl.startsWith("data:")) {
+  if (imageUrl.startsWith("blob:") || imageUrl.startsWith("data:")) {
     return imageUrl;
   }
 
   const origin = getEmbroideryServiceBase();
+  if (/^https?:\/\//i.test(imageUrl)) {
+    try {
+      const parsedUrl = new URL(imageUrl);
+      if (
+        parsedUrl.hostname === "localhost" ||
+        parsedUrl.hostname === "127.0.0.1" ||
+        parsedUrl.hostname === "host.docker.internal" ||
+        /^192\.168\./.test(parsedUrl.hostname) ||
+        /^10\./.test(parsedUrl.hostname) ||
+        /^172\.(1[6-9]|2\d|3[0-1])\./.test(parsedUrl.hostname)
+      ) {
+        return `${origin}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+      }
+    } catch {
+      return imageUrl;
+    }
+
+    return imageUrl;
+  }
+
   return `${origin}${imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`}`;
 };
 

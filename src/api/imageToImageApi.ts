@@ -6,7 +6,7 @@ import type { GenerateResponse, PresetId } from "@/types/textile";
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
   import.meta.env.VITE_AI_SERVICE_URL ||
-  "http://192.168.0.154:8000"
+  "http://localhost:8000"
 ).replace(/\/+$/, "");
 const SUBSCRIPTION_BASE_URL = (import.meta.env.VITE_SUBSCRIPTION_SERVICE_URL || "http://localhost:8094").replace(
   /\/+$/,
@@ -52,11 +52,12 @@ export function normalizeBackendImageUrl(url?: string) {
     const parsed = new URL(url);
 
     if (
-      (parsed.hostname === "192.168.0.154" && parsed.port === "8002") ||
-      parsed.hostname === "host.docker.internal" ||
-      parsed.hostname === "192.168.0.155" ||
       parsed.hostname === "localhost" ||
-      parsed.hostname === "127.0.0.1"
+      parsed.hostname === "127.0.0.1" ||
+      parsed.hostname === "host.docker.internal" ||
+      /^192\.168\./.test(parsed.hostname) ||
+      /^10\./.test(parsed.hostname) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(parsed.hostname)
     ) {
       return `${API_BASE_URL}${parsed.pathname}${parsed.search}${parsed.hash}`;
     }

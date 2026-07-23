@@ -27,7 +27,7 @@ const getDefaultApiBaseUrl = () => {
 
   const { protocol, hostname } = window.location;
 
-  if (!hostname || hostname === "localhost" || hostname === "192.168.0.154") {
+  if (!hostname || hostname === "localhost" || /^192\.168\./.test(hostname)) {
     return normalizeBaseUrl(import.meta.env.VITE_AI_SERVICE_URL);
   }
 
@@ -36,13 +36,13 @@ const getDefaultApiBaseUrl = () => {
 
 const getDefaultBitmapBaseUrl = () => {
   if (typeof window === "undefined") {
-    return "http://localhost:8002";
+    return normalizeBaseUrl(import.meta.env.VITE_BITMAP_SERVICE_PUBLIC_URL);
   }
 
   const { protocol, hostname } = window.location;
 
   if (!hostname || hostname === "localhost" || hostname === "127.0.0.1") {
-    return "http://localhost:8002";
+    return normalizeBaseUrl(import.meta.env.VITE_BITMAP_SERVICE_PUBLIC_URL);
   }
 
   return `${protocol}//${hostname}:8002`;
@@ -55,12 +55,15 @@ export const API_BASE_URL =
 
 const FASTAPI_PUBLIC_URL =
   normalizeBaseUrl(import.meta.env.VITE_AI_SERVICE_URL) ||
-  "http://192.168.0.154:8000";
+  "http://localhost:8000";
 
 const BITMAP_PUBLIC_URL =
+  normalizeBaseUrl(import.meta.env.VITE_BITMAP_SERVICE_PUBLIC_URL) ||
+  normalizeBaseUrl(import.meta.env.VITE_BITMAP_BACKEND_URL) ||
   normalizeBaseUrl(import.meta.env.VITE_COLOR_SEPARATION_OUTPUT_BASE_URL) ||
   normalizeBaseUrl(import.meta.env.VITE_BITMAP_OUTPUT_BASE_URL) ||
-  getDefaultBitmapBaseUrl();
+  getDefaultBitmapBaseUrl() ||
+  "http://localhost:8002";
 
 const COLOR_SEPARATION_DETAIL_BASE_URL =
   normalizeBaseUrl(import.meta.env.VITE_COLOR_SEPARATION_DETAIL_BASE_URL) ||
@@ -165,6 +168,25 @@ const fixFastApiOutputPath = (path?: string | null) => {
   if (!path) return "";
 
   return path.replace("/storage/outputs/", "/static/outputs/");
+};
+
+const isLocalOrPrivateBitmapHost = (url: URL) => {
+  const hostname = url.hostname.toLowerCase();
+  const port = url.port || (url.protocol === "https:" ? "443" : "80");
+
+  if (port !== "8002") return false;
+  if (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "0.0.0.0" ||
+    hostname === "host.docker.internal"
+  ) {
+    return true;
+  }
+
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) return true;
+  return /^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(hostname);
 };
 
 export const normalizeColorSeparationResponse = (
@@ -561,7 +583,7 @@ export const getFullImageUrl = (path?: string | null) => {
     try {
       const url = new URL(fixedPath);
 
-      if (url.pathname.startsWith("/storage/")) {
+      if (isLocalOrPrivateBitmapHost(url) || url.pathname.startsWith("/storage/")) {
         return `${BITMAP_PUBLIC_URL}${url.pathname}${url.search}${url.hash}`;
       }
 

@@ -50,12 +50,20 @@ export type BitmapGeminiImageToImageResponse = {
 };
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
+const stripBitmapProxySuffix = (value: string) => value.replace(/\/api\/bitmap$/i, "");
 
 const SUBSCRIPTION_BASE_URL = trimTrailingSlash(
   import.meta.env.VITE_SUBSCRIPTION_SERVICE_URL || "http://localhost:8094"
 );
 
-const BITMAP_API = `${SUBSCRIPTION_BASE_URL}/api/bitmap`;
+const BITMAP_API = trimTrailingSlash(
+  import.meta.env.VITE_BITMAP_BACKEND_URL ||
+    import.meta.env.VITE_BITMAP_SERVICE_PUBLIC_URL ||
+    import.meta.env.VITE_BITMAP_SERVICE_URL ||
+    `${SUBSCRIPTION_BASE_URL}/api/bitmap`
+);
+
+const BITMAP_PUBLIC_URL = stripBitmapProxySuffix(BITMAP_API);
 
 const bitmapClient = axios.create({
   baseURL: BITMAP_API,
@@ -68,15 +76,15 @@ const getAuthHeaders = (token?: string) => {
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 };
 
-const toFormBody = (params: BitmapParamMap) => {
-  const formBody = new URLSearchParams();
+const toQueryParams = (params: BitmapParamMap) => {
+  const queryParams: Record<string, string> = {};
 
   Object.entries(params).forEach(([key, value]) => {
     if (value === undefined || value === null) return;
-    formBody.append(key, String(value));
+    queryParams[key] = String(value);
   });
 
-  return formBody;
+  return queryParams;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -121,7 +129,7 @@ const resolveServiceImageUrl = (url?: string | null) => {
   if (!url) return "";
   if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
   const normalized = url.startsWith("/") ? url : `/${url}`;
-  return `${SUBSCRIPTION_BASE_URL}${normalized}`;
+  return `${BITMAP_PUBLIC_URL}${normalized}`;
 };
 
 const createBitmapError = async (error: unknown) => {
@@ -274,20 +282,20 @@ const normalizeGeminiResponse = (payload: unknown): BitmapGeminiImageToImageResp
 };
 
 const postForm = async (path: string, params: BitmapParamMap, token?: string) => {
-  return bitmapClient.post(path, toFormBody(params), {
+  return bitmapClient.post(path, null, {
     headers: {
       ...getAuthHeaders(token),
-      "Content-Type": "application/x-www-form-urlencoded",
     },
+    params: toQueryParams(params),
   });
 };
 
 const postBinary = async (path: string, params: BitmapParamMap, token?: string): Promise<BitmapBinaryResponse> => {
-  const response = await bitmapClient.post(path, toFormBody(params), {
+  const response = await bitmapClient.post(path, null, {
     headers: {
       ...getAuthHeaders(token),
-      "Content-Type": "application/x-www-form-urlencoded",
     },
+    params: toQueryParams(params),
     responseType: "blob",
   });
 
@@ -341,37 +349,37 @@ export const bitmapApi = {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await postMultipart("/upload", formData, token);
+    const response = await postMultipart("/upload/", formData, token);
     return normalizeUploadResponse(response.data);
   },
 
   async analyze(filename: string, token?: string) {
-    const response = await postForm("/analyze", { filename }, token);
+    const response = await postForm("/analyze/", { filename }, token);
     return normalizeAnalysisResponse(response.data);
   },
 
   async previewHalftone(params: BitmapParamMap, token?: string) {
-    return postBinary("/preview/halftone", params, token);
+    return postBinary("/halftone/monochrome", params, token);
   },
 
   async previewDither(params: BitmapParamMap, token?: string) {
-    return postBinary("/preview/dither", params, token);
+    return postBinary("/dither/", params, token);
   },
 
   async previewSeparationProof(params: BitmapParamMap, token?: string) {
-    return postBinary("/preview/separation-proof", params, token);
+    return postBinary("/halftone/separation/proof", params, token);
   },
 
   async exportSeparationZip(params: BitmapParamMap, token?: string) {
-    return postBinary("/export/separation-zip", params, token);
+    return postBinary("/halftone/separation", params, token);
   },
 
   async exportPsd(params: BitmapParamMap, token?: string) {
-    return postBinary("/export/psd", params, token);
+    return postBinary("/halftone/separation/psd", params, token);
   },
 
   async exportCmyk(params: BitmapParamMap, token?: string) {
-    return postBinary("/export/cmyk", params, token);
+    return postBinary("/halftone/cmyk/", params, token);
   },
 
   async geminiImageToImage(formData: FormData, token?: string) {

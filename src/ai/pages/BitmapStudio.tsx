@@ -375,6 +375,7 @@ export default function BitmapStudio() {
       dot_screen_enabled: dotScreenEnabled,
       spot_color_count: spotColorCount,
       manual_spot_colors: manualSpotColors,
+      warm_psd_cache: true,
     };
 
     return {
@@ -490,7 +491,10 @@ export default function BitmapStudio() {
         return;
       }
 
-      const exportResponse = await bitmapApi.exportPsd({ ...request.params, dpi: psdDpi }, token || undefined);
+      const exportResponse = await bitmapApi.exportPsd(
+        { ...request.params, dpi: psdDpi, include_grayscale_layers: true },
+        token || undefined
+      );
       syncAvailableCredits(exportResponse.remainingCredits);
       if (exportResponse.remainingCredits === null) {
         await refreshCredits();

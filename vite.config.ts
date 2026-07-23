@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -19,11 +19,15 @@ const createBitmapProxyOptions = (target: string) => ({
   secure: false,
 });
 
-export default defineConfig(({ mode }) => ({
-  base: "/",
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, projectRoot, "");
+  const enableHttps = env.VITE_DEV_HTTPS === "true";
 
-  server: {
-    https: undefined,
+  return {
+    base: "/",
+
+    server: {
+    https: enableHttps ? {} : false,
     host: "0.0.0.0",
     port: 3000,
     hmr: {
@@ -54,7 +58,7 @@ export default defineConfig(({ mode }) => ({
 
   plugins: [
     react(),
-    mode === "development" ? mkcert() : null,
+    mode === "development" && enableHttps ? mkcert() : null,
   ].filter(Boolean),
 
   resolve: {
@@ -82,4 +86,5 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-}));
+  };
+});
