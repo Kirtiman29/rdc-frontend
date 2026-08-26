@@ -17,11 +17,13 @@ import { Link, useLocation } from "react-router-dom";
 import AiCreditCost from "@/ai/components/AiCreditCost";
 import {
   GEMINI_IMAGE_TO_IMAGE_ASPECT_RATIOS,
+  enhancePrompt,
   generateGeminiImgToImg,
   getAiErrorMessage,
   type GenerateResponse,
   type GeminiImageToImageAspectRatio,
   type GeminiImageToImageMode,
+  type TextToImageProvider,
 } from "@/api/aiApi";
 
 import pattern1 from "@/assets/sample-pattern-1.jpg";
@@ -56,6 +58,20 @@ type GeneratedImage = GenerateResponse["images"][number];
 
 const slideshowImages = [pattern1, pattern2, pattern3, pattern4];
 
+const getPatternMakerDownloadName = (filename: string, index?: number) => {
+  const fallbackName = `rdc-pattern-maker-${typeof index === "number" ? index + 1 : Date.now()}.png`;
+  const trimmed = filename.trim();
+  const candidate = trimmed || fallbackName;
+  const extensionMatch = candidate.match(/\.(png|jpe?g|webp)$/i);
+  const extension = extensionMatch?.[0].toLowerCase() ?? ".png";
+
+  if (/(gemini|openai|gpt)/i.test(candidate)) {
+    return fallbackName.replace(/\.png$/i, extension);
+  }
+
+  return candidate;
+};
+
 const aspectRatioLabels: Record<GeminiImageToImageAspectRatio, string> = {
   auto: "Auto (input image)",
   "1:1": "1:1",
@@ -76,6 +92,7 @@ const ALLOWED_GEMINI_IMAGE_TYPES = [
   "image/webp",
 ];
 const ALLOWED_GEMINI_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
+const MAX_GEMINI_IMAGE_UPLOAD_BYTES = 120 * 1024 * 1024;
 
 const editModeOptions: Array<{
   value: GeminiImageToImageMode;
@@ -86,6 +103,174 @@ const editModeOptions: Array<{
   { value: "edit", title: "Edit", description: "Changes only the requested parts" },
   { value: "redesign", title: "Redesign", description: "Creates a new variation of the design" },
 ];
+
+type PatternPromptPreset = {
+  id: string;
+  title: string;
+  description: string;
+  prompt: string;
+  recommendedMode: GeminiImageToImageMode;
+  editType: string;
+};
+
+type PatternWorkflowStep = {
+  title: string;
+  description: string;
+};
+
+type ChangeStrengthOption = {
+  value: 20 | 30 | 50;
+  title: string;
+  description: string;
+  instruction: string;
+  editMode: GeminiImageToImageMode;
+  changeStrength: number;
+  referenceStrength: number;
+  promptStrength: number;
+};
+
+const patternWorkflowSteps: PatternWorkflowStep[] = [
+  {
+    title: "1. Upload Reference",
+    description: "Use a clean flat textile tile or artwork image.",
+  },
+  {
+    title: "2. Pick Direction",
+    description: "Choose the closest preset to the designer intent.",
+  },
+  {
+    title: "3. Set Change",
+    description: "Start with 20% or 30% for production-safe variations.",
+  },
+  {
+    title: "4. Generate & Select",
+    description: "Create 2-4 options, keep the best, then refine again.",
+  },
+];
+
+const UNIVERSAL_BASE_PROMPT =
+  "Analyze the uploaded reference image's artwork style, motif family, illustration rendering technique (flat 2D vector, painted, block-print, line-art, or ornamental), color palette, and pattern composition. Create an intelligent textile pattern variation that respects the exact artistic style and motif identity of the uploaded artwork.";
+
+const patternPromptPresets: PatternPromptPreset[] = [
+  {
+    id: "auto",
+    title: "Auto-Adaptive (Universal)",
+    description: "Auto-detects image style (floral, paisley, vector, block-print, etc.).",
+    recommendedMode: "edit",
+    editType: "controlled textile pattern variation",
+    prompt: UNIVERSAL_BASE_PROMPT,
+  },
+  {
+    id: "close-polish",
+    title: "Reference Safe",
+    description: "Closest textile variation with original flow preserved.",
+    recommendedMode: "edit",
+    editType: "controlled textile variation",
+    prompt:
+      "Use the uploaded textile artwork as the primary reference. Create a very similar flat textile pattern variation while preserving the original motif family, layout flow, motif scale, spacing, density, color mood, and repeat rhythm. Improve only print clarity, edge cleanliness, and color balance.",
+  },
+  {
+    id: "floral-refresh",
+    title: "Floral Studio",
+    description: "Cleaner flowers and leaves without changing composition.",
+    recommendedMode: "edit",
+    editType: "controlled floral textile variation",
+    prompt:
+      "Create a refined floral textile variation from the uploaded design. Keep the same composition path, motif placement, floral scale, stem direction, leaf rhythm, and negative space. Improve flower definition, leaf detailing, print sharpness, and color harmony without turning it into a new layout.",
+  },
+  {
+    id: "paisley-cleaner",
+    title: "Paisley Cleaner",
+    description: "Better paisley flow with less visual noise.",
+    recommendedMode: "edit",
+    editType: "controlled paisley textile variation",
+    prompt:
+      "Create a cleaner paisley textile variation from the uploaded image. Preserve paisley size, direction, spacing, curve flow, ornamental balance, and color family. Reduce muddy texture, improve line clarity, keep motifs elegant, and avoid overcrowding.",
+  },
+  {
+    id: "ethnic-block",
+    title: "Ethnic Block",
+    description: "Controlled block-print feel from the same source.",
+    recommendedMode: "edit",
+    editType: "controlled block print textile variation",
+    prompt:
+      "Convert the uploaded design toward an Indian block-print textile style while preserving the source motif arrangement, repeat rhythm, motif scale, and spacing. Simplify shapes into handcrafted block-print forms, keep clean edges, and avoid changing the overall composition too much.",
+  },
+  {
+    id: "luxury-ornamental",
+    title: "Luxury Ornamental",
+    description: "Premium motif language with richer detailing.",
+    recommendedMode: "edit",
+    editType: "controlled ornamental textile variation",
+    prompt:
+      "Create a premium ornamental textile variation inspired by the uploaded design. Keep the reference structure recognizable, preserve motif scale and layout rhythm, improve decorative line quality, add controlled refined detailing, and keep the artwork suitable for high-end fabric printing.",
+  },
+  {
+    id: "minimal-repeat",
+    title: "Minimal Repeat",
+    description: "Cleaner, lighter version for subtle fabric prints.",
+    recommendedMode: "edit",
+    editType: "controlled minimal textile variation",
+    prompt:
+      "Create a lighter minimal textile variation from the uploaded image. Preserve the original flow, motif family, and repeat rhythm, but reduce visual clutter, simplify supporting details, balance empty space, and keep a clean print-ready textile tile.",
+  },
+  {
+    id: "tropical-botanical",
+    title: "Tropical Botanical",
+    description: "Leafy tropical direction from the uploaded reference.",
+    recommendedMode: "edit",
+    editType: "controlled botanical textile variation",
+    prompt:
+      "Create a tropical botanical textile variation inspired by the uploaded image. Preserve the source composition flow, motif density, repeat spacing, and scale. Emphasize flowing foliage and botanical detailing while keeping the original textile layout readable.",
+  },
+];
+
+const changeStrengthOptions: ChangeStrengthOption[] = [
+  {
+    value: 20,
+    title: "20% Change",
+    description: "Subtle shape & detail edit",
+    editMode: "edit",
+    changeStrength: 0.25,
+    referenceStrength: 0.85,
+    promptStrength: 0.5,
+    instruction:
+      "Apply 20% subtle studio variation. Keep the uploaded image as master reference. Match its illustration style, rendering technique, motif family, and color palette. Refine 20% of motif outlines, inner petals, leaf vein detailing, and secondary accents while keeping primary motif placement intact.",
+  },
+  {
+    value: 30,
+    title: "30% Change",
+    description: "Motif & layout refresh",
+    editMode: "redesign",
+    changeStrength: 0.6,
+    referenceStrength: 0.5,
+    promptStrength: 0.85,
+    instruction:
+      "Apply 30% distinct pattern variation! Match the artistic rendering style, color harmony, and motif family of the reference image. Noticeably refresh 30% of main motif shapes, floral petal curvatures, stem paths, leaf placements, and background accent distribution to create a clearly refreshed, elegant textile pattern.",
+  },
+  {
+    value: 50,
+    title: "50% Change",
+    description: "Shape, placement & new elements",
+    editMode: "redesign",
+    changeStrength: 0.85,
+    referenceStrength: 0.25,
+    promptStrength: 0.95,
+    instruction:
+      "Apply 50% dramatic pattern redesign! Match the core artistic rendering technique and color harmony of the reference image. Visibly transform the entire pattern composition: alter motif shapes, change motif scale, rearrange motif positions across the canvas, alter vine/branch paths, and introduce new matching supporting flowers, leaves, foliage, and decorative filler details in the exact same art style. Create a fresh, rich, distinct new pattern variation.",
+  },
+];
+
+const outputGuardrails =
+  "Output requirements: flat print-ready textile artwork only, full-canvas edge-to-edge pattern tile, preserve source flow and repeat rhythm, no product mockup, no scarf, no cloth folds, no photographed fabric texture, no white border, no frame, no text, no logo, no watermark, no distorted motifs.";
+
+const buildPresetPrompt = (
+  preset: PatternPromptPreset,
+  changeProfile: ChangeStrengthOption
+) => {
+  const basePrompt = preset.id === "auto" || !preset.prompt ? UNIVERSAL_BASE_PROMPT : preset.prompt;
+  return `${basePrompt}\n\n${changeProfile.instruction}\n\n${outputGuardrails}`;
+};
 
 export default function GeminiImageToImage() {
   const location = useLocation();
@@ -104,7 +289,11 @@ export default function GeminiImageToImage() {
   const [aspectRatio, setAspectRatio] =
     useState<GeminiImageToImageAspectRatio>("auto");
   const [editMode, setEditMode] = useState<GeminiImageToImageMode>("auto");
+  const [selectedProvider, setSelectedProvider] = useState<TextToImageProvider>("gemini");
+  const [selectedPresetId, setSelectedPresetId] = useState(patternPromptPresets[0].id);
+  const [changePercent, setChangePercent] = useState<ChangeStrengthOption["value"]>(30);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
   const [status, setStatus] = useState("Upload an image to get started.");
   const [activeSlide, setActiveSlide] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -133,6 +322,56 @@ export default function GeminiImageToImage() {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
+  const selectedPreset =
+    patternPromptPresets.find((preset) => preset.id === selectedPresetId) ||
+    patternPromptPresets[0];
+  const selectedChangeProfile =
+    changeStrengthOptions.find((option) => option.value === changePercent) ||
+    changeStrengthOptions[1];
+  const modelOptions: { value: TextToImageProvider; label: string }[] = [
+    { value: "gemini", label: "Gemini" },
+    { value: "gpt", label: "GPT Image" },
+  ];
+
+  const applyPromptPreset = (
+    preset: PatternPromptPreset = selectedPreset,
+    changeProfile: ChangeStrengthOption = selectedChangeProfile
+  ) => {
+    setSelectedPresetId(preset.id);
+    setChangePercent(changeProfile.value);
+    setEditMode(changeProfile.editMode === "edit" ? preset.recommendedMode : changeProfile.editMode);
+    setPrompt(buildPresetPrompt(preset, changeProfile));
+    setGeneratedImages([]);
+    setStatus(`${preset.title} preset applied with ${changeProfile.value}% change.`);
+  };
+
+  const handleChangeStrengthSelect = (option: ChangeStrengthOption) => {
+    setChangePercent(option.value);
+    setEditMode(option.editMode);
+    setPrompt(buildPresetPrompt(selectedPreset, option));
+  };
+
+  const handleEnhancePrompt = async () => {
+    if (isEnhancing) return;
+
+    if (!prompt.trim()) {
+      setStatus("Please enter a prompt first.");
+      return;
+    }
+
+    try {
+      setIsEnhancing(true);
+      setStatus("Enhancing prompt...");
+      const result = await enhancePrompt(prompt, file ?? undefined, "");
+      setPrompt(result.enhanced_prompt);
+      setStatus("Prompt enhanced.");
+    } catch (error) {
+      setStatus(getAiErrorMessage(error, "Prompt enhancement failed."));
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (isGenerating) return;
 
@@ -150,18 +389,47 @@ export default function GeminiImageToImage() {
       setIsGenerating(true);
       setStatus("Generating image variations...");
 
+      const effectiveMode =
+        changePercent === 50 || changePercent === 30
+          ? "redesign"
+          : editMode;
+
       const result = await generateGeminiImgToImg({
         file,
         prompt,
+        provider: selectedProvider,
         numImages,
         aspectRatio,
-        mode: editMode,
+        mode: effectiveMode,
+        editType: selectedPreset.editType,
+        changeStrength: selectedChangeProfile.changeStrength,
+        referenceStrength: selectedChangeProfile.referenceStrength,
+        promptStrength: selectedChangeProfile.promptStrength,
+        variationType: selectedPreset.id,
+        outputIntent: "flat print-ready textile pattern variation",
+        qualityPreset: "clean commercial textile artwork",
+        preserve:
+          changePercent === 50
+            ? "background color mood"
+            : changePercent === 30
+            ? "color mood, background ground"
+            : "background ground color, general pattern theme",
+        motifLock:
+          changePercent === 50
+            ? "allow 50% strong redesign of motif shapes, motif placement, and addition of new supporting elements"
+            : changePercent === 30
+            ? "allow 30% distinct motif shape redesign and placement adjustment"
+            : "allow 20% visible motif shape and curve variation",
       });
 
       setGeneratedImages(result.images);
+      const providerLabel = result.providerFallbackUsed
+        ? ` using ${formatProviderLabel(result.provider || result.fallbackProvider)} fallback`
+        : "";
+
       setStatus(
         result.images.length
-          ? `Generated ${result.images.length} image${result.images.length > 1 ? "s" : ""}.`
+          ? `Generated ${result.images.length} image${result.images.length > 1 ? "s" : ""}${providerLabel}.`
           : "Generation finished, but no images were returned."
       );
     } catch (error) {
@@ -179,17 +447,29 @@ export default function GeminiImageToImage() {
     );
   };
 
+  const validateIncomingUpload = (incoming: File) => {
+    if (!isAllowedUpload(incoming)) {
+      return "Please upload a PNG, JPG, JPEG, or WEBP image.";
+    }
+
+    if (incoming.size > MAX_GEMINI_IMAGE_UPLOAD_BYTES) {
+      return "Please upload an image smaller than 120 MB.";
+    }
+
+    return "";
+  };
+
   const changeNumImages = (delta: number) => {
     setNumImages((current) => Math.max(1, Math.min(4, current + delta)));
   };
 
-  const handleDownload = async (url: string, filename: string) => {
+  const handleDownload = async (url: string, filename: string, index?: number) => {
     const response = await fetch(url);
     const blob = await response.blob();
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = objectUrl;
-    link.download = filename;
+    link.download = getPatternMakerDownloadName(filename, index);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -272,8 +552,9 @@ export default function GeminiImageToImage() {
                   setIsDragOver(false);
                   const incoming = e.dataTransfer.files?.[0];
                   if (incoming) {
-                    if (!isAllowedUpload(incoming)) {
-                      setStatus("Please upload a PNG, JPG, JPEG, or WEBP image.");
+                    const uploadError = validateIncomingUpload(incoming);
+                    if (uploadError) {
+                      setStatus(uploadError);
                       return;
                     }
 
@@ -315,7 +596,7 @@ export default function GeminiImageToImage() {
                       <p className="text-xs font-bold text-[#A1A8B3] group-hover:text-white transition-colors">
                         Drag & drop image here or <span className="text-[#E11D2E]">browse</span>
                       </p>
-                      <p className="mt-0.5 text-[9px] text-[#6B7280]">Supports PNG, JPG • Max 10MB</p>
+                      <p className="mt-0.5 text-[9px] text-[#6B7280]">Supports PNG, JPG, WEBP - Max 120MB</p>
                     </div>
                   </>
                 )}
@@ -326,8 +607,9 @@ export default function GeminiImageToImage() {
                   onChange={(e) => {
                     const incoming = e.target.files?.[0];
                     if (incoming) {
-                      if (!isAllowedUpload(incoming)) {
-                        setStatus("Please upload a PNG, JPG, JPEG, or WEBP image.");
+                      const uploadError = validateIncomingUpload(incoming);
+                      if (uploadError) {
+                        setStatus(uploadError);
                         e.target.value = "";
                         return;
                       }
@@ -353,12 +635,112 @@ export default function GeminiImageToImage() {
                   placeholder='e.g. "Replace flowers with hibiscus while keeping layout same"'
                   className="no-scrollbar h-full w-full resize-none rounded-xl border border-[#2B3138] bg-[#111315]/60 p-4 pb-12 text-sm text-[#F5F7FA] placeholder:text-[#6B7280] transition-all focus:border-[#E11D2E]/50 focus:bg-[#111315]/80 focus:outline-none"
                 />
+                <button
+                  type="button"
+                  onClick={handleEnhancePrompt}
+                  disabled={isEnhancing || !prompt.trim()}
+                  className="absolute bottom-3 right-3 inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E11D2E]/40 bg-[#E11D2E]/15 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[#ffb3bb] shadow-lg shadow-black/20 transition hover:border-[#E11D2E]/70 hover:bg-[#E11D2E]/25 disabled:cursor-not-allowed disabled:border-[#2B3138] disabled:bg-[#20242A] disabled:text-[#6B7280]"
+                >
+                  {isEnhancing ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-3 w-3" />
+                  )}
+                  <span>{isEnhancing ? "Enhancing..." : "Enhance"}</span>
+                </button>
               </div>
             </div>
           </div>
 
+          {!isAiColorMatching && (
+            <div className="mb-6 space-y-6">
+              <div className="rounded-2xl border border-[#2B3138] bg-[#111315]/55 p-4">
+                <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-[#E11D2E]" />
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A1A8B3]">
+                      Designer Flow
+                    </p>
+                  </div>
+                  <p className="text-xs text-[#A1A8B3]">
+                    For best results, generate controlled variations before trying heavy redesigns.
+                  </p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {patternWorkflowSteps.map((step) => (
+                    <div
+                      key={step.title}
+                      className="rounded-xl border border-[#2B3138] bg-[#0F1114] p-3"
+                    >
+                      <div className="text-sm font-semibold text-white">{step.title}</div>
+                      <div className="mt-1 text-xs leading-5 text-[#A1A8B3]">
+                        {step.description}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-[#2B3138] bg-[#111315]/55 p-5">
+                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <Wand2 className="h-4 w-4 text-[#E11D2E]" />
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#A1A8B3]">
+                      Variation Change Strength
+                    </p>
+                  </div>
+                  <p className="text-xs text-[#A1A8B3]">
+                    Click 20%, 30%, or 50% to auto-change design variations
+                  </p>
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                  {changeStrengthOptions.map((option) => {
+                    const active = changePercent === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => handleChangeStrengthSelect(option)}
+                        className={`flex flex-col justify-between rounded-2xl border p-5 text-left transition-all duration-300 ${
+                          active
+                            ? "border-[#E11D2E] bg-[#E11D2E]/15 shadow-lg shadow-[#E11D2E]/10"
+                            : "border-[#2B3138] bg-[#0F1114] hover:border-[#E11D2E]/40 hover:bg-[#111315]/80"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-base font-bold text-white">{option.title}</span>
+                            {active && (
+                              <span className="h-2.5 w-2.5 rounded-full bg-[#E11D2E] animate-pulse" />
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs font-semibold text-[#E11D2E]">
+                            {option.description}
+                          </p>
+                        </div>
+                        <p className="mt-4 text-xs leading-relaxed text-[#A1A8B3]">
+                          {option.value === 20 && "Preserves exact motif placement while refining linework & fine details."}
+                          {option.value === 30 && "Refreshes motif shapes, curves & placements in matching art style."}
+                          {option.value === 50 && "Redesigns layout, motif shapes, placements & adds new matching elements."}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Middle Row: Aspect Ratio & Num Images */}
-          <div className="grid gap-6 md:grid-cols-2 mb-6">
+          <div className="grid gap-6 md:grid-cols-3 mb-6">
+            <FieldCard title="Model" icon={<Sparkles className="h-4 w-4 text-[#E11D2E]" />}>
+              <SelectField
+                value={selectedProvider}
+                onChange={(value) => setSelectedProvider(value as TextToImageProvider)}
+                options={modelOptions}
+              />
+            </FieldCard>
+
             <FieldCard title="Aspect Ratio" icon={<Maximize className="h-4 w-4 text-[#E11D2E]" />}>
               <SelectField
                 value={aspectRatio}
@@ -506,12 +888,12 @@ export default function GeminiImageToImage() {
                         <div>
                           <p className="text-sm font-semibold text-white">Variation {index + 1}</p>
                           <p className="text-[10px] uppercase tracking-[0.18em] text-[#6B7280]">
-                            {image.filename}
+                            {getPatternMakerDownloadName(image.filename, index)}
                           </p>
                         </div>
                         <button
                           type="button"
-                          onClick={() => void handleDownload(resolvedUrl, image.filename)}
+                          onClick={() => void handleDownload(resolvedUrl, image.filename, index)}
                           className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-[#2B3138] bg-[#20242A] px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#A1A8B3] transition hover:border-[#E11D2E]/40 hover:text-white"
                         >
                           <Download className="h-3.5 w-3.5" />
@@ -676,6 +1058,13 @@ export default function GeminiImageToImage() {
       </AnimatePresence>
     </div>
   );
+}
+
+function formatProviderLabel(provider?: string | null) {
+  const normalizedProvider = (provider || "").trim().toLowerCase();
+  if (normalizedProvider === "openai" || normalizedProvider === "gpt") return "GPT";
+  if (normalizedProvider === "gemini") return "Gemini";
+  return "alternate";
 }
 
 

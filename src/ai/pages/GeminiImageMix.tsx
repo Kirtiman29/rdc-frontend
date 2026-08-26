@@ -14,14 +14,17 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
 import {
-  generateGeminiImageMix,
   getAIImageUrl,
   getAiErrorMessage,
   GEMINI_IMAGE_MIX_ASPECT_RATIOS,
   type GenerateResponse,
   type GeminiImageMixAspectRatio,
+  type TextToImageProvider,
 } from "@/api/aiApi";
+import { generateImageMixWithProvider } from "@/api/imageMixProviderApi";
+import ModelProviderSelector from "@/ai/components/ModelProviderSelector";
 import AiCreditEstimate from "@/ai/components/AiCreditEstimate";
+import { getModelProviderLabel } from "@/ai/constants/modelProviders";
 
 import pattern1 from "@/assets/sample-pattern-1.jpg";
 import pattern2 from "@/assets/sample-pattern-2.jpg";
@@ -79,6 +82,8 @@ export default function GeminiImageMix() {
   const [numImages, setNumImages] = useState(1);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [, setRemainingCredits] = useState<number | null>(null);
+  const [selectedProvider, setSelectedProvider] =
+    useState<TextToImageProvider>("gemini");
   const [aspectRatio, setAspectRatio] =
     useState<GeminiImageMixAspectRatio>("1:1");
   const [isDragOver, setIsDragOver] = useState(false);
@@ -149,11 +154,12 @@ export default function GeminiImageMix() {
       setIsGenerating(true);
       setError("");
 
-      const result = await generateGeminiImageMix({
+      const result = await generateImageMixWithProvider({
         files,
         prompt,
         numImages,
         aspectRatio,
+        provider: selectedProvider,
       });
 
       setGeneratedImages(result.images);
@@ -408,6 +414,11 @@ export default function GeminiImageMix() {
                       </AnimatePresence>
                     </div>
 
+                    <ModelProviderSelector
+                      value={selectedProvider}
+                      onChange={setSelectedProvider}
+                    />
+
                     {/* Popover: Aspect Ratio */}
                     <div className={`relative ${activePopover === "aspect" ? "z-50" : "z-10"}`}>
                       <button
@@ -477,7 +488,11 @@ export default function GeminiImageMix() {
                       ) : (
                         <Layers className="h-4 w-4" />
                       )}
-                      <span>{isGenerating ? "MIXING..." : "MIX WITH GEMINI"}</span>
+                      <span>
+                        {isGenerating
+                          ? "MIXING..."
+                          : `MIX WITH ${getModelProviderLabel(selectedProvider).toUpperCase()}`}
+                      </span>
                     </button>
                   </div>
                 </div>

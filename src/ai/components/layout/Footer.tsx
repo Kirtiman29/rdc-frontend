@@ -79,7 +79,7 @@ export function Footer() {
           </h3>
           <ul className="space-y-2 text-xs">
             <li>
-              <Link to="/ai-studio/generate?mode=brush" className="hover:text-white transition-colors">Brush Effect</Link>
+              <Link to="/ai-studio/painting-technique" className="hover:text-white transition-colors">Brush Effect</Link>
             </li>
             <li>
               <Link to="/ai-studio/generate?mode=texture" className="hover:text-white transition-colors">Texture</Link>

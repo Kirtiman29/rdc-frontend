@@ -19,6 +19,7 @@ import {
   BookOpen,
   ChevronDown,
   HelpCircle,
+  Paintbrush,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -94,6 +95,38 @@ const chapter2Tools = [
     accentColor: "#10B981"
   },
   {
+    id: "painting-technique",
+    title: "Brush Effect & Painting Studio",
+    description: "Transform flat vector graphics or images into 8 physical painting mediums: Oil, Liquid Watercolor, Impasto Acrylic, Gouache, Fresco, Encaustic Wax, Charcoal, and Dry Brush.",
+    icon: Paintbrush,
+    badge: "Neural Medium Synthesis",
+    cost: "10 Credits",
+    to: "/ai-studio/painting-technique",
+    image: pattern5,
+    features: [
+      "Simulate oil, watercolor, acrylic, gouache, fresco & wax",
+      "Interactive before/after split comparison slider",
+      "High-resolution PNG export for lookbooks"
+    ],
+    accentColor: "#E11D2E"
+  },
+  {
+    id: "traditional-art",
+    title: "Traditional Art & Indian Craft",
+    description: "Convert designs into authentic Indian traditional crafts: Madhubani Folk Art, Warli Tribal Art, Ikat Weaves, Bandhani Tie-Dye, Ajrakh, and Rajasthan Hand Block Prints.",
+    icon: Palette,
+    badge: "Heritage Craft Synthesis",
+    cost: "10 Credits",
+    to: "/ai-studio/traditional-art",
+    image: pattern6,
+    features: [
+      "Simulate Madhubani, Warli, Ikat, Bandhani, Ajrakh & Handblock",
+      "Interactive before/after split comparison slider",
+      "High-resolution PNG export for production briefs"
+    ],
+    accentColor: "#F59E0B"
+  },
+  {
     id: "gemini-image-to-image",
     title: "Gemini Image-to-Image",
     description: "Refine a source image with mask guidance, palette controls, and backend-friendly edit parameters for professional image-to-image workflows.",
@@ -110,20 +143,20 @@ const chapter2Tools = [
     accentColor: "#F97316"
   },
   {
-    id: "upscale",
-    title: "Smart Upscale",
-    description: "Prepare low-resolution prints for production mills. Enhance canvas texture outlines, remove jpeg compression blocks, and output 4K resolution files with absolute clarity.",
+    id: "replicate-upscale",
+    title: "Replicate Real-ESRGAN Upscale",
+    description: "Unblur blurry images and designs using Replicate's Real-ESRGAN super-resolution model. Upscale 2x, 4x, or 8x with extreme line clarity.",
     icon: Maximize,
-    badge: "Super-Resolution",
-    cost: "10-20 Credits",
+    badge: "Replicate 4K/8K AI",
+    cost: "10 Credits",
     to: "/ai-studio/upscale",
     image: pattern4,
     features: [
-      "Smart upscale for pixel-clear lines",
-      "Textile-mode fabric texture smoothing",
-      "Batch zip file download compatibility"
+      "Select 2x, 4x, or 8x scaling factor",
+      "Remove compression blur & artifact noise",
+      "Interactive before/after split slider & 4K PNG export"
     ],
-    accentColor: "#F59E0B"
+    accentColor: "#3B82F6"
   }
 ];
 

@@ -63,6 +63,9 @@ import TextileRecolorStudio from "@/ai/pages/TextileRecolorStudio";
 import ColorMatchingStudio from "@/ai/pages/ColorMatchingStudio";
 import ColorSeparation from "@/ai/pages/ColorSeparation";
 import EmbroideryStudio from "@/ai/pages/EmbroideryStudio";
+import PaintingStudio from "@/ai/pages/PaintingStudio";
+import TraditionalArtStudio from "@/ai/pages/TraditionalArtStudio";
+import ReplicateUpscaleStudio from "@/ai/pages/ReplicateUpscaleStudio";
 import SeamlessStudio from "@/ai/pages/SeamlessStudio";
 import AiProfile from "@/ai/pages/Profile";
 import ExploreFabrics from "@/pages/fabrics/ExploreFabrics";
@@ -195,13 +198,18 @@ const App = () => (
                 <Route path="pattern-maker" element={<PatternMaker />} />
                 <Route path="gemini-image-to-image" element={<Navigate to="pattern-maker" replace />} />
                 <Route path="gemini-image-mix" element={<GeminiImageMix />} />
-                <Route path="upscale" element={<Upscale />} />
+                <Route path="upscale" element={<ReplicateUpscaleStudio />} />
+                <Route path="replicate-upscale" element={<ReplicateUpscaleStudio />} />
                 <Route path="seamless" element={<SeamlessStudio />} />
                 <Route path="finder" element={<PatternFinder />} />
                 <Route path="recolor" element={<TextileRecolorStudio />} />
                 <Route path="ai-color-matching" element={<ColorMatchingStudio />} />
                 <Route path="color-separation" element={<ColorSeparation />} />
                 <Route path="embroidery" element={<EmbroideryStudio />} />
+                <Route path="painting-technique" element={<PaintingStudio />} />
+                <Route path="brush-effect" element={<PaintingStudio />} />
+                <Route path="traditional-art" element={<TraditionalArtStudio />} />
+                <Route path="indian-craft" element={<TraditionalArtStudio />} />
                 <Route path="favorites" element={<Favorites />} />
                 <Route path="profile" element={<AiProfile />} />
                 <Route path="*" element={<AiNotFound />} />

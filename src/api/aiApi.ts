@@ -1,5 +1,5 @@
 import axios from "axios";
-import { applyIndustrialInterceptors, getAssetUrl } from "./apiClient";
+import { applyIndustrialInterceptors, getAssetUrl, getToken } from "./apiClient";
 import { getMyCredits } from "./subscriptionApi";
 import { generateGeminiImageToImage as generateGeminiImageToImageRequest } from "./imageToImageApi";
 import { fetchHistory } from "./historyApi";
@@ -18,6 +18,13 @@ const GEMINI_IMAGE_OUTPUT_BASE_URL = (
 ).replace(/\/+$/, "");
 
 const AI_SERVICE_URL = (import.meta.env.VITE_AI_SERVICE_URL || "").replace(/\/+$/, "");
+const GPU_SERVICE_URL = (
+  import.meta.env.VITE_GPU_SERVICE_URL ||
+  import.meta.env.VITE_UPSCALE_SERVICE_URL ||
+  "http://localhost:8004"
+).replace(/\/+$/, "");
+const USE_DIRECT_GPU_UPSCALE = import.meta.env.VITE_USE_DIRECT_GPU_UPSCALE !== "false";
+const ENABLE_UPSCALE_PROXY_FALLBACK = import.meta.env.VITE_UPSCALE_PROXY_FALLBACK === "true";
 
 const ASSET_SERVICE_URL = (
   import.meta.env.VITE_ASSET_SERVICE_URL ||
@@ -123,6 +130,9 @@ const getUrlPath = (url: string) => {
     return url.split(/[?#]/)[0];
   }
 };
+
+const isAssetDownloadUrl = (url: string) =>
+  /\/api\/assets\/download\/[^/?#]+/i.test(getUrlPath(url));
 
 const isLocalOrPrivateHost = (hostname: string) =>
   hostname === "localhost" ||
@@ -242,6 +252,9 @@ const readUrlsFromValue = (value: unknown, urls: string[]) => {
 
 const extractUploadedAssetUrl = (payload: unknown): string => {
   if (typeof payload === "string") {
+    if (isAssetDownloadUrl(payload)) {
+      return getAssetUrl(payload);
+    }
     if (/^(https?:\/\/|data:|blob:)/i.test(payload)) {
       return payload;
     }
@@ -265,6 +278,9 @@ const extractUploadedAssetUrl = (payload: unknown): string => {
   for (const key of directUrlKeys) {
     const value = payload[key];
     if (typeof value === "string" && value) {
+      if (isAssetDownloadUrl(value)) {
+        return getAssetUrl(value);
+      }
       if (/^(https?:\/\/|data:|blob:)/i.test(value)) {
         return value;
       }
@@ -295,6 +311,78 @@ const extractUploadedAssetUrl = (payload: unknown): string => {
     "Image upload succeeded but the frontend could not find a usable hosted URL in the upload response."
   );
 };
+
+const AI_ASSET_URL_PARAM_KEYS = new Set([
+  "inputUrl",
+  "input_url",
+  "inputUrls",
+  "input_urls",
+  "imageUrl",
+  "image_url",
+  "imageUrls",
+  "image_urls",
+  "referenceUrl",
+  "reference_url",
+  "referenceUrls",
+  "reference_urls",
+  "referenceImages",
+  "reference_images",
+  "sourceUrl",
+  "source_url",
+  "sourceUrls",
+  "source_urls",
+  "maskFile",
+  "mask_file",
+  "fileUrl",
+  "file_url",
+  "assetUrl",
+  "asset_url",
+  "downloadUrl",
+  "download_url",
+]);
+
+const normalizeAiAssetDownloadUrl = (value: string) => {
+  if (isAssetDownloadUrl(value)) {
+    return getAssetUrl(value);
+  }
+
+  return value;
+};
+
+const normalizeAiAssetUrlValue = (value: unknown): unknown => {
+  if (typeof value === "string") {
+    return normalizeAiAssetDownloadUrl(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeAiAssetUrlValue(item));
+  }
+
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [
+      key,
+      AI_ASSET_URL_PARAM_KEYS.has(key) ? normalizeAiAssetUrlValue(item) : item,
+    ])
+  );
+};
+
+const normalizeAiToolPayloadAssetUrls = (payload: AiToolPayload): AiToolPayload => ({
+  ...payload,
+  inputUrl:
+    typeof payload.inputUrl === "string" ?
+      normalizeAiAssetDownloadUrl(payload.inputUrl)
+    : payload.inputUrl,
+  params: Object.fromEntries(
+    Object.entries(payload.params || {}).map(([key, value]) => [
+      key,
+      AI_ASSET_URL_PARAM_KEYS.has(key) ? normalizeAiAssetUrlValue(value) : value,
+    ])
+  ),
+});
 
 type GeneratedImagePayload = {
   filename?: string;
@@ -547,6 +635,7 @@ export type BuiltInAiToolName =
 export type AiToolName = BuiltInAiToolName | (string & {});
 export type GeminiGenerationAspectRatio =
   (typeof GEMINI_GENERATION_ASPECT_RATIOS)[number];
+export type TextToImageProvider = "gemini" | "gpt" | "openai";
 export type GeminiImageMixAspectRatio =
   (typeof GEMINI_IMAGE_MIX_ASPECT_RATIOS)[number];
 export type GeminiImageToImageAspectRatio =
@@ -577,6 +666,10 @@ export interface AiToolResponse<TData = unknown> {
 export interface GenerateResponse {
   status: string;
   remainingCredits?: number | null;
+  provider?: string | null;
+  requestedProvider?: string | null;
+  providerFallbackUsed?: boolean;
+  fallbackProvider?: string | null;
   images: {
     id: number;
     filename: string;
@@ -598,6 +691,7 @@ interface GeminiGenerateOptions {
   numImages?: number;
   aspectRatio?: GeminiGenerationAspectRatio;
   enhancePrompt?: boolean;
+  provider?: TextToImageProvider;
 }
 
 interface GeminiImageToImageOptions extends Omit<GeminiGenerateOptions, "prompt" | "aspectRatio"> {
@@ -649,6 +743,31 @@ const mapUpscaleModeToModel = (mode: UpscaleMode) => {
   }
 };
 
+const getImageExtensionFromMime = (mimeType?: string) => {
+  switch ((mimeType || "").toLowerCase()) {
+    case "image/jpeg":
+    case "image/jpg":
+      return "jpg";
+    case "image/webp":
+      return "webp";
+    case "image/png":
+    default:
+      return "png";
+  }
+};
+
+const createSafeImageUploadFile = (file: File) => {
+  const fallbackType = file.type || "image/png";
+  const extension = getImageExtensionFromMime(fallbackType);
+  const baseName = (file.name || "pattern-reference")
+    .replace(/\.[^.]+$/, "")
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "pattern-reference";
+
+  return new File([file], `${baseName}.${extension}`, { type: fallbackType });
+};
+
 export interface UpscaleResponse {
   status: string;
   image: string;
@@ -657,6 +776,7 @@ export interface UpscaleResponse {
   outputData?: {
     status?: string;
     message?: string;
+    generation_id?: number;
     mode?: string;
     scale?: number;
     scale_label?: string;
@@ -711,6 +831,30 @@ export const normalizeAiOutputUrl = (url?: string | null) => {
   return normalizeAiOutputUrlFromBase(ADMIN_SERVICE_URL, url);
 };
 
+const isGpuUpscaleOutputPath = (url: string) =>
+  /^(?:files\/upscale|input)(?:\/|$)/i.test(getUrlPath(url).replace(/^\/+/, ""));
+
+export const normalizeGpuOutputUrl = (url?: string | null) => {
+  if (!url) return "";
+  if (/^(data:|blob:)/i.test(url)) return url;
+
+  try {
+    const parsedUrl = new URL(url, "http://placeholder.local");
+    const pathWithQuery = `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+
+    if (/^https?:\/\//i.test(url)) {
+      if (isLocalOrPrivateHost(parsedUrl.hostname) || isGpuUpscaleOutputPath(url)) {
+        return joinUrl(GPU_SERVICE_URL, pathWithQuery);
+      }
+      return url;
+    }
+
+    return joinUrl(GPU_SERVICE_URL, pathWithQuery);
+  } catch {
+    return joinUrl(GPU_SERVICE_URL, url);
+  }
+};
+
 export const normalizeGeminiImageOutputUrl = (url?: string | null) => {
   if (!url) return "";
   if (/^(data:|blob:)/i.test(url)) return url;
@@ -735,7 +879,8 @@ export const normalizeGeminiImageOutputUrl = (url?: string | null) => {
   return joinUrl(GEMINI_IMAGE_OUTPUT_BASE_URL, url);
 };
 
-export const getAIImageUrl = (url: string) => normalizeAiOutputUrl(url);
+export const getAIImageUrl = (url: string) =>
+  isGpuUpscaleOutputPath(url) ? normalizeGpuOutputUrl(url) : normalizeAiOutputUrl(url);
 
 const assertAllowedAspectRatio = <TAspectRatio extends string>(
   aspectRatio: string,
@@ -788,7 +933,15 @@ const shouldFallbackToLegacySeamlessPattern = (error: unknown) => {
 };
 
 const generateLegacySeamlessPattern = async (
-  file: File
+  file: File,
+  options: {
+    mode?: "auto" | "manual";
+    horizontalBand?: number;
+    verticalBand?: number;
+    provider?: string;
+    generationMode?: "repair" | "reference";
+    prompt?: string;
+  } = {}
 ): Promise<GenerateSeamlessResponse> => {
   if (!AI_SERVICE_URL) {
     throw new Error(
@@ -798,6 +951,19 @@ const generateLegacySeamlessPattern = async (
 
   const formData = new FormData();
   formData.append("file", file);
+  if (options.provider) {
+    formData.append("provider", options.provider);
+  }
+  if (options.generationMode === "reference") {
+    formData.append("generation_mode", "reference_seamless");
+  }
+  if (options.prompt?.trim()) {
+    formData.append("prompt", options.prompt.trim());
+  }
+  if (options.mode === "manual") {
+    formData.append("horizontal_band", String(options.horizontalBand || 48));
+    formData.append("vertical_band", String(options.verticalBand || 48));
+  }
 
   const legacyAiApi = axios.create({
     baseURL: AI_SERVICE_URL,
@@ -856,17 +1022,19 @@ export const uploadAiInputAsset = async (file: File): Promise<string> => {
 export const invokeAiTool = async <TData = unknown>(
   payload: AiToolPayload
 ): Promise<AiToolResponse<TData>> => {
+  const normalizedPayload = normalizeAiToolPayloadAssetUrls(payload);
   const response = await aiStudioApi.post<AiToolResponse<TData>, AiToolResponse<TData>>(
     "/use",
-    payload
+    normalizedPayload
   );
 
   dispatchCreditsUpdated(response.remainingCredits);
 
   if (IS_DEV) {
     console.debug("[aiApi] Raw /ai/use response", {
-      toolName: payload.toolName,
-      requestedParams: payload.params,
+      toolName: normalizedPayload.toolName,
+      requestedParams: normalizedPayload.params,
+      inputUrl: normalizedPayload.inputUrl,
       response,
     });
   }
@@ -976,10 +1144,11 @@ export const generateDesign = async (formData: FormData): Promise<GenerateRespon
 
 export const generateGeminiTextToImage = async ({
   prompt,
-  style = "floral",
+  style = "",
   numImages = 1,
   aspectRatio = "1:1",
   enhancePrompt = true,
+  provider = "gemini",
 }: GeminiGenerateOptions): Promise<GenerateResponse> => {
   const trimmedPrompt = prompt.trim();
 
@@ -999,6 +1168,7 @@ export const generateGeminiTextToImage = async ({
         "Invalid aspect_ratio for Gemini text to image."
       ),
       enhance_prompt: enhancePrompt,
+      provider,
       num_images: numImages,
     },
   });
@@ -1099,12 +1269,32 @@ export const generateGeminiImgToImg = async ({
   mode = "auto",
   aspectRatio = "auto",
   numImages = 1,
+  editType,
+  changeStrength,
+  referenceStrength,
+  promptStrength,
+  preserve,
+  motifLock,
+  outputIntent,
+  qualityPreset,
+  variationType,
+  provider = "gemini",
 }: {
   file: File;
   prompt: string;
   mode?: GeminiImageToImageMode;
   aspectRatio?: GeminiImageToImageAspectRatio;
   numImages?: number;
+  provider?: TextToImageProvider;
+  editType?: string;
+  changeStrength?: number;
+  referenceStrength?: number;
+  promptStrength?: number;
+  preserve?: string;
+  motifLock?: string | string[];
+  outputIntent?: string;
+  qualityPreset?: string;
+  variationType?: string;
 }): Promise<GenerateResponse> => {
   const trimmedPrompt = prompt.trim();
 
@@ -1116,13 +1306,52 @@ export const generateGeminiImgToImg = async ({
     throw new Error("prompt is required for Gemini image to image.");
   }
 
+  const safeUploadFile = createSafeImageUploadFile(file);
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", safeUploadFile, safeUploadFile.name);
   formData.append("prompt", trimmedPrompt);
+  formData.append("provider", provider);
   formData.append("mode", mode);
+  formData.append("edit_mode", mode);
+
+  if (editType) {
+    formData.append("edit_type", editType);
+  }
 
   if (aspectRatio && aspectRatio !== "auto") {
     formData.append("aspect_ratio", aspectRatio);
+  }
+
+  if (typeof changeStrength === "number") {
+    formData.append("change_strength", String(changeStrength));
+  }
+
+  if (typeof referenceStrength === "number") {
+    formData.append("reference_strength", String(referenceStrength));
+  }
+
+  if (typeof promptStrength === "number") {
+    formData.append("prompt_strength", String(promptStrength));
+  }
+
+  if (preserve) {
+    formData.append("preserve", preserve);
+  }
+
+  if (motifLock) {
+    formData.append("motif_lock", Array.isArray(motifLock) ? motifLock.join(", ") : motifLock);
+  }
+
+  if (outputIntent) {
+    formData.append("output_intent", outputIntent);
+  }
+
+  if (qualityPreset) {
+    formData.append("quality_preset", qualityPreset);
+  }
+
+  if (variationType) {
+    formData.append("variation_type", variationType);
   }
 
   formData.append("num_images", String(numImages));
@@ -1143,7 +1372,7 @@ export const generateGeminiImgToImg = async ({
     .filter(Boolean);
   const images = [...new Set(urls)].map((url, index) => ({
     id: index + 1,
-    filename: `gemini-img-to-img-${index + 1}.png`,
+    filename: `rdc-pattern-maker-${index + 1}.png`,
     url,
     input_image: "",
     style: mode,
@@ -1152,6 +1381,10 @@ export const generateGeminiImgToImg = async ({
   return {
     status: data.success === false ? "error" : "success",
     remainingCredits: data.remaining_credits ?? null,
+    provider: data.provider ?? null,
+    requestedProvider: data.requested_provider ?? null,
+    providerFallbackUsed: Boolean(data.provider_fallback_used),
+    fallbackProvider: data.fallback_provider ?? null,
     images,
   };
 };
@@ -1192,7 +1425,7 @@ export const generateGeminiImageMix = async ({
   return mapAiResponseToGenerateResponse(response, null, "mix");
 };
 
-export const upscaleImage = async (
+const upscaleImageViaProxy = async (
   file: File,
   mode: UpscaleMode,
   options?: {
@@ -1227,6 +1460,93 @@ export const upscaleImage = async (
     remainingCredits: response.remainingCredits,
     outputData: response.outputData,
   };
+};
+
+const upscaleImageViaGpu = async (
+  file: File,
+  mode: UpscaleMode,
+  options?: {
+    scale?: number;
+    sizeMode?: "increase_pixels" | "same_dimensions";
+    prompt?: string;
+    batch?: boolean;
+  }
+): Promise<UpscaleResponse> => {
+  const token = getToken();
+
+  if (!token) {
+    throw new Error("Please sign in again before using GPU upscale.");
+  }
+
+  const safeUploadFile = createSafeImageUploadFile(file);
+  const formData = new FormData();
+  formData.append("file", safeUploadFile, safeUploadFile.name);
+  formData.append("mode", mapUpscaleModeToModel(mode));
+  formData.append("scale", String(options?.scale || (mode === "double" ? 8 : 4)));
+  formData.append("size_mode", options?.sizeMode || "increase_pixels");
+  formData.append("prompt", options?.prompt || "");
+
+  const response = await axios.post<UpscaleResponse["outputData"]>(
+    `${GPU_SERVICE_URL}/ai/upscale`,
+    formData,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      transformRequest: [
+        (data, headers) => {
+          if (headers) {
+            delete (headers as Record<string, unknown>)["Content-Type"];
+            delete (headers as Record<string, unknown>)["content-type"];
+          }
+          return data;
+        },
+      ],
+    }
+  );
+
+  const outputData = response.data;
+  const finalImageUrl =
+    normalizeGpuOutputUrl(outputData?.output?.url) ||
+    normalizeGpuOutputUrl(outputData?.artifacts?.final?.url) ||
+    normalizeGpuOutputUrl(outputData?.output?.path);
+
+  if (!finalImageUrl) {
+    throw new Error(outputData?.message || "GPU upscale completed without an output image URL.");
+  }
+
+  return {
+    status: outputData?.status || "success",
+    image: finalImageUrl,
+    generation_id: outputData?.generation_id || Date.now(),
+    remainingCredits: null,
+    outputData,
+  };
+};
+
+export const upscaleImage = async (
+  file: File,
+  mode: UpscaleMode,
+  options?: {
+    scale?: number;
+    sizeMode?: "increase_pixels" | "same_dimensions";
+    prompt?: string;
+    batch?: boolean;
+  }
+): Promise<UpscaleResponse> => {
+  if (!USE_DIRECT_GPU_UPSCALE) {
+    return upscaleImageViaProxy(file, mode, options);
+  }
+
+  try {
+    return await upscaleImageViaGpu(file, mode, options);
+  } catch (error) {
+    if (ENABLE_UPSCALE_PROXY_FALLBACK) {
+      console.warn("[aiApi] GPU upscale failed, falling back to Java AI proxy", error);
+      return upscaleImageViaProxy(file, mode, options);
+    }
+    throw error;
+  }
 };
 
 export const useColorwayTool = async ({
@@ -1308,6 +1628,9 @@ export const generateSeamlessPattern = async (
     mode?: "auto" | "manual";
     horizontalBand?: number;
     verticalBand?: number;
+    provider?: string;
+    generationMode?: "repair" | "reference";
+    prompt?: string;
   } = {}
 ): Promise<GenerateSeamlessResponse> => {
   try {
@@ -1316,6 +1639,15 @@ export const generateSeamlessPattern = async (
     if (options.mode === "manual") {
       params.horizontal_band = options.horizontalBand;
       params.vertical_band = options.verticalBand;
+    }
+    if (options.provider) {
+      params.provider = options.provider;
+    }
+    if (options.generationMode === "reference") {
+      params.generation_mode = "reference_seamless";
+    }
+    if (options.prompt?.trim()) {
+      params.prompt = options.prompt.trim();
     }
 
     let response = await invokeAiTool<SeamlessOutputData>({
@@ -1355,7 +1687,7 @@ export const generateSeamlessPattern = async (
       throw error;
     }
 
-    return generateLegacySeamlessPattern(file);
+    return generateLegacySeamlessPattern(file, options);
   }
 };
 

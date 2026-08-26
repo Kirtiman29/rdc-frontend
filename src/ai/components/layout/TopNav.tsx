@@ -41,7 +41,8 @@ const colorItems = [
 
 const toolsItems = [
   { label: "Embroidery", path: "/ai-studio/embroidery" },
-  { label: "Brush Effect", path: "/ai-studio/generate?mode=brush" },
+  { label: "Brush Effect", path: "/ai-studio/painting-technique" },
+  { label: "Traditional Art", path: "/ai-studio/traditional-art" },
   { label: "Texture", path: "/ai-studio/generate?mode=texture" },
   { label: "Fabric Texture", path: "/ai-studio/generate?mode=fabric-texture" },
 ];
@@ -295,7 +296,11 @@ export function TopNav() {
                 "?mode=texture",
                 "?mode=fabric-texture",
               ].includes(location.search) && location.pathname === "/ai-studio/generate") ||
-              location.pathname === "/ai-studio/embroidery"
+              location.pathname === "/ai-studio/embroidery" ||
+              location.pathname === "/ai-studio/painting-technique" ||
+              location.pathname === "/ai-studio/brush-effect" ||
+              location.pathname === "/ai-studio/traditional-art" ||
+              location.pathname === "/ai-studio/indian-craft"
             }
             activeDropdown={activeDropdown}
             setActiveDropdown={setActiveDropdown}

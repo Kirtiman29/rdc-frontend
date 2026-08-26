@@ -1,7 +1,8 @@
 import axios from "axios";
 
-import { getToken } from "@/api/apiClient";
+import { clearTokens, getRefreshToken, getToken, saveTokens } from "@/api/apiClient";
 import { AI_CREDITS_UPDATED_EVENT } from "@/api/aiApi";
+import { serviceApiUrls } from "@/api/serviceConfig";
 
 type BitmapParamValue = string | number | boolean | null | undefined;
 type BitmapParamMap = Record<string, BitmapParamValue>;
@@ -37,9 +38,26 @@ export type BitmapBinaryResponse = {
   creditsRequired: number | null;
 };
 
+type BitmapJobResponse = {
+  success: boolean;
+  jobId: number | null;
+  status: string;
+  outputKey: string | null;
+  errorMessage: string | null;
+  message: string | null;
+  queued: boolean;
+  creditsConsumed: boolean;
+  remainingCredits: number | null;
+  creditsRequired: number | null;
+};
+
 export type BitmapGeminiImageToImageResponse = {
   success: boolean;
   message?: string;
+  provider?: string;
+  requested_provider?: string;
+  provider_fallback_used?: boolean;
+  fallback_provider?: string;
   output_url?: string;
   image_urls?: string[];
   remaining_credits?: number;
@@ -64,17 +82,89 @@ const BITMAP_API = trimTrailingSlash(
 );
 
 const BITMAP_PUBLIC_URL = stripBitmapProxySuffix(BITMAP_API);
+const BITMAP_OUTPUT_BASE_URL = trimTrailingSlash(
+  import.meta.env.VITE_BITMAP_OUTPUT_BASE_URL ||
+    import.meta.env.VITE_COLOR_SEPARATION_OUTPUT_BASE_URL ||
+    BITMAP_PUBLIC_URL
+);
+const BITMAP_JOB_POLL_INTERVAL_MS = Number(import.meta.env.VITE_BITMAP_JOB_POLL_INTERVAL_MS || 2500);
+const BITMAP_JOB_TIMEOUT_MS = Number(import.meta.env.VITE_BITMAP_JOB_TIMEOUT_MS || 1800000);
 
 const bitmapClient = axios.create({
   baseURL: BITMAP_API,
 });
 
-const getAccessToken = (token?: string) => token || getToken() || localStorage.getItem("token") || "";
+type BitmapRequestConfig = Parameters<typeof bitmapClient.request>[0] & {
+  _bitmapAuthRetry?: boolean;
+};
+
+let bitmapRefreshPromise: Promise<string> | null = null;
+
+const getAccessToken = (token?: string) => getToken() || localStorage.getItem("token") || token || "";
 
 const getAuthHeaders = (token?: string) => {
   const accessToken = getAccessToken(token);
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 };
+
+const refreshBitmapAccessToken = async () => {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    throw new Error("No refresh token");
+  }
+
+  const refreshResponse = await axios.post(serviceApiUrls.authRefresh, { refreshToken });
+  const data = refreshResponse.data?.data || refreshResponse.data;
+  const accessToken = typeof data?.accessToken === "string" ? data.accessToken : "";
+  const newRefreshToken = typeof data?.refreshToken === "string" ? data.refreshToken : "";
+
+  if (!accessToken || !newRefreshToken) {
+    throw new Error("Invalid refresh response");
+  }
+
+  saveTokens(accessToken, newRefreshToken);
+  return accessToken;
+};
+
+bitmapClient.interceptors.request.use((config) => {
+  const accessToken = getAccessToken();
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  return config;
+});
+
+bitmapClient.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config as BitmapRequestConfig | undefined;
+
+    if (error.response?.status !== 401 || !originalRequest || originalRequest._bitmapAuthRetry) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._bitmapAuthRetry = true;
+
+    try {
+      bitmapRefreshPromise = bitmapRefreshPromise || refreshBitmapAccessToken();
+      const accessToken = await bitmapRefreshPromise;
+
+      originalRequest.headers = originalRequest.headers || {};
+      originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+
+      return bitmapClient(originalRequest);
+    } catch (refreshError) {
+      clearTokens();
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+      return Promise.reject(refreshError);
+    } finally {
+      bitmapRefreshPromise = null;
+    }
+  }
+);
 
 const toQueryParams = (params: BitmapParamMap) => {
   const queryParams: Record<string, string> = {};
@@ -99,22 +189,6 @@ const toNullableString = (value: unknown) => {
 const toBoolean = (value: unknown) =>
   value === true || value === "true" || value === 1 || value === "1" || value === "yes";
 
-const parseHeaderNumber = (value: unknown) => {
-  const raw = Array.isArray(value) ? value[0] : value;
-  if (typeof raw === "number") return Number.isFinite(raw) ? raw : null;
-  if (typeof raw !== "string") return null;
-  const parsed = Number(raw.trim());
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-const parseResponseCredits = (headers: unknown) => {
-  const record = isRecord(headers) ? headers : {};
-  return {
-    remainingCredits: parseHeaderNumber(record["x-remaining-credits"]),
-    creditsRequired: parseHeaderNumber(record["x-credits-required"]),
-  };
-};
-
 const dispatchCreditsUpdated = (remainingCredits?: number | null) => {
   if (typeof window === "undefined" || typeof remainingCredits !== "number") return;
 
@@ -125,11 +199,13 @@ const dispatchCreditsUpdated = (remainingCredits?: number | null) => {
   );
 };
 
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
 const resolveServiceImageUrl = (url?: string | null) => {
   if (!url) return "";
   if (/^(https?:\/\/|data:|blob:)/i.test(url)) return url;
   const normalized = url.startsWith("/") ? url : `/${url}`;
-  return `${BITMAP_PUBLIC_URL}${normalized}`;
+  return `${BITMAP_OUTPUT_BASE_URL}${normalized}`;
 };
 
 const createBitmapError = async (error: unknown) => {
@@ -261,6 +337,13 @@ const normalizeGeminiResponse = (payload: unknown): BitmapGeminiImageToImageResp
         ? record.success
         : toBoolean(record.success),
     message: typeof record.message === "string" ? record.message : undefined,
+    provider: toNullableString(record.provider) || undefined,
+    requested_provider: toNullableString(record.requested_provider) || undefined,
+    provider_fallback_used:
+      typeof record.provider_fallback_used === "boolean"
+        ? record.provider_fallback_used
+        : toBoolean(record.provider_fallback_used),
+    fallback_provider: toNullableString(record.fallback_provider) || undefined,
     output_url: outputUrl || undefined,
     image_urls: imageUrls.length > 0 ? imageUrls : undefined,
     remaining_credits:
@@ -281,6 +364,97 @@ const normalizeGeminiResponse = (payload: unknown): BitmapGeminiImageToImageResp
   };
 };
 
+const toNullableNumber = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+};
+
+const normalizeJobResponse = (payload: unknown): BitmapJobResponse => {
+  const record = isRecord(payload) ? payload : {};
+  const status = typeof record.status === "string" ? record.status : "";
+  const normalizedStatus = status.toUpperCase();
+
+  return {
+    success: typeof record.success === "boolean" ? record.success : normalizedStatus !== "FAILED",
+    jobId:
+      toNullableNumber(record.jobId) ??
+      toNullableNumber(record.job_id) ??
+      toNullableNumber(record.id),
+    status,
+    outputKey:
+      toNullableString(record.outputKey) ||
+      toNullableString(record.output_key) ||
+      toNullableString(record.outputUrl) ||
+      toNullableString(record.output_url),
+    errorMessage:
+      toNullableString(record.errorMessage) ||
+      toNullableString(record.error_message) ||
+      toNullableString(record.error),
+    message: toNullableString(record.message),
+    queued:
+      typeof record.queued === "boolean"
+        ? record.queued
+        : ["CREATED", "QUEUED", "PROCESSING"].includes(normalizedStatus),
+    creditsConsumed:
+      typeof record.creditsConsumed === "boolean"
+        ? record.creditsConsumed
+        : toBoolean(record.credits_consumed),
+    remainingCredits:
+      toNullableNumber(record.remainingCredits) ??
+      toNullableNumber(record.remaining_credits),
+    creditsRequired:
+      toNullableNumber(record.creditsRequired) ??
+      toNullableNumber(record.credits_required),
+  };
+};
+
+const assertCompletedJob = (job: BitmapJobResponse) => {
+  const status = job.status.toUpperCase();
+  if (status === "FAILED") {
+    throw new Error(job.errorMessage || job.message || "Bitmap job failed");
+  }
+  if (status !== "COMPLETED") {
+    throw new Error(job.message || `Bitmap job ended with status ${job.status || "unknown"}`);
+  }
+  if (!job.outputKey) {
+    throw new Error("Bitmap job completed without an output file");
+  }
+};
+
+const getBitmapJobStatus = async (jobId: number, token?: string) => {
+  const response = await bitmapClient.get(`/jobs/${jobId}`, {
+    headers: {
+      ...getAuthHeaders(token),
+    },
+  });
+  return normalizeJobResponse(response.data);
+};
+
+const pollBitmapJob = async (jobId: number, token?: string) => {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < BITMAP_JOB_TIMEOUT_MS) {
+    const job = await getBitmapJobStatus(jobId, token);
+    const status = job.status.toUpperCase();
+
+    if (typeof job.remainingCredits === "number") {
+      dispatchCreditsUpdated(job.remainingCredits);
+    }
+
+    if (status === "COMPLETED" || status === "FAILED") {
+      return job;
+    }
+
+    await sleep(BITMAP_JOB_POLL_INTERVAL_MS);
+  }
+
+  throw new Error("Bitmap job timed out. Please check the job again after some time.");
+};
+
 const postForm = async (path: string, params: BitmapParamMap, token?: string) => {
   return bitmapClient.post(path, null, {
     headers: {
@@ -290,22 +464,30 @@ const postForm = async (path: string, params: BitmapParamMap, token?: string) =>
   });
 };
 
-const postBinary = async (path: string, params: BitmapParamMap, token?: string): Promise<BitmapBinaryResponse> => {
+const postQueuedBinary = async (path: string, params: BitmapParamMap, token?: string): Promise<BitmapBinaryResponse> => {
   const response = await bitmapClient.post(path, null, {
     headers: {
       ...getAuthHeaders(token),
     },
     params: toQueryParams(params),
+  });
+
+  const queuedJob = normalizeJobResponse(response.data);
+  if (!queuedJob.jobId) {
+    throw new Error(queuedJob.message || "Bitmap job was not queued");
+  }
+
+  const completedJob = await pollBitmapJob(queuedJob.jobId, token);
+  assertCompletedJob(completedJob);
+
+  const fileResponse = await axios.get(resolveServiceImageUrl(completedJob.outputKey), {
     responseType: "blob",
   });
 
-  const credits = parseResponseCredits(response.headers);
-  dispatchCreditsUpdated(credits.remainingCredits);
-
   return {
-    blob: response.data,
-    remainingCredits: credits.remainingCredits,
-    creditsRequired: credits.creditsRequired,
+    blob: fileResponse.data,
+    remainingCredits: completedJob.remainingCredits,
+    creditsRequired: completedJob.creditsRequired,
   };
 };
 
@@ -349,37 +531,37 @@ export const bitmapApi = {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await postMultipart("/upload/", formData, token);
+    const response = await postMultipart("/upload", formData, token);
     return normalizeUploadResponse(response.data);
   },
 
   async analyze(filename: string, token?: string) {
-    const response = await postForm("/analyze/", { filename }, token);
+    const response = await postForm("/analyze", { filename }, token);
     return normalizeAnalysisResponse(response.data);
   },
 
   async previewHalftone(params: BitmapParamMap, token?: string) {
-    return postBinary("/halftone/monochrome", params, token);
+    return postQueuedBinary("/preview/halftone", params, token);
   },
 
   async previewDither(params: BitmapParamMap, token?: string) {
-    return postBinary("/dither/", params, token);
+    return postQueuedBinary("/preview/dither", params, token);
   },
 
   async previewSeparationProof(params: BitmapParamMap, token?: string) {
-    return postBinary("/halftone/separation/proof", params, token);
+    return postQueuedBinary("/preview/separation-proof", params, token);
   },
 
   async exportSeparationZip(params: BitmapParamMap, token?: string) {
-    return postBinary("/halftone/separation", params, token);
+    return postQueuedBinary("/export/separation-zip", params, token);
   },
 
   async exportPsd(params: BitmapParamMap, token?: string) {
-    return postBinary("/halftone/separation/psd", params, token);
+    return postQueuedBinary("/export/psd", params, token);
   },
 
   async exportCmyk(params: BitmapParamMap, token?: string) {
-    return postBinary("/halftone/cmyk/", params, token);
+    return postQueuedBinary("/export/cmyk", params, token);
   },
 
   async geminiImageToImage(formData: FormData, token?: string) {

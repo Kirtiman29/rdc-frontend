@@ -38,6 +38,10 @@ export type PresetCategory = {
 export type GenerateResponse = {
   output_url?: string;
   image_urls?: string[];
+  provider?: string;
+  requested_provider?: string;
+  provider_fallback_used?: boolean;
+  fallback_provider?: string;
   edit_mode?: string;
   edit_options?: Record<string, unknown>;
   model?: string;

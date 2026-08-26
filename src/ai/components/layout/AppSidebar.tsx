@@ -2,7 +2,7 @@
 import React from "react";
 import { 
   Wand2, Image, Heart, Settings, LayoutDashboard, 
-  Maximize, Search, Sparkles, Palette, SwatchBook, User, ImageUp
+  Maximize, Search, Sparkles, Palette, SwatchBook, User, ImageUp, Paintbrush, Scissors
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -13,13 +13,15 @@ const navSection = [
   { label: "Bitmap", path: "/ai-studio/bitmap", icon: ImageUp },
   { label: "Text to Pattern", path: "/ai-studio/gemini-text-to-image", icon: Sparkles },
   { label: "Pattern Mixer", path: "/ai-studio/gemini-image-mix", icon: Image },
+  { label: "Brush Effect Studio", path: "/ai-studio/painting-technique", icon: Paintbrush },
+  { label: "Traditional Art Studio", path: "/ai-studio/traditional-art", icon: Palette },
+  { label: "Embroidery Studio", path: "/ai-studio/embroidery", icon: Scissors },
   { label: "Upscale", path: "/ai-studio/upscale", icon: Maximize },
   { label: "Pattern Extractor", path: "/ai-studio/finder", icon: Search },
   { label: "Color Matching", path: "/ai-studio/recolor", icon: Palette },
   { label: "AI Color Matching", path: "/ai-studio/ai-color-matching", icon: Sparkles },
   { label: "Color Separation", path: "/ai-studio/color-separation", icon: SwatchBook },
 ];
-
 const librarySection = [
   { label: "My Designs", path: "/ai-studio/gallery", icon: Image, count: 12 },
   { label: "Favorites", path: "/ai-studio/favorites", icon: Heart, count: 5 },

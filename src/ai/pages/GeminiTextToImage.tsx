@@ -6,7 +6,6 @@ import {
   Download,
   Maximize,
   X,
-  Palette,
   Zap,
   Plus,
   Minus,
@@ -22,6 +21,7 @@ import {
   GEMINI_GENERATION_ASPECT_RATIOS,
   type GenerateResponse,
   type GeminiGenerationAspectRatio,
+  type TextToImageProvider,
 } from "@/api/aiApi";
 import AiCreditEstimate from "@/ai/components/AiCreditEstimate";
 
@@ -73,6 +73,7 @@ const faqs = [
 
 export default function GeminiTextToImage() {
   const [userPrompt, setUserPrompt] = useState("");
+  const [promptAlreadyEnhanced, setPromptAlreadyEnhanced] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isEnhancing, setIsEnhancing] = useState(false);
@@ -80,12 +81,15 @@ export default function GeminiTextToImage() {
   const [numImages, setNumImages] = useState(1);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [, setRemainingCredits] = useState<number | null>(null);
-  const [activeStyle, setActiveStyle] = useState("floral");
+  const [activeStyle, setActiveStyle] = useState("none");
+  const [selectedProvider, setSelectedProvider] =
+    useState<TextToImageProvider>("gemini");
   const [aspectRatio, setAspectRatio] =
     useState<GeminiGenerationAspectRatio>("1:1");
 
   // Popover state
-  const [activePopover, setActivePopover] = useState<"settings" | "style" | "aspect" | null>(null);
+  const [activePopover, setActivePopover] =
+    useState<"settings" | "model" | "style" | "aspect" | null>(null);
 
   // Slideshow state
   const [activeSlide, setActiveSlide] = useState(0);
@@ -101,10 +105,28 @@ export default function GeminiTextToImage() {
   }, [isPlaying]);
 
   const styles = [
+    { id: "none", label: "None" },
     { id: "floral", label: "Floral" },
     { id: "paisley", label: "Paisley" },
     { id: "abstract", label: "Abstract" },
   ];
+
+  const modelOptions: { id: TextToImageProvider; label: string; description: string }[] = [
+    {
+      id: "gemini",
+      label: "Gemini",
+      description: "Google Gemini image model",
+    },
+    {
+      id: "gpt",
+      label: "GPT Image",
+      description: "OpenAI GPT Image 2",
+    },
+  ];
+
+  const selectedModelLabel =
+    modelOptions.find((model) => model.id === selectedProvider)?.label || "Gemini";
+  const selectedStyleValue = activeStyle === "none" ? "" : activeStyle;
 
   const handleDownload = async (url: string, filename: string) => {
     try {
@@ -133,8 +155,9 @@ export default function GeminiTextToImage() {
       setIsEnhancing(true);
       setError("");
 
-      const result = await enhancePrompt(userPrompt, undefined, activeStyle);
+      const result = await enhancePrompt(userPrompt, undefined, selectedStyleValue);
       setUserPrompt(result.enhanced_prompt);
+      setPromptAlreadyEnhanced(true);
       setRemainingCredits(result.remainingCredits ?? null);
     } catch (enhanceError) {
       console.error("Enhance failed", enhanceError);
@@ -157,9 +180,11 @@ export default function GeminiTextToImage() {
 
       const result = await generateGeminiTextToImage({
         prompt: userPrompt,
-        style: activeStyle,
+        style: selectedStyleValue,
         numImages,
         aspectRatio,
+        provider: selectedProvider,
+        enhancePrompt: !promptAlreadyEnhanced,
       });
 
       setGeneratedImages(result.images);
@@ -228,25 +253,30 @@ export default function GeminiTextToImage() {
                 <div className="relative w-full mb-4">
                   <textarea
                     value={userPrompt}
-                    onChange={(e) => setUserPrompt(e.target.value)}
-                    placeholder="Describe exactly what you want to create and watch Gemini model bring it to life..."
-                    className="no-scrollbar h-28 w-full resize-none rounded-xl border border-[#2B3138]/40 bg-[#111315]/60 p-4 pb-12 text-sm text-[#F5F7FA] placeholder:text-[#6B7280] transition-all focus:border-[#E11D2E]/50 focus:bg-[#111315]/80 focus:outline-none"
+                    onChange={(e) => {
+                      setUserPrompt(e.target.value);
+                      setPromptAlreadyEnhanced(false);
+                    }}
+                    placeholder={`Describe exactly what you want to create and let ${selectedModelLabel} bring it to life...`}
+                    className="no-scrollbar h-28 w-full resize-none rounded-xl border border-[#2B3138]/40 bg-[#111315]/60 p-4 text-sm text-[#F5F7FA] placeholder:text-[#6B7280] transition-all focus:border-[#E11D2E]/50 focus:bg-[#111315]/80 focus:outline-none"
                   />
-
-                  <div className="absolute bottom-3 right-3">
-                    <button
-                      onClick={handleEnhance}
-                      disabled={isEnhancing || !userPrompt.trim()}
-                      className="flex items-center gap-1.5 rounded-lg border border-[#E11D2E]/30 bg-[#E11D2E]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-[#ff9ba5] transition hover:bg-[#E11D2E]/20 disabled:opacity-30"
-                    >
-                      {isEnhancing ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Wand2 className="h-3 w-3" />
-                      )}
-                      <span>{isEnhancing ? "Enhancing..." : "Enhance"}</span>
-                    </button>
-                  </div>
+                </div>
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <span className="text-[11px] font-medium text-[#A1A8B3]">
+                    {promptAlreadyEnhanced ? "Prompt enhanced" : "Prompt enhancement optional"}
+                  </span>
+                  <button
+                    onClick={handleEnhance}
+                    disabled={isEnhancing || !userPrompt.trim()}
+                    className="inline-flex h-9 items-center gap-2 rounded-xl border border-[#E11D2E]/40 bg-[#E11D2E]/15 px-4 text-xs font-bold text-[#ffb3bb] transition hover:border-[#E11D2E]/70 hover:bg-[#E11D2E]/25 disabled:cursor-not-allowed disabled:border-[#2B3138] disabled:bg-[#20242A] disabled:text-[#6B7280]"
+                  >
+                    {isEnhancing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Wand2 className="h-3.5 w-3.5" />
+                    )}
+                    <span>{isEnhancing ? "Enhancing..." : "Enhance Prompt"}</span>
+                  </button>
                 </div>
               </div>
 
@@ -316,6 +346,60 @@ export default function GeminiTextToImage() {
                                 breakdown={`${numImages} Outputs × ${GEMINI_TEXT_TO_IMAGE_COST} Credits`}
                                 totalCredits={numImages * GEMINI_TEXT_TO_IMAGE_COST}
                               />
+                            </div>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Popover: Model */}
+                  <div className={`relative ${activePopover === "model" ? "z-50" : "z-10"}`}>
+                    <button
+                      onClick={() => setActivePopover(activePopover === "model" ? null : "model")}
+                      className="flex items-center gap-2 rounded-xl border border-[#2B3138]/60 bg-[#20242A] px-4 py-2.5 text-xs font-bold text-[#F5F7FA] transition hover:border-[#E11D2E]/50 hover:bg-[#252A31]"
+                    >
+                      <Zap className="h-4 w-4 text-[#A1A8B3]" />
+                      <span>Model: {selectedModelLabel}</span>
+                      <ChevronDown className="h-4 w-4 text-[#A1A8B3]" />
+                    </button>
+
+                    <AnimatePresence>
+                      {activePopover === "model" && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-30 cursor-default"
+                            onClick={() => setActivePopover(null)}
+                          />
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="absolute bottom-full left-0 z-40 mb-2 w-72 rounded-[20px] border border-[#2B3138] bg-[#1C2025] p-4 shadow-2xl space-y-2"
+                          >
+                            <p className="text-xs font-bold uppercase tracking-wider text-[#A1A8B3] mb-1">
+                              Image Model
+                            </p>
+                            <div className="flex flex-col gap-1.5">
+                              {modelOptions.map((model) => (
+                                <button
+                                  key={model.id}
+                                  onClick={() => {
+                                    setSelectedProvider(model.id);
+                                    setActivePopover(null);
+                                  }}
+                                  className={`w-full rounded-xl border px-3 py-2 text-left transition-all duration-300 ${
+                                    selectedProvider === model.id
+                                      ? "border-[#E11D2E] bg-[#E11D2E]/10 text-white shadow-[0_0_8px_rgba(225,29,46,0.2)]"
+                                      : "border-[#2B3138] bg-[#181B1F] text-[#A1A8B3] hover:border-white/20 hover:text-white"
+                                  }`}
+                                >
+                                  <span className="block text-xs font-bold">{model.label}</span>
+                                  <span className="mt-0.5 block text-[10px] font-medium text-[#A1A8B3]">
+                                    {model.description}
+                                  </span>
+                                </button>
+                              ))}
                             </div>
                           </motion.div>
                         </>

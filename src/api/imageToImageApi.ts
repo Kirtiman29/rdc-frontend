@@ -76,6 +76,10 @@ export async function generateImage(form: FormData): Promise<GenerateResponse> {
 export type GeminiImageToImageServiceResponse = {
   success: boolean;
   message?: string;
+  provider?: string;
+  requested_provider?: string;
+  provider_fallback_used?: boolean;
+  fallback_provider?: string;
   output_url?: string;
   image_urls?: string[];
   remaining_credits?: number;
@@ -102,6 +106,15 @@ export async function generateGeminiImageToImage(
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        transformRequest: [
+          (data, headers) => {
+            if (headers) {
+              delete (headers as Record<string, unknown>)["Content-Type"];
+              delete (headers as Record<string, unknown>)["content-type"];
+            }
+            return data;
+          },
+        ],
       }
     );
 
@@ -115,6 +128,10 @@ export async function generateGeminiImageToImage(
     }
     return {
       ...data,
+      provider: data.provider,
+      requested_provider: data.requested_provider,
+      provider_fallback_used: data.provider_fallback_used,
+      fallback_provider: data.fallback_provider,
       output_url: normalizeBackendImageUrl(data.output_url),
       image_urls: Array.isArray(data.image_urls)
         ? data.image_urls
@@ -142,12 +159,16 @@ export function buildPresetForm(params: {
   preset: PresetId;
   targetColor?: string;
   prompt?: string;
+  provider?: "openai" | "gemini";
   numImages?: number;
 }) {
   const form = new FormData();
   const preset = getBackendPreset(params.preset);
 
   form.append("file", params.file);
+  form.append("provider", params.provider ?? "openai");
+  form.append("edit_mode", "precise_edit");
+  form.append("edit_type", "change color");
   form.append("color_preset", preset);
 
   if (preset === "pastel") {
@@ -159,6 +180,9 @@ export function buildPresetForm(params: {
   }
 
   form.append("target_color", params.targetColor ?? "#264F7A");
+  form.append("color_lock", "use the selected target color and submitted palette");
+  form.append("motif_lock", "preserve motifs, layout, linework, texture, and print details");
+  form.append("output_intent", "print-ready textile colorway");
   form.append("num_images", String(params.numImages ?? 1));
   form.append("enhance_prompt", "false");
   form.append("change_strength", String(DEFAULT_EDIT_STRENGTH));
@@ -176,6 +200,7 @@ export function buildBackgroundForm(params: {
   file: File;
   backgroundColor: string;
   prompt?: string;
+  provider?: "openai" | "gemini";
   numImages?: number;
 }) {
   const instruction =
@@ -188,8 +213,14 @@ export function buildBackgroundForm(params: {
   const form = new FormData();
   form.append("file", params.file, params.file.name || "background-input.png");
   form.append("prompt", finalPrompt);
+  form.append("provider", params.provider ?? "openai");
+  form.append("edit_mode", "precise_edit");
+  form.append("edit_type", "change background color");
   form.append("color_preset", "natural");
   form.append("target_color", params.backgroundColor);
+  form.append("color_lock", "change only the background color");
+  form.append("motif_lock", "preserve all motifs and foreground artwork unchanged");
+  form.append("output_intent", "print-ready textile background recolor");
   form.append("change_strength", String(DEFAULT_EDIT_STRENGTH));
   form.append("reference_strength", String(DEFAULT_REFERENCE_STRENGTH));
   form.append("prompt_strength", String(DEFAULT_PROMPT_STRENGTH));

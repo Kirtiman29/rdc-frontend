@@ -17,6 +17,8 @@ import gptImage2Showcase from "@/assets/gpt-image2-showcase.png";
 import flamingoShowcase from "@/assets/flamingo-showcase.png";
 import colorfulCharacterShowcase from "@/assets/colorful-character-showcase.png";
 import AiCreditCost from "@/ai/components/AiCreditCost";
+import { getModelProviderLabel } from "@/ai/constants/modelProviders";
+import type { TextToImageProvider } from "@/api/aiApi";
 
 const EMBROIDERY_PREVIEW_CREDIT_COST = 10;
 
@@ -527,6 +529,12 @@ const formatValue = (value: string) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 
+const formatProviderName = (provider: string | null | undefined) => {
+  const normalized = (provider || "gemini").trim().toLowerCase();
+  if (normalized === "openai" || normalized === "gpt") return "GPT Image";
+  return "Gemini";
+};
+
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
 const getEmbroideryServiceBase = () =>
@@ -686,6 +694,7 @@ export default function EmbroideryStudio() {
   const [density, setDensity] = useState("coarse and rustic spacing");
   const [thickness, setThickness] = useState("heavy corded yarn");
   const [fabricHint, setFabricHint] = useState("Recommended for Sashiko: coarse indigo cotton canvas.");
+  const [selectedProvider, setSelectedProvider] = useState<TextToImageProvider>("gemini");
   const [customPrompt, setCustomPrompt] = useState("");
   const [sourceFile, setSourceFile] = useState<File | null>(null);
   const [sourceUrl, setSourceUrl] = useState("");
@@ -789,6 +798,7 @@ export default function EmbroideryStudio() {
     setDensity("coarse and rustic spacing");
     setThickness("heavy corded yarn");
     setFabricHint("Recommended for Sashiko: coarse indigo cotton canvas.");
+    setSelectedProvider("gemini");
     setNotice(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -842,6 +852,7 @@ export default function EmbroideryStudio() {
       formData.append("fabric", fabric);
       formData.append("density", density);
       formData.append("thickness", thickness);
+      formData.append("provider", selectedProvider);
       if (customPrompt.trim()) formData.append("custom_prompt", customPrompt.trim());
 
       const token = getToken() || localStorage.getItem("token") || "";
@@ -889,7 +900,15 @@ export default function EmbroideryStudio() {
       setResultUrl(`${getResponseImageUrl(imageUrl)}${String(imageUrl).includes("?") ? "&" : "?"}t=${Date.now()}`);
       setSplitPosition(50);
       setProgress(100);
-      setNotice({ type: "success", text: "Embroidery preview generated." });
+      const providerFallbackUsed = Boolean(payload?.provider_fallback_used || payload?.providerFallbackUsed);
+      const usedProvider = formatProviderName(payload?.provider || selectedProvider);
+      const requestedProvider = formatProviderName(payload?.requested_provider || selectedProvider);
+      setNotice({
+        type: "success",
+        text: providerFallbackUsed
+          ? `Embroidery preview generated with ${usedProvider} fallback after ${requestedProvider} failed.`
+          : `Embroidery preview generated with ${usedProvider}.`,
+      });
     } catch (error) {
       setNotice({
         type: "error",
@@ -952,7 +971,7 @@ export default function EmbroideryStudio() {
           </div>
           <div className="flex items-center gap-2 rounded-full border border-[#2B3138] bg-[#1C2025] px-3 py-2 text-xs font-semibold text-[#A1A8B3]">
             <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.75)]" />
-            Gemini embroidery preview
+            {getModelProviderLabel(selectedProvider)} embroidery preview
           </div>
         </div>
       </div>
@@ -1115,6 +1134,29 @@ export default function EmbroideryStudio() {
               <h2 className="mt-1 text-base font-semibold text-white">Embroidery Settings</h2>
             </div>
             <div className="space-y-4 p-4">
+              <div>
+                <span className="mb-2 block text-xs font-bold uppercase text-[#A1A8B3]">Image Model</span>
+                <div className="grid grid-cols-2 rounded-lg border border-[#2B3138] bg-[#111315] p-1">
+                  {[
+                    { id: "gemini" as const, label: "Gemini" },
+                    { id: "gpt" as const, label: "GPT Image" },
+                  ].map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setSelectedProvider(option.id)}
+                      className={`h-9 rounded-md text-xs font-bold transition ${
+                        selectedProvider === option.id
+                          ? "bg-[#E11D2E] text-white"
+                          : "text-[#A1A8B3] hover:bg-white/[0.04] hover:text-white"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <label className="block">
                 <span className="mb-2 block text-xs font-bold uppercase text-[#A1A8B3]">Fabric Background</span>
                 <select

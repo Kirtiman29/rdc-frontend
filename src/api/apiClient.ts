@@ -241,17 +241,30 @@ export const getAssetUrl = (urlOrUuid?: string | null) => {
   }
 
   const baseDownload = createApiUrl(serviceOrigins.asset, "assets/download");
+  const cleanedInput = urlOrUuid.trim();
+  const pathLikeInput = (() => {
+    try {
+      return new URL(cleanedInput, "http://placeholder.local").pathname;
+    } catch {
+      return cleanedInput.split(/[?#]/)[0];
+    }
+  })();
 
-  if (urlOrUuid.includes("http")) {
+  if (/\/api\/assets\/download\//i.test(pathLikeInput)) {
+    const uuid = pathLikeInput.split("/").filter(Boolean).pop();
+    return uuid ? `${baseDownload}/${uuid}` : baseDownload;
+  }
 
-    const parts = urlOrUuid.split("/");
+  if (cleanedInput.includes("http")) {
+
+    const parts = cleanedInput.split("/");
     const uuid = parts.filter(Boolean).pop();
 
     return `${baseDownload}/${uuid}`;
 
   }
 
-  return `${baseDownload}/${urlOrUuid}`;
+  return `${baseDownload}/${cleanedInput.replace(/^\/+/, "")}`;
 };
 
 /* DEFAULT EXPORT */

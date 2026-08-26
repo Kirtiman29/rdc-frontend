@@ -5,6 +5,8 @@ import {
   type AiToolResponse,
 } from "./aiApi";
 
+const LOCAL_AI_BASE_URL = "http://localhost:8000";
+
 describe("extractGeneratedImageUrls", () => {
   it("prefers outputData.generated_images over the single preview outputUrl", () => {
     const response: AiToolResponse = {
@@ -27,8 +29,8 @@ describe("extractGeneratedImageUrls", () => {
     };
 
     expect(extractGeneratedImageUrls(response)).toEqual([
-      "http://192.168.0.154:8000/generated/image_1.png",
-      "http://192.168.0.154:8000/generated/image_2.png",
+      `${LOCAL_AI_BASE_URL}/generated/image_1.png`,
+      `${LOCAL_AI_BASE_URL}/generated/image_2.png`,
     ]);
   });
 
@@ -48,9 +50,9 @@ describe("extractGeneratedImageUrls", () => {
     };
 
     expect(extractGeneratedImageUrls(response)).toEqual([
-      "http://192.168.0.154:8000/generated/image_1.png",
-      "http://192.168.0.154:8000/generated/image_2.png",
-      "http://192.168.0.154:8000/generated/image_3.png",
+      `${LOCAL_AI_BASE_URL}/generated/image_1.png`,
+      `${LOCAL_AI_BASE_URL}/generated/image_2.png`,
+      `${LOCAL_AI_BASE_URL}/generated/image_3.png`,
     ]);
   });
 
@@ -64,7 +66,7 @@ describe("extractGeneratedImageUrls", () => {
     };
 
     expect(extractGeneratedImageUrls(response)).toEqual([
-      "http://192.168.0.154:8000/generated/image_1.png",
+      `${LOCAL_AI_BASE_URL}/generated/image_1.png`,
     ]);
   });
 
@@ -89,8 +91,8 @@ describe("extractGeneratedImageUrls", () => {
     };
 
     expect(extractGeneratedImageUrls(response)).toEqual([
-      "http://192.168.0.154:8000/generated/image_1.png",
-      "http://192.168.0.154:8000/generated/image_2.png",
+      `${LOCAL_AI_BASE_URL}/generated/image_1.png`,
+      `${LOCAL_AI_BASE_URL}/generated/image_2.png`,
     ]);
   });
 
@@ -99,8 +101,6 @@ describe("extractGeneratedImageUrls", () => {
       normalizeGeminiImageOutputUrl(
         "http://192.168.0.154:8002/gemini-generated/gemini_i2i_60fbd0210c754e2c9be3eb29d6c0966a.png"
       )
-    ).toBe(
-      "http://192.168.0.154:8000/gemini-generated/gemini_i2i_60fbd0210c754e2c9be3eb29d6c0966a.png"
-    );
+    ).toBe(`${LOCAL_AI_BASE_URL}/gemini-generated/gemini_i2i_60fbd0210c754e2c9be3eb29d6c0966a.png`);
   });
 });

@@ -18,10 +18,13 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
-  generateSeamlessPattern,
   getAIImageUrl,
   getAiErrorMessage,
+  type TextToImageProvider,
 } from "../../api/aiApi";
+import { generatePatternExtractorWithProvider } from "@/api/patternExtractorProviderApi";
+import ModelProviderSelector from "@/ai/components/ModelProviderSelector";
+import { getModelProviderLabel } from "@/ai/constants/modelProviders";
 import toast from "react-hot-toast";
 
 import pattern1 from "@/assets/sample-pattern-1.jpg";
@@ -73,6 +76,8 @@ export default function PatternFinder() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [selectedProvider, setSelectedProvider] =
+    useState<TextToImageProvider>("gemini");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -123,7 +128,7 @@ export default function PatternFinder() {
     if (!file) return;
     setIsExtracting(true);
     try {
-      const response = await generateSeamlessPattern(file);
+      const response = await generatePatternExtractorWithProvider(file, selectedProvider);
       if (response.success && response.output_image) {
         setResultImage(getAIImageUrl(response.output_image));
         toast.success(response.message || "Pattern generated successfully");
@@ -215,12 +220,19 @@ export default function PatternFinder() {
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5 text-[#E11D2E]" /> AI Engine
                     </span>
-                    <span className="text-xs font-bold text-white uppercase">Neural Extractor v1.0</span>
+                    <span className="text-xs font-bold text-white uppercase">
+                      {getModelProviderLabel(selectedProvider)}
+                    </span>
                   </div>
                 </div>
 
                 {/* Right action controls */}
                 <div className="flex items-center gap-4">
+                  <ModelProviderSelector
+                    value={selectedProvider}
+                    onChange={setSelectedProvider}
+                  />
+
                   <div className="text-right hidden sm:block">
                     <p className="text-[10px] uppercase tracking-wider text-[#A1A8B3]">Cost</p>
                     <p className="text-xs font-bold text-[#ff9ba5]">7 Credits</p>
@@ -236,7 +248,13 @@ export default function PatternFinder() {
                     ) : (
                       <Wand2 className="h-4 w-4" />
                     )}
-                    <span>{isExtracting ? "EXTRACTING..." : resultImage ? "REGENERATE" : "GENERATE PATTERN"}</span>
+                    <span>
+                      {isExtracting
+                        ? "EXTRACTING..."
+                        : resultImage
+                          ? "REGENERATE"
+                          : `GENERATE WITH ${getModelProviderLabel(selectedProvider).toUpperCase()}`}
+                    </span>
                   </button>
                 </div>
 

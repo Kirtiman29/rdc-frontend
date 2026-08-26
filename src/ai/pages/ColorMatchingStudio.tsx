@@ -796,10 +796,29 @@ type PlayfulMoodId = string;
 type InteriorMoodId = string;
 type FashionMoodId = string;
 type ColorMatchingAction = "preset" | "background" | "detected";
+type ColorMatchingProvider = "openai" | "gemini";
+
+const COLOR_MATCHING_MODEL_OPTIONS: Array<{
+  id: ColorMatchingProvider;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "openai",
+    label: "GPT",
+    description: "OpenAI color matching",
+  },
+  {
+    id: "gemini",
+    label: "Gemini",
+    description: "Gemini color matching",
+  },
+];
 
 export default function ColorMatchingStudio() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [activeAction, setActiveAction] = useState<ColorMatchingAction>("preset");
+  const [selectedProvider, setSelectedProvider] = useState<ColorMatchingProvider>("openai");
   const [selectedPreset, setSelectedPreset] = useState<PresetId>("monotone");
   const [selectedShadeIndex, setSelectedShadeIndex] = useState(0);
   const [openCategory, setOpenCategory] = useState(getPresetCategoryTitle("monotone"));
@@ -847,6 +866,8 @@ export default function ColorMatchingStudio() {
   const colorPalettePickerRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<string | null>(null);
 
+  const selectedProviderLabel =
+    COLOR_MATCHING_MODEL_OPTIONS.find((option) => option.id === selectedProvider)?.label ?? "GPT";
   const selectedPresetMeta = useMemo(() => getPresetMeta(selectedPreset), [selectedPreset]);
   const selectedPastelMood = useMemo(
     () => PASTEL_MOOD_PALETTES.find((mood) => mood.id === selectedPastelMoodId) ?? PASTEL_MOOD_PALETTES[0],
@@ -1404,9 +1425,15 @@ export default function ColorMatchingStudio() {
     const form = new FormData();
     form.append("file", selectedFile);
     form.append("prompt", prompt);
+    form.append("provider", selectedProvider);
+    form.append("edit_mode", "precise_edit");
+    form.append("edit_type", "change color");
     form.append("color_preset", getBackendPreset(selectedPreset));
     form.append("target_color", activePaletteColor);
     form.append("color_palette", submittedPalette.join(", "));
+    form.append("color_lock", "use the selected target color and submitted palette");
+    form.append("motif_lock", "preserve motifs, layout, linework, texture, and print details");
+    form.append("output_intent", "print-ready textile colorway");
     form.append("change_strength", String(DEFAULT_EDIT_STRENGTH));
     form.append("reference_strength", String(DEFAULT_REFERENCE_STRENGTH));
     form.append("prompt_strength", String(DEFAULT_PROMPT_STRENGTH));
@@ -1491,6 +1518,7 @@ export default function ColorMatchingStudio() {
         buildBackgroundForm({
           file: selectedFile,
           backgroundColor,
+          provider: selectedProvider,
           numImages: 1,
         })
       );
@@ -1537,6 +1565,7 @@ export default function ColorMatchingStudio() {
       const instruction = getDetectedColorInstruction(mappings);
       form.append("file", selectedFile);
       form.append("prompt", instruction);
+      form.append("provider", selectedProvider);
       form.append("edit_mode", "precise_edit");
       form.append("edit_type", "change color");
       form.append("target_element", "detected color areas");
@@ -1603,6 +1632,7 @@ export default function ColorMatchingStudio() {
       const form = new FormData();
       form.append("file", selectedFile);
       form.append("prompt", instruction);
+      form.append("provider", selectedProvider);
       form.append("edit_mode", "precise_edit");
       form.append("edit_type", "change color");
       form.append("target_element", `areas matching ${sourceHex}`);
@@ -1812,7 +1842,37 @@ export default function ColorMatchingStudio() {
             </SectionCard>
 
             <SectionCard
-              title="02 - Detected Colors"
+              title="02 - Model"
+              description="Choose which image model should run color matching for presets, detected colors, and background edits."
+            >
+              <div className="grid grid-cols-2 gap-2">
+                {COLOR_MATCHING_MODEL_OPTIONS.map((option) => {
+                  const active = selectedProvider === option.id;
+
+                  return (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => setSelectedProvider(option.id)}
+                      className={`min-h-[72px] rounded-xl border px-3 py-3 text-left transition ${
+                        active
+                          ? "border-[#E11D2E]/50 bg-[#E11D2E]/10 text-white shadow-[0_0_0_1px_rgba(225,29,46,0.16)]"
+                          : "border-white/10 bg-[#111315]/45 text-[#A1A8B3] hover:border-white/20 hover:text-white"
+                      }`}
+                      aria-pressed={active}
+                    >
+                      <span className="block text-sm font-semibold">{option.label}</span>
+                      <span className="mt-1 block text-[10px] uppercase tracking-[0.18em] text-[#A1A8B3]">
+                        {option.description}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </SectionCard>
+
+            <SectionCard
+              title="03 - Detected Colors"
               description="Detected image colors appear here after upload. Edit targets and change one color or all edited mappings."
               trailing={
                 <AiCreditCost credits={PRECISE_COLOR_CHANGE_CREDIT_COST} label="Precise Color Change" />
@@ -1958,7 +2018,7 @@ export default function ColorMatchingStudio() {
             </SectionCard>
  
             <SectionCard
-              title="03 - Quick Presets"
+              title="04 - Quick Presets"
               description="Select a preset and tweak individual swatches if needed."
               trailing={<AiCreditCost credits={PRESET_MATCHING_CREDIT_COST} label="Preset Matching" />}
             >
@@ -2399,6 +2459,7 @@ export default function ColorMatchingStudio() {
                         ? "Detected Color Mode"
                         : "Preset Mode"}
                   </MiniBadge>
+                  <MiniBadge>{selectedProviderLabel}</MiniBadge>
                   {selectedPresetMeta?.label && <MiniBadge>{selectedPresetMeta.label}</MiniBadge>}
                   {lastResponse?.model && <MiniBadge>{lastResponse.model}</MiniBadge>}
                   {lastResponse?.fallback_used && (
@@ -2550,7 +2611,7 @@ export default function ColorMatchingStudio() {
             </div>
 
             <SectionCard
-              title="04 - Background"
+              title="05 - Background"
               description="Only background color changes. Motifs, print details, foreground colors, and linework stay preserved."
               trailing={<AiCreditCost credits={BACKGROUND_RECOLOR_CREDIT_COST} label="Background Recolor" />}
             >

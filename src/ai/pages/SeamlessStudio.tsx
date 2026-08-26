@@ -23,6 +23,8 @@ import { generateSeamlessPattern, normalizeAiOutputUrl } from "@/api/aiApi";
 const SEAMLESS_PATTERN_CREDIT_COST = 7;
 
 type Mode = "auto" | "manual";
+type Workflow = "repair" | "reference";
+type SeamlessProvider = "gpt" | "vertex";
 
 type Notice = {
   type: "success" | "warning" | "error" | "info";
@@ -31,8 +33,12 @@ type Notice = {
 
 type ValidationPayload = {
   ai_inpaint_used?: boolean;
+  ai_provider?: string;
   vertex_fallback_used?: boolean;
   vertex_status?: string;
+  gpt_status?: string;
+  gpt_fallback_used?: boolean;
+  gpt_failure_message?: string;
   method?: string;
   quality_rating?: string;
   repeat_ready?: boolean;
@@ -58,6 +64,9 @@ const STEPS = [
   "Validating repeat",
   "Rendering preview",
 ];
+
+const DEFAULT_REFERENCE_PROMPT =
+  "Create a seamless textile repeat inspired by the uploaded image. First identify the motif family from the image, then keep the same category, shapes, colors, linework, scale, spacing, and background feel.";
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
@@ -114,6 +123,15 @@ const validationBadges = (validation?: ValidationPayload) => {
     badges.push({ label: "Vertex AI Failed", tone: "warning" });
   }
 
+  if (validation.ai_provider === "openai_gpt_image" || validation.method?.startsWith("openai_gpt")) {
+    badges.push({
+      label: validation.gpt_status === "used" ? "GPT Used" : `GPT: ${validation.gpt_status || "Not Used"}`,
+      tone: validation.gpt_status === "used" ? "success" : "warning",
+    });
+  } else if (validation.gpt_fallback_used || validation.gpt_failure_message) {
+    badges.push({ label: "GPT Fallback Used", tone: "warning" });
+  }
+
   if (validation.method) badges.push({ label: `Method: ${validation.method.replace(/_/g, " ")}`, tone: "neutral" });
 
   if (validation.quality_rating) {
@@ -157,9 +175,12 @@ export default function SeamlessStudio() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [mode, setMode] = useState<Mode>("auto");
+  const [provider, setProvider] = useState<SeamlessProvider>("gpt");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceImage, setSourceImage] = useState<HTMLImageElement | null>(null);
+  const [workflow, setWorkflow] = useState<Workflow>("repair");
+  const [referencePrompt, setReferencePrompt] = useState(DEFAULT_REFERENCE_PROMPT);
   const [horizontalBand, setHorizontalBand] = useState(48);
   const [verticalBand, setVerticalBand] = useState(48);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -232,6 +253,7 @@ export default function SeamlessStudio() {
 
     setSelectedFile(file);
     setSourceUrl(nextUrl);
+    setReferencePrompt(DEFAULT_REFERENCE_PROMPT);
     setNotice({ type: "success", text: `${file.name} loaded.` });
     clearResults();
   };
@@ -247,7 +269,10 @@ export default function SeamlessStudio() {
     setSelectedFile(null);
     setSourceUrl("");
     setSourceImage(null);
+    setWorkflow("repair");
+    setReferencePrompt(DEFAULT_REFERENCE_PROMPT);
     setMode("auto");
+    setProvider("gpt");
     setHorizontalBand(48);
     setVerticalBand(48);
     setProgress(0);
@@ -289,6 +314,9 @@ export default function SeamlessStudio() {
         mode,
         horizontalBand,
         verticalBand,
+        provider: workflow === "reference" ? "gpt" : provider,
+        generationMode: workflow,
+        prompt: workflow === "reference" ? referencePrompt : undefined,
       })) as SeamlessResponse;
       const tile = payload.tile_url || payload.output_image || "";
       const hasTile = Boolean(tile);
@@ -428,54 +456,114 @@ export default function SeamlessStudio() {
           </section>
 
           <section className="rounded-lg border border-[#2B3138] bg-[#181B1F] p-4">
-            <p className="text-xs font-bold uppercase text-[#E11D2E]">2. Seam Mode</p>
+            <p className="text-xs font-bold uppercase text-[#E11D2E]">2. Workflow</p>
             <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-[#2B3138] bg-[#111315] p-1">
-              {(["auto", "manual"] as Mode[]).map((item) => (
+              {([
+                { id: "repair", label: "Repair Existing" },
+                { id: "reference", label: "Create Similar" },
+              ] as Array<{ id: Workflow; label: string }>).map((item) => (
                 <button
-                  key={item}
-                  onClick={() => setMode(item)}
+                  key={item.id}
+                  onClick={() => setWorkflow(item.id)}
                   className={`rounded-md px-3 py-2 text-xs font-bold uppercase transition ${
-                    mode === item ? "bg-[#E11D2E] text-white" : "text-[#A1A8B3] hover:bg-white/[0.04] hover:text-white"
+                    workflow === item.id ? "bg-[#E11D2E] text-white" : "text-[#A1A8B3] hover:bg-white/[0.04] hover:text-white"
                   }`}
                 >
-                  {item}
+                  {item.label}
                 </button>
               ))}
             </div>
 
-            {mode === "manual" && (
-              <div className="mt-4 space-y-4 rounded-lg border border-[#2B3138] bg-[#111315] p-3">
-                <div className="aspect-square overflow-hidden rounded-md border border-[#2B3138] bg-[#0F1113]">
-                  <canvas ref={canvasRef} className="h-full w-full object-contain" />
+            {workflow === "repair" ? (
+              <>
+                <div className="mt-4">
+                  <p className="text-xs font-bold uppercase text-[#E11D2E]">3. Seam Mode</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-[#2B3138] bg-[#111315] p-1">
+                    {(["auto", "manual"] as Mode[]).map((item) => (
+                      <button
+                        key={item}
+                        onClick={() => setMode(item)}
+                        className={`rounded-md px-3 py-2 text-xs font-bold uppercase transition ${
+                          mode === item ? "bg-[#E11D2E] text-white" : "text-[#A1A8B3] hover:bg-white/[0.04] hover:text-white"
+                        }`}
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <label className="block">
-                  <span className="mb-2 flex items-center justify-between text-xs font-semibold text-[#A1A8B3]">
-                    Horizontal band <span className="text-[#ff8a96]">{horizontalBand * 2}px</span>
-                  </span>
-                  <input
-                    type="range"
-                    min={8}
-                    max={160}
-                    value={horizontalBand}
-                    onChange={(event) => setHorizontalBand(Number(event.target.value))}
-                    className="w-full accent-[#E11D2E]"
-                  />
-                </label>
+                {mode === "manual" && (
+                  <div className="mt-4 space-y-4 rounded-lg border border-[#2B3138] bg-[#111315] p-3">
+                    <div className="aspect-square overflow-hidden rounded-md border border-[#2B3138] bg-[#0F1113]">
+                      <canvas ref={canvasRef} className="h-full w-full object-contain" />
+                    </div>
 
-                <label className="block">
-                  <span className="mb-2 flex items-center justify-between text-xs font-semibold text-[#A1A8B3]">
-                    Vertical band <span className="text-[#ff8a96]">{verticalBand * 2}px</span>
+                    <label className="block">
+                      <span className="mb-2 flex items-center justify-between text-xs font-semibold text-[#A1A8B3]">
+                        Horizontal band <span className="text-[#ff8a96]">{horizontalBand * 2}px</span>
+                      </span>
+                      <input
+                        type="range"
+                        min={8}
+                        max={160}
+                        value={horizontalBand}
+                        onChange={(event) => setHorizontalBand(Number(event.target.value))}
+                        className="w-full accent-[#E11D2E]"
+                      />
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 flex items-center justify-between text-xs font-semibold text-[#A1A8B3]">
+                        Vertical band <span className="text-[#ff8a96]">{verticalBand * 2}px</span>
+                      </span>
+                      <input
+                        type="range"
+                        min={8}
+                        max={160}
+                        value={verticalBand}
+                        onChange={(event) => setVerticalBand(Number(event.target.value))}
+                        className="w-full accent-[#E11D2E]"
+                      />
+                    </label>
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  <p className="text-xs font-bold uppercase text-[#E11D2E]">4. AI Provider</p>
+                  <div className="mt-3 grid grid-cols-2 gap-2 rounded-lg border border-[#2B3138] bg-[#111315] p-1">
+                    {([
+                      { id: "gpt", label: "GPT" },
+                      { id: "vertex", label: "Vertex" },
+                    ] as Array<{ id: SeamlessProvider; label: string }>).map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => setProvider(item.id)}
+                        className={`rounded-md px-3 py-2 text-xs font-bold uppercase transition ${
+                          provider === item.id ? "bg-[#E11D2E] text-white" : "text-[#A1A8B3] hover:bg-white/[0.04] hover:text-white"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="mt-4 space-y-3 rounded-lg border border-[#2B3138] bg-[#111315] p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs font-bold uppercase text-[#E11D2E]">3. GPT Direction</p>
+                  <span className="rounded-full border border-[#2B3138] bg-[#181B1F] px-2.5 py-1 text-[11px] font-bold uppercase text-[#A1A8B3]">
+                    GPT Only
                   </span>
-                  <input
-                    type="range"
-                    min={8}
-                    max={160}
-                    value={verticalBand}
-                    onChange={(event) => setVerticalBand(Number(event.target.value))}
-                    className="w-full accent-[#E11D2E]"
-                  />
-                </label>
+                </div>
+                <textarea
+                  value={referencePrompt}
+                  onChange={(event) => setReferencePrompt(event.target.value)}
+                  rows={5}
+                  className="w-full resize-none rounded-md border border-[#2B3138] bg-[#0F1113] px-3 py-2 text-sm leading-6 text-white outline-none transition placeholder:text-[#6B7280] focus:border-[#E11D2E]/70"
+                  placeholder="Same colors, same motif family, seamless textile repeat..."
+                />
               </div>
             )}
 
@@ -486,7 +574,7 @@ export default function SeamlessStudio() {
                 className="flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#E11D2E] text-sm font-bold text-white transition hover:bg-[#c91526] disabled:cursor-not-allowed disabled:bg-[#2B3138] disabled:text-[#6B7280]"
               >
                 {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
-                Generate Seamless
+                {workflow === "reference" ? "Create Similar Seamless" : "Generate Seamless"}
               </button>
               <button
                 onClick={resetWorkspace}
